@@ -187,6 +187,18 @@ export function createProductService({ database, imagesDirectory }) {
     return serializeProduct(database.prepare('SELECT * FROM products WHERE id = ?').get(id));
   }
 
+  function getProductByEan(value) {
+    const ean = String(value || '').trim();
+    if (!/^\d{8,14}$/.test(ean)) return null;
+
+    return serializeProduct(database.prepare(`
+      SELECT * FROM products
+      WHERE ean = ?
+      ORDER BY CASE WHEN status = 'ativo' THEN 0 ELSE 1 END, id ASC
+      LIMIT 1
+    `).get(ean));
+  }
+
   function listProducts(searchParams) {
     const requestedPage = Number(searchParams.get('page') || 1);
     const requestedPageSize = Number(searchParams.get('pageSize') || 48);
@@ -306,6 +318,7 @@ export function createProductService({ database, imagesDirectory }) {
   return {
     productId,
     getProduct,
+    getProductByEan,
     listProducts,
     getSummary,
     listCategories,

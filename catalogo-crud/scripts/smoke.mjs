@@ -58,6 +58,16 @@ try {
     );
   }
 
+  const eanProductsResponse = await fetch(baseUrl + '/api/products?page=1&pageSize=100');
+  const eanProducts = await eanProductsResponse.json();
+  const productWithEan = eanProducts.items.find((product) => /^\d{8,14}$/.test(String(product.ean || '')));
+  if (productWithEan) {
+    const eanResponse = await fetch(baseUrl + `/api/products/by-ean/${encodeURIComponent(productWithEan.ean)}`);
+    const eanProduct = await eanResponse.json();
+    assert.equal(eanResponse.status, 200, 'Consulta de produto por EAN falhou');
+    assert.equal(eanProduct.id, productWithEan.id, 'Consulta por EAN retornou produto incorreto');
+  }
+
   const rejectedWrite = await fetch(baseUrl + '/api/products', {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },

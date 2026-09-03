@@ -153,3 +153,17 @@ a:focus-visible { outline: 3px solid rgba(17, 123, 114, 0.32); outline-offset: 3
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+.ean-launcher { width: min(100%, 490px); margin-top: 21px; padding: 12px; border: 1px solid rgba(17, 123, 114, .18); border-radius: 15px; background: rgba(255, 255, 255, .72); box-shadow: 0 10px 24px rgba(11, 48, 52, .05); }
+.ean-launcher label { display: flex; gap: 7px; align-items: center; margin: 0 0 8px; color: var(--home-navy); font-size: .75rem; font-weight: 850; }
+.ean-launcher-icon { width: 17px; height: 14px; background: repeating-linear-gradient(90deg, var(--home-teal-dark) 0 2px, transparent 2px 4px, var(--home-teal-dark) 4px 5px, transparent 5px 7px); }
+.ean-launcher-controls { display: flex; gap: 8px; }
+.ean-launcher input { min-width: 0; flex: 1; height: 40px; padding: 0 12px; color: var(--home-navy); font: inherit; font-size: .82rem; border: 1px solid #cfe0da; border-radius: 10px; outline: none; background: #fff; }
+.ean-launcher input::placeholder { color: #8ba0a0; }
+.ean-launcher input:focus { border-color: var(--home-teal); box-shadow: 0 0 0 3px rgba(17, 123, 114, .13); }
+.ean-launcher button { height: 40px; padding: 0 13px; color: #fff; font: inherit; font-size: .77rem; font-weight: 850; border: 0; border-radius: 10px; cursor: pointer; background: var(--home-teal-dark); }
+.ean-launcher button:hover:not(:disabled) { background: var(--home-teal); }
+.ean-launcher button:disabled { cursor: wait; opacity: .72; }
+.ean-launcher-status { min-height: 16px; margin: 7px 1px 0; color: #557178; font-size: .69rem; font-weight: 650; }
+.ean-launcher-status.is-error { color: #b34737; }
+@media (max-width: 520px) { .ean-launcher { width: 100%; } .ean-launcher-controls { flex-direction: column; } .ean-launcher button { width: 100%; } }

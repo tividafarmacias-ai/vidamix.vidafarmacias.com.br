@@ -28,6 +28,15 @@ export function createApiRouter({ productService, storyBackgroundService }) {
     sendJson(response, 200, productService.listProducts(url.searchParams));
   });
 
+  router.get('/api/products/by-ean/:ean', ({ params, response }) => {
+    const product = productService.getProductByEan(params.ean);
+    if (!product) {
+      sendError(response, 404, 'Produto não encontrado para este EAN.');
+      return;
+    }
+    sendJson(response, 200, product);
+  });
+
   router.get('/api/products/:id', ({ params, response }) => {
     const id = getRequestedProductId(productService, params.id);
     const product = id ? productService.getProduct(id) : null;

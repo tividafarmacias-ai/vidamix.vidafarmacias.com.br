@@ -24,6 +24,14 @@
               <a class="studio-primary-action" href="/artes/stories"><span aria-hidden="true">✦</span> Criar arte para Story</a>
               <a class="studio-secondary-action" href="#formatos">Ver todos os formatos</a>
             </div>
+            <form class="ean-launcher" id="ean-launcher" novalidate>
+              <label for="ean-input"><span class="ean-launcher-icon" aria-hidden="true"></span>Bipar código de barras</label>
+              <div class="ean-launcher-controls">
+                <input id="ean-input" name="ean" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]*" maxlength="14" placeholder="Aproxime o leitor ou digite o EAN" aria-describedby="ean-status" />
+                <button type="submit">Criar arte</button>
+              </div>
+              <p id="ean-status" class="ean-launcher-status" role="status" aria-live="polite"></p>
+            </form>
           </div>
           <div class="hero-preview" aria-hidden="true">
             <div class="hero-preview-halo"></div><div class="hero-story-card hero-story-card-back"></div>
