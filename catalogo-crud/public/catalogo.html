@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b2b33" />
+    <meta
+      name="description"
+      content="Catálogo de produtos com busca, visualização e edição local."
+    />
+    <title>Catálogo | VidaMix Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/catalogue-stories-link.css" />
+    <link rel="stylesheet" href="/catalogue.css" />
+  </head>
+  <body class="catalogue-page">
+    <main class="catalogue-app">
+      <div class="workspace catalogue-content">
+        <header class="workspace-header catalogue-header">
+         
+          <div class="workspace-actions">
+            <a class="primary-button story-launch-button" id="story-creator-button" href="/artes/stories">
+              <span aria-hidden="true">✦</span>
+              Criar arte
+            </a>
+            <button class="ghost-button" id="new-product-button" type="button">
+              <span aria-hidden="true">+</span>
+              Novo produto
+            </button>
+          </div>
+        </header>
+
+     
+
+        <section class="filter-panel" aria-label="Filtros do catálogo">
+          <div class="filter-panel-heading">
+            <div>
+              <p class="eyebrow">Encontre rapidamente</p>
+              <h3>Filtre o catálogo</h3>
+            </div>
+            <button class="filter-reset-button" id="clear-filters-button" type="button">Limpar filtros</button>
+          </div>
+
+          <label class="search-field" for="search-input">
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input
+              id="search-input"
+              type="search"
+              autocomplete="off"
+              placeholder="Buscar por nome, EAN, fabricante ou princípio ativo"
+            />
+          </label>
+
+          <div class="category-filter-section">
+            <div class="category-filter-heading">
+              <span>Explore por categoria</span>
+              <small>Escolha uma categoria para refinar a listagem.</small>
+            </div>
+            <div class="category-chips" id="category-chips" role="group" aria-label="Filtros por categoria"></div>
+          </div>
+
+          <div class="filter-row">
+            <label>
+              <span>Categoria</span>
+              <select id="category-filter">
+                <option value="">Todas as categorias</option>
+              </select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="status-filter">
+                <option value="">Todos</option>
+                <option value="ativo">Ativos</option>
+                <option value="inativo">Inativos</option>
+              </select>
+            </label>
+            <label>
+              <span>Imagem</span>
+              <select id="image-filter">
+                <option value="">Todas</option>
+                <option value="com" selected>Com imagem local</option>
+                <option value="sem">Sem imagem local</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="catalogue-section" aria-live="polite">
+          <div class="results-heading">
+            <div>
+              <p class="eyebrow" id="results-kicker">Carregando catálogo</p>
+              <h3 id="results-title">Produtos</h3>
+            </div>
+            <div class="pagination" aria-label="Paginação">
+              <button class="icon-button" id="previous-page-button" type="button" aria-label="Página anterior">←</button>
+              <span id="page-indicator">—</span>
+              <button class="icon-button" id="next-page-button" type="button" aria-label="Próxima página">→</button>
+            </div>
+          </div>
+
+          <div class="product-grid" id="product-grid" aria-label="Lista de produtos"></div>
+
+          
+        </section>
+      </div>
+    </main>
+
+    <dialog class="product-dialog" id="product-dialog" aria-labelledby="dialog-title">
+      <form class="product-form" id="product-form" novalidate>
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow" id="dialog-kicker">Novo registro</p>
+            <h2 id="dialog-title">Adicionar produto</h2>
+          </div>
+          <button class="close-button" id="close-dialog-button" type="button" aria-label="Fechar">×</button>
+        </header>
+
+        <div class="form-layout">
+          <section class="image-panel" aria-label="Imagem do produto">
+            <div class="image-preview" id="dialog-image-preview">
+              <span aria-hidden="true">⌁</span>
+              <p>Sem imagem local</p>
+            </div>
+            <p class="image-caption" id="image-caption">A imagem local é definida pelo manifesto importado.</p>
+          </section>
+
+          <section class="form-fields">
+            <div class="field-grid two-columns">
+              <label class="full-span">
+                <span>Nome <b>*</b></span>
+                <input name="nome" required maxlength="255" placeholder="Nome do produto" />
+              </label>
+              <label>
+                <span>Subtítulo</span>
+                <input name="subtitulo" maxlength="255" placeholder="Ex.: 30 cápsulas" />
+              </label>
+              <label>
+                <span>EAN</span>
+                <input name="ean" inputmode="numeric" maxlength="40" placeholder="Código de barras" />
+              </label>
+              <label>
+                <span>Fabricante</span>
+                <input name="fabricante" maxlength="255" placeholder="Fabricante" />
+              </label>
+              <label>
+                <span>Grupo</span>
+                <input name="grupo" maxlength="255" placeholder="Ex.: Medicamento" />
+              </label>
+              <label>
+                <span>Categoria</span>
+                <input name="categoria_produtos" list="category-options" maxlength="255" placeholder="Categoria do produto" />
+              </label>
+              <label>
+                <span>Nome da categoria</span>
+                <input name="categoria_nome" maxlength="255" placeholder="Opcional" />
+              </label>
+              <label>
+                <span>Status</span>
+                <select name="status">
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                </select>
+              </label>
+              <label>
+                <span>Direção da imagem</span>
+                <select name="direcao_imagem">
+                  <option value="vertical">Vertical</option>
+                  <option value="horizontal">Horizontal</option>
+                </select>
+              </label>
+              <label>
+                <span>Princípio ativo</span>
+                <input name="principio_ativo" maxlength="255" placeholder="Opcional" />
+              </label>
+              <label>
+                <span>Registro MS</span>
+                <input name="ms" maxlength="255" placeholder="Opcional" />
+              </label>
+              <label>
+                <span>Categoria ID</span>
+                <input name="categoria_id" inputmode="numeric" placeholder="Opcional" />
+              </label>
+              <label>
+                <span>Caracteres</span>
+                <input name="caracteres" maxlength="50" placeholder="Ex.: 24/34" />
+              </label>
+              <label>
+                <span>Início da vigência</span>
+                <input name="data_vigencia_inicio" type="date" />
+              </label>
+              <label>
+                <span>Fim da vigência</span>
+                <input name="data_vigencia_fim" type="date" />
+              </label>
+              <label class="full-span">
+                <span>URL de imagem original</span>
+                <input name="imagem_url" type="url" maxlength="1000" placeholder="https://..." />
+              </label>
+              <label class="full-span">
+                <span>Arquivo de imagem local</span>
+                <input name="imagem_arquivo" maxlength="1000" placeholder="imagens/nome-do-arquivo.png" />
+                <small>Use somente um arquivo existente dentro de <code>imagens/</code>.</small>
+              </label>
+              <label class="full-span">
+                <span>Frases para encarte</span>
+                <textarea name="frases_encarte" rows="3" maxlength="1000" placeholder="Observações ou frases promocionais"></textarea>
+              </label>
+            </div>
+
+            <div class="check-row">
+              <label class="check-field">
+                <input name="generico" type="checkbox" />
+                <span>Produto genérico</span>
+              </label>
+              <label class="check-field">
+                <input name="produto_destaque" type="checkbox" />
+                <span>Produto em destaque</span>
+              </label>
+            </div>
+          </section>
+        </div>
+
+        <footer class="dialog-footer">
+          <button class="danger-button" id="delete-product-button" type="button" hidden>Excluir produto</button>
+          <div class="footer-actions">
+            <button class="ghost-button" id="cancel-dialog-button" type="button">Cancelar</button>
+            <button class="primary-button" id="save-product-button" type="submit">Salvar alterações</button>
+          </div>
+        </footer>
+      </form>
+    </dialog>
+
+    <datalist id="category-options"></datalist>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
