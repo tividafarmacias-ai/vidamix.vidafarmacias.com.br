@@ -1176,16 +1176,36 @@ function syncScaleControl(input, output, box, defaultWidth, limits, currentWidth
   output.textContent = `${currentPercent}%`;
 }
 
+function syncPriceValidation() {
+  const priceFields = [
+    { input: elements.price, required: true },
+    { input: elements.secondaryPrice, required: isTwoProductsMode() },
+  ];
+
+  priceFields.forEach(({ input, required }) => {
+    const priceInput = input.closest('.story-price-input');
+    const missing = required && parsePrice(input.value) === null;
+    priceInput?.classList.toggle('is-missing', missing);
+    input.setAttribute('aria-invalid', String(missing));
+  });
+}
+
 function syncPriceInputs() {
   const twoProducts = isTwoProductsMode();
   elements.primaryPriceLabel.textContent = twoProducts ? 'Preço do produto 1' : 'Preço da oferta';
-  elements.secondaryPriceField.hidden = !twoProducts;
+  elements.secondaryPriceField.hidden = false;
+  elements.secondaryPriceField.classList.toggle('is-disabled', !twoProducts);
+  elements.secondaryPriceField.setAttribute('aria-disabled', String(!twoProducts));
+  elements.price.required = true;
+  elements.secondaryPrice.disabled = !twoProducts;
+  elements.secondaryPrice.required = twoProducts;
   elements.secondaryPriceLabel.textContent = 'Preço do produto 2';
 
   if (elements.price.value !== state.price) elements.price.value = state.price;
   if (elements.secondaryPrice.value !== state.secondaryPrice) {
     elements.secondaryPrice.value = state.secondaryPrice;
   }
+  syncPriceValidation();
 }
 
 function syncProductEditor() {
@@ -2278,6 +2298,7 @@ function bindEvents() {
     const typedValue = elements.price.value.replace(/[^\d,.-]/g, '');
     elements.price.value = typedValue;
     state.price = typedValue;
+    syncPriceValidation();
     schedulePreview();
     updateAvailability();
   });
@@ -2286,6 +2307,7 @@ function bindEvents() {
     const formatted = formatPrice(elements.price.value);
     state.price = formatted;
     elements.price.value = formatted;
+    syncPriceValidation();
     schedulePreview();
     updateAvailability();
   });
@@ -2294,6 +2316,7 @@ function bindEvents() {
     const typedValue = elements.secondaryPrice.value.replace(/[^\d,.-]/g, '');
     elements.secondaryPrice.value = typedValue;
     state.secondaryPrice = typedValue;
+    syncPriceValidation();
     schedulePreview();
     updateAvailability();
   });
@@ -2302,6 +2325,7 @@ function bindEvents() {
     const formatted = formatPrice(elements.secondaryPrice.value);
     state.secondaryPrice = formatted;
     elements.secondaryPrice.value = formatted;
+    syncPriceValidation();
     schedulePreview();
     updateAvailability();
   });

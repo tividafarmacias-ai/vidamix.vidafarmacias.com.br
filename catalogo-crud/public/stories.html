@@ -133,16 +133,16 @@
           <div class="story-price-fields">
             <label class="story-price-field">
               <span class="story-price-field-label" id="story-primary-price-label">Preço da oferta</span>
-              <span class="story-price-input">
+              <span class="story-price-input is-missing">
                 <span>R$</span>
-                <input id="story-price" type="text" inputmode="decimal" autocomplete="off" placeholder="00,00" aria-labelledby="story-primary-price-label" />
+                <input id="story-price" type="text" inputmode="decimal" autocomplete="off" placeholder="00,00" aria-labelledby="story-primary-price-label" aria-invalid="true" required />
               </span>
             </label>
-            <label class="story-price-field" id="story-secondary-price-field" hidden>
+            <label class="story-price-field is-disabled" id="story-secondary-price-field" aria-disabled="true">
               <span class="story-price-field-label" id="story-secondary-price-label">Preço do produto 2</span>
               <span class="story-price-input">
                 <span>R$</span>
-                <input id="story-secondary-price" type="text" inputmode="decimal" autocomplete="off" placeholder="00,00" aria-labelledby="story-secondary-price-label" />
+                <input id="story-secondary-price" type="text" inputmode="decimal" autocomplete="off" placeholder="00,00" aria-labelledby="story-secondary-price-label" disabled />
               </span>
             </label>
           </div>

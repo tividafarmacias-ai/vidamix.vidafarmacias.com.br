@@ -1852,3 +1852,10 @@ body.stories-page {
 .story-collapsible-section.is-collapsed .story-section-heading { margin-bottom: 0; }
 .story-collapsible-section.is-collapsed .story-section-heading > :not(.story-section-collapse-toggle) { pointer-events: none; }
 .story-section-selection { display: block; margin-top: 3px !important; color: var(--teal-dark) !important; font-weight: 800; }
+.story-price-input.is-missing { border-color: #d95c53; background: #fffafa; box-shadow: 0 0 0 3px rgba(217, 92, 83, .09); }
+.story-price-input.is-missing > span { color: #b84740; border-right-color: #f0c5c0; background: #fff0ee; }
+.story-price-input.is-missing:focus-within { border-color: #c94940; box-shadow: 0 0 0 3px rgba(217, 92, 83, .17); }
+.story-price-field.is-disabled { opacity: .54; }
+.story-price-field.is-disabled .story-price-input { border-color: #dfe7e3; background: #f3f6f4; box-shadow: none; }
+.story-price-field.is-disabled .story-price-input > span { color: #8b9d99; border-right-color: #dfe7e3; background: #ebf0ed; }
+.story-price-field.is-disabled input { cursor: not-allowed; }
