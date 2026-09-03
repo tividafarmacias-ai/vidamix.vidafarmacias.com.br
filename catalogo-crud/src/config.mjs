@@ -5,8 +5,7 @@ const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectDirectory = path.resolve(sourceDirectory, '..');
 
 function getPort(value) {
-  const port = Number(value);
-  return Number.isInteger(port) && port > 0 && port <= 65_535 ? port : 3333;
+  const PORT = Number(process.env.PORT) || 3030;;
 }
 
 function resolveConfiguredPath(value, fallback) {

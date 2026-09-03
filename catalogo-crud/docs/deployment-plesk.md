@@ -14,26 +14,36 @@ da arvore do release.
 O projeto usa node:sqlite. A partir da linha 22.13, esse modulo nao precisa da
 flag experimental.
 
-## 1. Criar o repositorio local
+## 1. Escolher o fluxo de versionamento
 
-Execute uma unica vez na raiz do projeto:
+O repositorio Git atual ja existe na pasta pai de catalogo-crud, na branch main
+e com um remote origin configurado. Ele tambem versiona a base grande de
+imagens de produtos. Por isso, **nao aponte o Git do Plesk diretamente para a
+branch main desse repositorio**: o clone levaria arquivos que nao pertencem ao
+runtime da aplicacao.
 
-    git init
-    git add .
-    git commit -m "chore: preparar publicacao no Plesk"
-    git branch -M main
+Para a primeira publicacao, use o caminho mais seguro e reproduzivel: gere um
+arquivo ZIP da versao que deseja publicar e envie apenas esse arquivo pelo File
+Manager do Plesk. Na raiz do repositorio Git, execute:
 
-Crie um repositorio privado no provedor Git e conecte-o:
+    git status
+    git tag -a catalogo-v1.0.0 -m "Primeira publicacao do catalogo"
+    git archive --format=zip --output=vidamix-catalogo-v1.0.0.zip catalogo-v1.0.0:catalogo-crud
 
-    git remote add origin URL-DO-REPOSITORIO
-    git push -u origin main
+Os arquivos de prova de conceito no diretorio camas-stories sao excluidos desse
+arquivo de release. Descompacte o ZIP na pasta vidamix-app indicada neste guia.
 
-Antes de cada envio, execute:
+Para automacao futura, crie um repositorio privado exclusivo cujo conteudo seja
+somente catalogo-crud. Configure a extensao Git do Plesk para esse repositorio
+dedicado. Nao utilize o repositorio pai enquanto ele continuar contendo as
+imagens de produtos.
+
+Antes de cada release, execute:
 
     npm.cmd ci
     npm.cmd run verify
 
-Dados, senhas, node_modules e arquivos legados ja estao no .gitignore.
+Dados, senhas, node_modules e novos arquivos legados ja estao no .gitignore.
 
 ## 2. Criar dados persistentes
 
@@ -103,8 +113,10 @@ persistente e nao reimportam os arquivos.
 1. Instale ou renove o certificado Let’s Encrypt e force HTTP para HTTPS.
 2. Se o sistema for interno, complemente o login com restricao de IP ou VPN.
 3. Consulte os logs no Plesk se o health check falhar.
-4. Para cada release, valide localmente, envie a branch main, use a extensao
-   Git do Plesk para fazer deploy, reinicie a aplicacao e teste as rotas.
+4. Para cada release, valide localmente, crie uma tag, gere o ZIP da tag e
+   envie-o pelo File Manager. Quando houver repositorio dedicado, use a
+   extensao Git do Plesk para fazer deploy, reinicie a aplicacao e teste as
+   rotas.
 5. Use tags, por exemplo v1.1.0, antes de cada publicacao. Para rollback,
    publique a tag anterior e reinicie a aplicacao.
 
