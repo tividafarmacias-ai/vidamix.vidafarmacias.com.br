@@ -154,16 +154,19 @@ a:focus-visible { outline: 3px solid rgba(17, 123, 114, 0.32); outline-offset: 3
   *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
 
-.ean-launcher { width: min(100%, 490px); margin-top: 21px; padding: 12px; border: 1px solid rgba(17, 123, 114, .18); border-radius: 15px; background: rgba(255, 255, 255, .72); box-shadow: 0 10px 24px rgba(11, 48, 52, .05); }
-.ean-launcher label { display: flex; gap: 7px; align-items: center; margin: 0 0 8px; color: var(--home-navy); font-size: .75rem; font-weight: 850; }
+.ean-launch-button { display: inline-flex; gap: 8px; min-height: 41px; padding: 0 13px; align-items: center; color: var(--home-teal-dark); font: inherit; font-size: .78rem; font-weight: 850; border: 1px solid rgba(17, 123, 114, .22); border-radius: 11px; cursor: pointer; background: rgba(255, 255, 255, .7); transition: border-color 150ms ease, background 150ms ease, transform 150ms ease; }
+.ean-launch-button:hover { border-color: var(--home-teal); background: #fff; transform: translateY(-1px); }
 .ean-launcher-icon { width: 17px; height: 14px; background: repeating-linear-gradient(90deg, var(--home-teal-dark) 0 2px, transparent 2px 4px, var(--home-teal-dark) 4px 5px, transparent 5px 7px); }
-.ean-launcher-controls { display: flex; gap: 8px; }
-.ean-launcher input { min-width: 0; flex: 1; height: 40px; padding: 0 12px; color: var(--home-navy); font: inherit; font-size: .82rem; border: 1px solid #cfe0da; border-radius: 10px; outline: none; background: #fff; }
-.ean-launcher input::placeholder { color: #8ba0a0; }
-.ean-launcher input:focus { border-color: var(--home-teal); box-shadow: 0 0 0 3px rgba(17, 123, 114, .13); }
-.ean-launcher button { height: 40px; padding: 0 13px; color: #fff; font: inherit; font-size: .77rem; font-weight: 850; border: 0; border-radius: 10px; cursor: pointer; background: var(--home-teal-dark); }
-.ean-launcher button:hover:not(:disabled) { background: var(--home-teal); }
-.ean-launcher button:disabled { cursor: wait; opacity: .72; }
-.ean-launcher-status { min-height: 16px; margin: 7px 1px 0; color: #557178; font-size: .69rem; font-weight: 650; }
-.ean-launcher-status.is-error { color: #b34737; }
-@media (max-width: 520px) { .ean-launcher { width: 100%; } .ean-launcher-controls { flex-direction: column; } .ean-launcher button { width: 100%; } }
+.ean-scanner-overlay { position: fixed; z-index: 100; inset: 0; display: grid; padding: 24px; place-items: center; background: rgba(7, 35, 39, .62); backdrop-filter: blur(5px); }
+.ean-scanner-overlay[hidden] { display: none; }
+.ean-scanner-dialog { position: relative; width: min(100%, 420px); padding: 39px 32px 29px; text-align: center; border: 1px solid rgba(255,255,255,.52); border-radius: 24px; background: #fff; box-shadow: 0 28px 70px rgba(0, 0, 0, .27); }
+.ean-scanner-close { position: absolute; top: 11px; right: 13px; display: grid; width: 32px; height: 32px; padding: 0; color: #60777a; font-size: 1.4rem; line-height: 1; place-items: center; border: 0; border-radius: 50%; cursor: pointer; background: #f0f6f3; }
+.ean-scanner-close:hover { color: var(--home-navy); background: #e1eee8; }
+.ean-scanner-mark { display: block; width: 93px; height: 62px; margin: 0 auto 21px; border-radius: 6px; background: repeating-linear-gradient(90deg, var(--home-navy) 0 3px, transparent 3px 6px, var(--home-navy) 6px 8px, transparent 8px 12px, var(--home-teal) 12px 14px, transparent 14px 17px); }
+.ean-scanner-dialog h2 { margin: 0; color: var(--home-navy); font-size: clamp(1.3rem, 4vw, 1.64rem); letter-spacing: -.05em; }
+.ean-scanner-dialog > p { margin: 10px auto 0; color: var(--home-ink-soft); font-size: .84rem; line-height: 1.5; }
+.ean-scanner-status { min-height: 20px; margin-top: 18px !important; color: var(--home-teal-dark) !important; font-size: .75rem !important; font-weight: 800; }
+.ean-scanner-status.is-error { color: #b34737 !important; }
+.screen-reader-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+#ean-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+@media (max-width: 520px) { .ean-scanner-overlay { padding: 16px; } .ean-scanner-dialog { padding: 37px 23px 25px; border-radius: 20px; } }

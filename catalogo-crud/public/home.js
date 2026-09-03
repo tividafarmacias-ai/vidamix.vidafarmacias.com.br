@@ -1,7 +1,9 @@
+const eanOverlay = document.querySelector('#ean-scanner-overlay');
+const eanOpenButton = document.querySelector('#ean-overlay-open');
+const eanCloseButton = document.querySelector('#ean-overlay-close');
 const eanForm = document.querySelector('#ean-launcher');
 const eanInput = document.querySelector('#ean-input');
 const eanStatus = document.querySelector('#ean-status');
-const eanSubmitButton = eanForm?.querySelector('button[type="submit"]');
 
 let scanTimer;
 let lastSubmittedEan = '';
@@ -29,11 +31,25 @@ function setEanStatus(message = '', isError = false) {
   eanStatus.classList.toggle('is-error', isError);
 }
 
+function closeScanner() {
+  clearTimeout(scanTimer);
+  eanOverlay.hidden = true;
+  eanOpenButton.focus();
+}
+
+function openScanner() {
+  lastSubmittedEan = '';
+  lookupInProgress = false;
+  eanInput.value = '';
+  setEanStatus('Aguardando leitura…');
+  eanOverlay.hidden = false;
+  requestAnimationFrame(() => eanInput.focus());
+}
+
 async function openStoryForEan(ean) {
   if (lookupInProgress || ean === lastSubmittedEan) return;
   lookupInProgress = true;
   lastSubmittedEan = ean;
-  eanSubmitButton.disabled = true;
   setEanStatus('Localizando produto…');
 
   try {
@@ -46,34 +62,41 @@ async function openStoryForEan(ean) {
   } catch (error) {
     lastSubmittedEan = '';
     setEanStatus(error.message || 'Não foi possível localizar o produto.', true);
+    eanInput.value = '';
+    eanInput.focus();
   } finally {
     lookupInProgress = false;
-    if (eanSubmitButton) eanSubmitButton.disabled = false;
   }
 }
 
 function submitEan({ showValidation = true } = {}) {
-  const ean = normalizeEan(eanInput?.value);
-  if (eanInput && eanInput.value !== ean) eanInput.value = ean;
-
+  const ean = normalizeEan(eanInput.value);
+  eanInput.value = ean;
   if (!isValidEan(ean)) {
-    if (showValidation) setEanStatus('Informe um EAN válido com dígito verificador.', true);
+    if (showValidation) setEanStatus('Código não reconhecido. Tente novamente.', true);
     return;
   }
   openStoryForEan(ean);
 }
 
-if (eanForm && eanInput) {
+if (eanOverlay && eanOpenButton && eanCloseButton && eanForm && eanInput) {
+  eanOpenButton.addEventListener('click', openScanner);
+  eanCloseButton.addEventListener('click', closeScanner);
+  eanOverlay.addEventListener('click', (event) => {
+    if (event.target === eanOverlay) closeScanner();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !eanOverlay.hidden) closeScanner();
+  });
   eanForm.addEventListener('submit', (event) => {
     event.preventDefault();
     submitEan();
   });
-
   eanInput.addEventListener('input', () => {
     clearTimeout(scanTimer);
     eanInput.value = normalizeEan(eanInput.value);
     lastSubmittedEan = '';
-    setEanStatus();
+    setEanStatus('Aguardando leitura…');
     if (!isValidEan(eanInput.value)) return;
     scanTimer = setTimeout(() => submitEan({ showValidation: false }), 120);
   });

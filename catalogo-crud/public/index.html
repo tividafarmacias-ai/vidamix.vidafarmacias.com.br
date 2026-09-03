@@ -24,14 +24,10 @@
               <a class="studio-primary-action" href="/artes/stories"><span aria-hidden="true">✦</span> Criar arte para Story</a>
               <a class="studio-secondary-action" href="#formatos">Ver todos os formatos</a>
             </div>
-            <form class="ean-launcher" id="ean-launcher" novalidate>
-              <label for="ean-input"><span class="ean-launcher-icon" aria-hidden="true"></span>Bipar código de barras</label>
-              <div class="ean-launcher-controls">
-                <input id="ean-input" name="ean" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]*" maxlength="14" placeholder="Aproxime o leitor ou digite o EAN" aria-describedby="ean-status" />
-                <button type="submit">Criar arte</button>
-              </div>
-              <p id="ean-status" class="ean-launcher-status" role="status" aria-live="polite"></p>
-            </form>
+            <button class="ean-launch-button" id="ean-overlay-open" type="button">
+              <span class="ean-launcher-icon" aria-hidden="true"></span>
+              Código de barras
+            </button>
           </div>
           <div class="hero-preview" aria-hidden="true">
             <div class="hero-preview-halo"></div><div class="hero-story-card hero-story-card-back"></div>
@@ -73,6 +69,20 @@
 
     
       </main>
+    </div>
+
+    <div class="ean-scanner-overlay" id="ean-scanner-overlay" hidden>
+      <section class="ean-scanner-dialog" role="dialog" aria-modal="true" aria-labelledby="ean-scanner-title">
+        <button class="ean-scanner-close" id="ean-overlay-close" type="button" aria-label="Fechar leitor de código de barras">×</button>
+        <span class="ean-scanner-mark" aria-hidden="true"></span>
+        <h2 id="ean-scanner-title">Escaneie o código de barras</h2>
+        <p>Aproxime o leitor. O produto será aberto automaticamente assim que o código for identificado.</p>
+        <form id="ean-launcher" novalidate>
+          <label class="screen-reader-only" for="ean-input">Código de barras</label>
+          <input id="ean-input" name="ean" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]*" maxlength="14" />
+        </form>
+        <p id="ean-status" class="ean-scanner-status" role="status" aria-live="polite">Aguardando leitura…</p>
+      </section>
     </div>
     <script type="module" src="/home.js"></script>
   </body>
