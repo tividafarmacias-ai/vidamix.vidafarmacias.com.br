@@ -59,7 +59,7 @@ a:focus-visible { outline: 3px solid rgba(17, 123, 114, 0.32); outline-offset: 3
 .hero-chip { display: inline-flex; padding: 6px 9px; margin-bottom: 17px; color: var(--home-teal-dark); font-size: .62rem; font-weight: 850; letter-spacing: .09em; border-radius: 6px; background: rgba(255,255,255,.7); }
 .studio-hero h2 { max-width: 610px; margin: 0; color: var(--home-navy); font-size: clamp(2rem, 4.25vw, 3.85rem); letter-spacing: -.068em; line-height: .98; }
 .studio-hero p { max-width: 520px; margin: 17px 0 24px; color: #45656a; font-size: clamp(.92rem, 1.15vw, 1.03rem); line-height: 1.58; }
-.studio-hero-actions { display: flex; gap: 18px; align-items: center; }
+.studio-hero-actions { display: flex; gap: 12px 16px; align-items: center; flex-wrap: wrap; }
 .studio-primary-action { display: inline-flex; gap: 8px; min-height: 46px; padding: 0 17px; align-items: center; color: #fff; font-size: .87rem; font-weight: 800; text-decoration: none; border-radius: 13px; background: var(--home-teal); box-shadow: 0 10px 20px rgba(17,123,114,.2); transition: transform 150ms ease, background 150ms ease; }
 .studio-primary-action:hover { background: var(--home-teal-dark); transform: translateY(-2px); }
 .studio-primary-action span { color: var(--home-lime); font-size: 1.1rem; }
@@ -154,9 +154,9 @@ a:focus-visible { outline: 3px solid rgba(17, 123, 114, 0.32); outline-offset: 3
   *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
 
-.ean-launch-button { display: inline-flex; gap: 8px; min-height: 41px; padding: 0 13px; align-items: center; color: var(--home-teal-dark); font: inherit; font-size: .78rem; font-weight: 850; border: 1px solid rgba(17, 123, 114, .22); border-radius: 11px; cursor: pointer; background: rgba(255, 255, 255, .7); transition: border-color 150ms ease, background 150ms ease, transform 150ms ease; }
-.ean-launch-button:hover { border-color: var(--home-teal); background: #fff; transform: translateY(-1px); }
-.ean-launcher-icon { width: 17px; height: 14px; background: repeating-linear-gradient(90deg, var(--home-teal-dark) 0 2px, transparent 2px 4px, var(--home-teal-dark) 4px 5px, transparent 5px 7px); }
+.ean-launch-button { display: inline-flex; gap: 9px; min-height: 46px; padding: 0 17px; align-items: center; color: #fff; font: inherit; font-size: .87rem; font-weight: 850; border: 0; border-radius: 13px; cursor: pointer; background: var(--home-navy); box-shadow: 0 10px 20px rgba(11, 43, 51, .19); transition: background 150ms ease, transform 150ms ease; }
+.ean-launch-button:hover { background: #174851; transform: translateY(-2px); }
+.ean-launcher-icon { width: 18px; height: 15px; background: repeating-linear-gradient(90deg, var(--home-lime) 0 2px, transparent 2px 4px, var(--home-lime) 4px 5px, transparent 5px 7px); }
 .ean-scanner-overlay { position: fixed; z-index: 100; inset: 0; display: grid; padding: 24px; place-items: center; background: rgba(7, 35, 39, .62); backdrop-filter: blur(5px); }
 .ean-scanner-overlay[hidden] { display: none; }
 .ean-scanner-dialog { position: relative; width: min(100%, 420px); padding: 39px 32px 29px; text-align: center; border: 1px solid rgba(255,255,255,.52); border-radius: 24px; background: #fff; box-shadow: 0 28px 70px rgba(0, 0, 0, .27); }

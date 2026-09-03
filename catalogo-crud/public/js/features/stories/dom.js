@@ -1,6 +1,14 @@
 export function getStoriesEditorElements(root = document) {
   return {
     backgrounds: root.querySelector('#story-background-grid'),
+    backgroundSection: root.querySelector('#story-background-section'),
+    backgroundContent: root.querySelector('#story-background-content'),
+    backgroundToggle: root.querySelector('#story-background-toggle'),
+    backgroundSelection: root.querySelector('#story-background-selection'),
+    compositionSection: root.querySelector('#story-composition-section'),
+    compositionContent: root.querySelector('#story-composition-content'),
+    compositionToggle: root.querySelector('#story-composition-toggle'),
+    compositionSelection: root.querySelector('#story-composition-selection'),
     compositionModes: [...root.querySelectorAll('input[name="story-composition-mode"]')],
     search: root.querySelector('#story-product-search'),
     clearSearch: root.querySelector('#clear-product-search-button'),

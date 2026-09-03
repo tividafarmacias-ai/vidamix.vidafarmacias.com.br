@@ -1842,3 +1842,13 @@ body.stories-page {
     font-size: 0.61rem;
   }
 }
+
+.story-collapsible-section .story-section-heading { position: relative; padding-right: 34px; }
+.story-section-collapse-toggle { position: absolute; z-index: 1; inset: -7px; display: flex; width: calc(100% + 14px); padding: 0 8px; align-items: center; justify-content: flex-end; color: var(--teal-dark); border: 0; border-radius: 12px; cursor: pointer; background: transparent; }
+.story-section-collapse-toggle:hover { background: rgba(230, 244, 237, .75); }
+.story-section-collapse-toggle:focus-visible { outline: 3px solid rgba(14, 116, 108, .24); outline-offset: 1px; }
+.story-section-collapse-toggle i { margin-top: 0; font-size: .72rem; pointer-events: none; }
+.story-panel-content[hidden] { display: none; }
+.story-collapsible-section.is-collapsed .story-section-heading { margin-bottom: 0; }
+.story-collapsible-section.is-collapsed .story-section-heading > :not(.story-section-collapse-toggle) { pointer-events: none; }
+.story-section-selection { display: block; margin-top: 3px !important; color: var(--teal-dark) !important; font-weight: 800; }

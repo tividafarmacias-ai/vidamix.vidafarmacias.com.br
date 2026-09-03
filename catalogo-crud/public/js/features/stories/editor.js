@@ -53,6 +53,50 @@ function setStatus(message, isError = false) {
   elements.status.classList.toggle('is-error', isError);
 }
 
+function setPanelCollapsed({ section, content, toggle, selection }, collapsed, selectionText = '') {
+  if (!section || !content || !toggle) return;
+
+  section.classList.toggle('is-collapsed', collapsed);
+  content.hidden = collapsed;
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+  toggle.setAttribute('aria-label', `${collapsed ? 'Expandir' : 'Recolher'} ${toggle.dataset.panelName || 'menu'}`);
+  const icon = toggle.querySelector('i');
+  icon?.classList.toggle('fa-chevron-down', collapsed);
+  icon?.classList.toggle('fa-chevron-up', !collapsed);
+
+  if (selection) {
+    selection.hidden = !collapsed;
+    selection.textContent = selectionText;
+  }
+}
+
+function togglePanel(panel) {
+  const collapsed = !panel.section.classList.contains('is-collapsed');
+  setPanelCollapsed(panel, collapsed, panel.selection?.textContent || 'Selecionado');
+}
+
+function compositionLabel(value) {
+  return {
+    single: '1 produto',
+    'two-products': '2 produtos',
+    combo: 'Combo',
+  }[normalizeCompositionMode(value)] || 'Selecionado';
+}
+
+const compositionPanel = Object.freeze({
+  section: elements.compositionSection,
+  content: elements.compositionContent,
+  toggle: elements.compositionToggle,
+  selection: elements.compositionSelection,
+});
+
+const backgroundPanel = Object.freeze({
+  section: elements.backgroundSection,
+  content: elements.backgroundContent,
+  toggle: elements.backgroundToggle,
+  selection: elements.backgroundSelection,
+});
+
 function parsePrice(value) {
   const cleanValue = String(value || '').trim().replace(/^R\$\s*/i, '').replace(/\s+/g, '');
   if (!cleanValue) return null;
@@ -1334,6 +1378,7 @@ function renderBackgrounds() {
       state.selectedBackground = background;
       renderBackgrounds();
       renderPreview();
+      setPanelCollapsed(backgroundPanel, true, background.nome || 'Fundo selecionado');
     });
     return button;
   });
@@ -1462,6 +1507,7 @@ function setCompositionMode(value) {
   renderProducts();
   syncProductEditor();
   renderPreview();
+  setPanelCollapsed(compositionPanel, true, compositionLabel(nextMode));
 }
 
 function resetProductCompositionState() {
@@ -2203,6 +2249,8 @@ function bindEvents() {
   const activeMode = elements.compositionModes.find((input) => input.checked);
   state.compositionMode = normalizeCompositionMode(activeMode?.value);
   syncCompositionModeControls();
+  compositionPanel.toggle?.addEventListener('click', () => togglePanel(compositionPanel));
+  backgroundPanel.toggle?.addEventListener('click', () => togglePanel(backgroundPanel));
   elements.compositionModes.forEach((input) => {
     input.addEventListener('change', () => {
       if (input.checked) setCompositionMode(input.value);

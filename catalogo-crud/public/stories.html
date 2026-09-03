@@ -35,53 +35,65 @@
 
     <main class="stories-shell">
       <aside class="story-control-sidebar story-control-sidebar-left" aria-label="Cenário e produto">
-        <section class="story-control-section story-composition-section" aria-labelledby="story-composition-heading">
+        <section class="story-control-section story-composition-section story-collapsible-section" id="story-composition-section" aria-labelledby="story-composition-heading">
           <div class="story-section-heading">
             <span class="story-section-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
             <div>
               <h2 id="story-composition-heading">Composição</h2>
               <p>Defina como os produtos aparecem na arte.</p>
+              <p class="story-section-selection" id="story-composition-selection" hidden></p>
             </div>
+            <button class="story-section-collapse-toggle" id="story-composition-toggle" type="button" aria-expanded="true" aria-controls="story-composition-content" aria-label="Recolher composição">
+              <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+            </button>
           </div>
-          <fieldset class="story-composition-options" aria-describedby="story-composition-help">
-            <legend class="story-composition-legend">Tipo de composição da arte</legend>
-            <p class="story-composition-help" id="story-composition-help">Escolha uma opção antes de selecionar os produtos.</p>
-            <label class="story-composition-option" for="story-composition-mode-single">
-              <input class="story-composition-input" id="story-composition-mode-single" name="story-composition-mode" type="radio" value="single" data-composition-mode="single" checked />
-              <span class="story-composition-option-card">
-                <span class="story-composition-option-icon" aria-hidden="true"><i class="fa-solid fa-box"></i></span>
-                <span class="story-composition-option-copy"><strong>1 produto</strong><small>Um produto e uma descrição</small></span>
-                <span class="story-composition-indicator" aria-hidden="true"></span>
-              </span>
-            </label>
-            <label class="story-composition-option" for="story-composition-mode-two">
-              <input class="story-composition-input" id="story-composition-mode-two" name="story-composition-mode" type="radio" value="two-products" data-composition-mode="two-products" />
-              <span class="story-composition-option-card">
-                <span class="story-composition-option-icon" aria-hidden="true"><i class="fa-solid fa-boxes-stacked"></i></span>
-                <span class="story-composition-option-copy"><strong>2 produtos</strong><small>Dois produtos e duas descrições</small></span>
-                <span class="story-composition-indicator" aria-hidden="true"></span>
-              </span>
-            </label>
-            <label class="story-composition-option" for="story-composition-mode-combo">
-              <input class="story-composition-input" id="story-composition-mode-combo" name="story-composition-mode" type="radio" value="combo" data-composition-mode="combo" />
-              <span class="story-composition-option-card">
-                <span class="story-composition-option-icon" aria-hidden="true"><i class="fa-solid fa-link"></i></span>
-                <span class="story-composition-option-copy"><strong>Combo</strong><small>Dois produtos em uma única descrição</small></span>
-                <span class="story-composition-indicator" aria-hidden="true"></span>
-              </span>
-            </label>
-          </fieldset>
+          <div class="story-panel-content" id="story-composition-content">
+            <fieldset class="story-composition-options" aria-describedby="story-composition-help">
+              <legend class="story-composition-legend">Tipo de composição da arte</legend>
+              <p class="story-composition-help" id="story-composition-help">Escolha uma opção antes de selecionar os produtos.</p>
+              <label class="story-composition-option" for="story-composition-mode-single">
+                <input class="story-composition-input" id="story-composition-mode-single" name="story-composition-mode" type="radio" value="single" data-composition-mode="single" checked />
+                <span class="story-composition-option-card">
+                  <span class="story-composition-option-icon" aria-hidden="true"><i class="fa-solid fa-box"></i></span>
+                  <span class="story-composition-option-copy"><strong>1 produto</strong><small>Um produto e uma descrição</small></span>
+                  <span class="story-composition-indicator" aria-hidden="true"></span>
+                </span>
+              </label>
+              <label class="story-composition-option" for="story-composition-mode-two">
+                <input class="story-composition-input" id="story-composition-mode-two" name="story-composition-mode" type="radio" value="two-products" data-composition-mode="two-products" />
+                <span class="story-composition-option-card">
+                  <span class="story-composition-option-icon" aria-hidden="true"><i class="fa-solid fa-boxes-stacked"></i></span>
+                  <span class="story-composition-option-copy"><strong>2 produtos</strong><small>Dois produtos e duas descrições</small></span>
+                  <span class="story-composition-indicator" aria-hidden="true"></span>
+                </span>
+              </label>
+              <label class="story-composition-option" for="story-composition-mode-combo">
+                <input class="story-composition-input" id="story-composition-mode-combo" name="story-composition-mode" type="radio" value="combo" data-composition-mode="combo" />
+                <span class="story-composition-option-card">
+                  <span class="story-composition-option-icon" aria-hidden="true"><i class="fa-solid fa-link"></i></span>
+                  <span class="story-composition-option-copy"><strong>Combo</strong><small>Dois produtos em uma única descrição</small></span>
+                  <span class="story-composition-indicator" aria-hidden="true"></span>
+                </span>
+              </label>
+            </fieldset>
+          </div>
         </section>
 
-        <section class="story-control-section">
+        <section class="story-control-section story-collapsible-section" id="story-background-section" aria-labelledby="story-background-heading">
           <div class="story-section-heading">
             <span class="story-section-icon" aria-hidden="true">◒</span>
             <div>
-              <h2>Fundo da arte</h2>
+              <h2 id="story-background-heading">Fundo da arte</h2>
               <p>Escolha o visual que melhor valoriza o produto.</p>
+              <p class="story-section-selection" id="story-background-selection" hidden></p>
             </div>
+            <button class="story-section-collapse-toggle" id="story-background-toggle" type="button" aria-expanded="true" aria-controls="story-background-content" aria-label="Recolher fundo da arte">
+              <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+            </button>
           </div>
-          <div class="story-background-grid" id="story-background-grid" aria-live="polite"></div>
+          <div class="story-panel-content" id="story-background-content">
+            <div class="story-background-grid" id="story-background-grid" aria-live="polite"></div>
+          </div>
         </section>
 
         <section class="story-control-section">
