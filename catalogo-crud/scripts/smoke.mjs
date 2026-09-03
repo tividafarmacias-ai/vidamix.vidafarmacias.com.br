@@ -41,6 +41,7 @@ try {
     ['/js/features/stories/editor.js', 200, 'text/javascript'],
     ['/api/inexistente', 404, 'application/json'],
     ['/assets/arquivo-fora-do-escopo.png', 403, 'application/json'],
+    ['/story-backgrounds/imagens%20originais/arquivo.png', 403, 'application/json'],
   ];
 
   for (const [pathname, expectedStatus, expectedContentType] of checks) {
@@ -53,7 +54,47 @@ try {
     );
   }
 
-  console.log(`Smoke test aprovado em ${checks.length} rotas.`);
+  const rejectedWrite = await fetch(baseUrl + '/api/products', {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: '{}',
+  });
+  assert.equal(rejectedWrite.status, 400, 'API aceitou conteúdo não JSON');
+
+  const authenticatedConfig = {
+    ...config,
+    auth: {
+      enabled: true,
+      username: 'smoke-user',
+      password: 'smoke-password',
+      realm: 'Smoke Test',
+    },
+  };
+  const authenticatedServer = createServer(
+    createApplication({ config: authenticatedConfig, database, logger: { error() {} } }),
+  );
+
+  try {
+    const authenticatedPort = await listen(authenticatedServer);
+    const authenticatedBaseUrl = 'http://127.0.0.1:' + authenticatedPort;
+    const deniedResponse = await fetch(authenticatedBaseUrl + '/api/health');
+    assert.equal(deniedResponse.status, 401, 'Aplicação protegida aceitou acesso sem credenciais');
+    assert.match(
+      deniedResponse.headers.get('www-authenticate') || '',
+      /^Basic /,
+      'Aplicação protegida não informou desafio Basic',
+    );
+
+    const authorization = 'Basic ' + Buffer.from('smoke-user:smoke-password').toString('base64');
+    const acceptedResponse = await fetch(authenticatedBaseUrl + '/api/health', {
+      headers: { Authorization: authorization },
+    });
+    assert.equal(acceptedResponse.status, 200, 'Aplicação protegida rejeitou credenciais válidas');
+  } finally {
+    await close(authenticatedServer);
+  }
+
+  console.log(`Smoke test aprovado em ${checks.length} rotas e controles de produção.`);
 } finally {
   await close(server);
   database.close();

@@ -41,6 +41,16 @@ npm.cmd run verify
 Esse comando valida a sintaxe dos módulos e executa um teste de fumaça das
 rotas de páginas, API e arquivos estáticos.
 
+## Publicação
+
+O projeto está preparado para ser executado no Plesk com Node.js 22.13+.
+Antes de publicar, mantenha o SQLite, o catálogo de importação e as imagens em
+um caminho persistente fora da aplicação, ative a autenticação administrativa e
+execute npm.cmd run check:production.
+
+O procedimento completo, com caminhos, variáveis e rollback, está em
+[docs/deployment-plesk.md](docs/deployment-plesk.md).
+
 ## Estrutura
 
 ```text

@@ -11,6 +11,7 @@ const roots = [
   'public/home.js',
   'public/stories.js',
   'public/js',
+  'scripts',
 ];
 
 async function collectJavaScriptFiles(target) {

@@ -63,11 +63,16 @@ Essa regra evita que Stories conheça decisões de Feed, encarte ou publicação
 ## Segurança e operação
 
 - Variáveis de ambiente são lidas apenas na configuração do servidor.
+- Em produção, a aplicação exige credenciais HTTP Basic configuradas por
+  ambiente; o catálogo não deve ser exposto para edição anônima.
 - Tokens e chaves de integrações futuras nunca podem ir para `public/`.
 - A entrega de arquivos estáticos usa resolução de caminho restrita, sem acesso
   arbitrário ao disco.
 - A API valida entrada antes de escrever no SQLite.
-- O banco local e seus arquivos WAL/SHM não são versionados.
+- O banco local e seus arquivos WAL/SHM não são versionados e devem residir em
+  storage persistente externo ao release.
+- O serviço usa WAL e um tempo de espera curto para reduzir falhas por lock;
+  em Plesk, mantenha uma única instância da aplicação enquanto usar SQLite.
 - Integrações de publicação devem usar filas no servidor, estado persistido,
   tentativas idempotentes e logs de auditoria.
 

@@ -6,12 +6,15 @@
   "description": "VidaMix Studio: catálogo e criação de artes comerciais.",
   "scripts": {
     "start": "node server.mjs",
+    "start:production": "node server.mjs",
     "dev": "node --watch server.mjs",
     "check": "node scripts/check.mjs",
+    "check:production": "node scripts/production-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
     "verify": "npm run check && npm run test:smoke"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0 <25",
+    "npm": ">=10"
   }
 }
