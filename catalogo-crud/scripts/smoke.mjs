@@ -20,7 +20,11 @@ function close(server) {
   });
 }
 
-const config = loadConfig(process.env);
+const config = loadConfig({
+  ...process.env,
+  NODE_ENV: 'test',
+  APP_AUTH_ENABLED: 'false',
+});
 const database = await initializeCatalogDatabase(config);
 const app = createApplication({ config, database, logger: { error() {} } });
 const server = createServer(app);
