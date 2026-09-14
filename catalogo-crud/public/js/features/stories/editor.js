@@ -15,6 +15,8 @@ import {
 } from './constants.js';
 import { getStoriesEditorElements } from './dom.js';
 import { createStoriesEditorState } from './state.js';
+import { createAutoLayout } from './auto-layout.js';
+import { bindPriceInput } from './price-input.js';
 
 const state = createStoriesEditorState();
 const elements = getStoriesEditorElements();
@@ -53,26 +55,30 @@ function setStatus(message, isError = false) {
   elements.status.classList.toggle('is-error', isError);
 }
 
-function setPanelCollapsed({ section, content, toggle, selection }, collapsed, selectionText = '') {
+function setPanelCollapsed({ section, content, toggle, selection, name, isComplete, summary }, collapsed) {
   if (!section || !content || !toggle) return;
 
+  const complete = isComplete();
+  const restoreFocus = collapsed && content.contains(document.activeElement);
   section.classList.toggle('is-collapsed', collapsed);
+  section.classList.toggle('is-complete', complete);
   content.hidden = collapsed;
   toggle.setAttribute('aria-expanded', String(!collapsed));
-  toggle.setAttribute('aria-label', `${collapsed ? 'Expandir' : 'Recolher'} ${toggle.dataset.panelName || 'menu'}`);
+  toggle.setAttribute('aria-label', `${collapsed ? 'Expandir' : 'Recolher'} ${name}${complete ? ', etapa concluída' : ''}`);
   const icon = toggle.querySelector('i');
   icon?.classList.toggle('fa-chevron-down', collapsed);
   icon?.classList.toggle('fa-chevron-up', !collapsed);
 
   if (selection) {
     selection.hidden = !collapsed;
-    selection.textContent = selectionText;
+    selection.textContent = `${complete ? 'Concluído · ' : ''}${summary()}`;
   }
+  if (restoreFocus) toggle.focus({ preventScroll: true });
 }
 
 function togglePanel(panel) {
   const collapsed = !panel.section.classList.contains('is-collapsed');
-  setPanelCollapsed(panel, collapsed, panel.selection?.textContent || 'Selecionado');
+  setPanelCollapsed(panel, collapsed);
 }
 
 function compositionLabel(value) {
@@ -84,6 +90,9 @@ function compositionLabel(value) {
 }
 
 const compositionPanel = Object.freeze({
+  name: 'composição',
+  isComplete: () => state.compositionChosen,
+  summary: () => state.compositionChosen ? compositionLabel(state.compositionMode) : 'Escolha uma composição',
   section: elements.compositionSection,
   content: elements.compositionContent,
   toggle: elements.compositionToggle,
@@ -91,11 +100,46 @@ const compositionPanel = Object.freeze({
 });
 
 const backgroundPanel = Object.freeze({
+  name: 'fundo da arte',
+  isComplete: () => state.backgroundChosen && Boolean(state.selectedBackground),
+  summary: () => state.backgroundChosen ? state.selectedBackground?.nome || 'Fundo selecionado' : 'Escolha um fundo',
   section: elements.backgroundSection,
   content: elements.backgroundContent,
   toggle: elements.backgroundToggle,
   selection: elements.backgroundSelection,
 });
+
+const productPanel = Object.freeze({
+  name: 'produto',
+  isComplete: () => Boolean(state.selectedProduct)
+    && (getCompositionProductLimit() === 1 || Boolean(state.secondaryProduct)),
+  summary: () => productPanel.isComplete()
+    ? [state.selectedProduct, state.secondaryProduct].filter(Boolean).map((product) => product.nome).join(' + ')
+    : getCompositionSelectionProgress(),
+  section: elements.productSection,
+  content: elements.productContent,
+  toggle: elements.productToggle,
+  selection: elements.productSelectionSummary,
+});
+
+function syncProductPanel({ collapseWhenComplete = false } = {}) {
+  const collapsed = productPanel.isComplete()
+    && (collapseWhenComplete || productPanel.section?.classList.contains('is-collapsed'));
+  setPanelCollapsed(productPanel, collapsed);
+  [
+    [elements.removeProduct, state.selectedProduct, '1'],
+    [elements.removeSecondaryProduct, state.secondaryProduct, '2'],
+  ].forEach(([button, product, number]) => {
+    button.disabled = !product;
+    button.title = product ? `Remover produto ${number}: ${product.nome}` : `Nenhum produto ${number} selecionado`;
+  });
+  elements.removeAllProducts.disabled = !state.selectedProduct && !state.secondaryProduct;
+}
+
+function setProductRemovalStatus(message = '') {
+  elements.productRemovalStatus.textContent = message;
+  elements.productRemovalStatus.hidden = !message;
+}
 
 function parsePrice(value) {
   const cleanValue = String(value || '').trim().replace(/^R\$\s*/i, '').replace(/\s+/g, '');
@@ -106,17 +150,6 @@ function parsePrice(value) {
     .replace(',', '.');
   const amount = Number(numericValue);
   return Number.isFinite(amount) && amount >= 0 ? amount : null;
-}
-
-function formatPrice(value) {
-  const cleanValue = String(value || '').trim().replace(/^R\$\s*/i, '').replace(/\s+/g, '');
-  const amount = parsePrice(cleanValue);
-  if (amount === null) return cleanValue;
-
-  return new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
 }
 
 function getPriceForDetailsTarget(target = 'details') {
@@ -162,6 +195,7 @@ function getDetailsProducts(target = 'details') {
 }
 
 function updateAvailability() {
+  syncAutoLayoutAvailability();
   const secondaryProductReady = !compositionRequiresSecondaryProduct()
     || Boolean(
       state.secondaryProduct
@@ -270,7 +304,8 @@ function getProductWidthLimits(target = 'product') {
   const ratio = getProductAspectRatio(target);
   const absoluteMaximum = Math.min(STORY_WIDTH, (STORY_HEIGHT - STORY_SAFE_TOP) * ratio);
   return {
-    minimum: Math.min(MIN_PRODUCT_WIDTH, absoluteMaximum),
+    // Automatic fitting may need a narrower image for very tall packaging.
+    minimum: Math.min(MIN_PRODUCT_WIDTH, getDefaultProductWidth(target) || MIN_PRODUCT_WIDTH, absoluteMaximum),
     maximum: absoluteMaximum,
   };
 }
@@ -720,6 +755,80 @@ function resetDetailsTransform(target = 'details') {
   setDefaultDetailsWidth(target, detailsTransform?.width || null);
   syncProductEditor();
   schedulePreview();
+}
+
+function syncAutoLayoutAvailability() {
+  let reason = '';
+  if (!state.selectedProduct) {
+    reason = 'Selecione um produto para ajustar a arte.';
+  } else if (compositionRequiresSecondaryProduct() && !state.secondaryProduct) {
+    reason = 'Selecione os dois produtos para ajustar esta composição.';
+  } else if (!state.backgroundImage || state.backgroundImageUrl !== state.selectedBackground?.url
+    || !state.productImage || state.productImageUrl !== state.selectedProduct.imagem_local_url
+    || (compositionRequiresSecondaryProduct() && (!state.secondaryProductImage
+      || state.secondaryProductImageUrl !== state.secondaryProduct.imagem_local_url))) {
+    reason = 'Aguarde o carregamento das imagens para ajustar a arte.';
+  }
+  const wasDisabled = elements.autoLayout.disabled;
+  elements.autoLayout.disabled = Boolean(reason);
+  if (reason || wasDisabled) {
+    elements.autoLayoutStatus.textContent = reason || 'Organiza os produtos e as ofertas sem sobrepor o texto livre.';
+    elements.autoLayoutStatus.classList.remove('is-error');
+  }
+  return !reason;
+}
+
+function applyAutoLayout() {
+  if (!syncAutoLayoutAvailability()) return;
+  finishGesture();
+  const targets = compositionRequiresSecondaryProduct() ? ['product', 'product-secondary'] : ['product'];
+  const freeText = getFreeTextLayout();
+  // Tracked text can paint beyond its logical box when a word is very long.
+  const textWidth = freeText ? Math.max(freeText.width, freeText.textWidth) : 0;
+  const layout = createAutoLayout({
+    mode: state.compositionMode,
+    products: targets.map((target) => ({ target, aspectRatio: getProductAspectRatio(target) })),
+    measureDetails: (target, width) => {
+      const card = getDetailsLayout({ x: 0, y: 0, width }, target);
+      return { width: card.descriptionWidth, height: card.cardHeight };
+    },
+    freeTextBox: freeText ? {
+      x: freeText.x + (freeText.width - textWidth) / 2,
+      y: freeText.y,
+      width: textWidth,
+      height: freeText.height,
+    } : null,
+  });
+  if (!layout) {
+    elements.autoLayoutStatus.textContent = freeText
+      ? 'Não há espaço suficiente. Reduza ou mova o texto livre e tente novamente.'
+      : 'Os textos desta composição ocupam a área disponível. Revise as descrições dos produtos e tente novamente.';
+    elements.autoLayoutStatus.classList.add('is-error');
+    return;
+  }
+
+  // Commit only the complete, measured layout. Linked elements and the export
+  // use these same transforms, while each size control starts at the new 100%.
+  for (const [target, transform] of Object.entries(layout.products)) {
+    setDefaultProductWidth(target, transform.width);
+    setProductTransform(target, clampProductTransform(transform, target));
+  }
+  for (const [target, transform] of Object.entries(layout.details)) {
+    setDefaultDetailsWidth(target, transform.width);
+    setDetailsTransform(target, clampDetailsTransform(transform, target));
+  }
+  if (!isTwoProductsMode()) {
+    state.secondaryDetailsTransform = null;
+    state.defaultSecondaryDetailsWidth = null;
+  }
+  state.activeEditor = null;
+  syncProductEditor();
+  schedulePreview();
+  updateAvailability();
+  const message = `Ajuste aplicado: ${compositionLabel(state.compositionMode).toLowerCase()}. Você pode continuar ajustando os elementos manualmente.`;
+  elements.autoLayoutStatus.textContent = message;
+  elements.autoLayoutStatus.classList.remove('is-error');
+  setStatus(message);
 }
 
 function setProductWidth(width, centerX, centerY, target = 'product') {
@@ -1209,6 +1318,7 @@ function syncPriceInputs() {
 }
 
 function syncProductEditor() {
+  syncAutoLayoutAvailability();
   const productBox = getProductBox();
   const secondaryProductBox = getProductBox(undefined, 'product-secondary');
   const detailsBox = getDetailsBox();
@@ -1305,6 +1415,7 @@ function syncProductEditor() {
 }
 
 async function renderPreview() {
+  syncAutoLayoutAvailability();
   const requestId = ++state.previewRequestId;
   const backgroundUrl = state.selectedBackground?.url || null;
   const productUrl = state.selectedProduct?.imagem_local_url || null;
@@ -1396,9 +1507,10 @@ function renderBackgrounds() {
     button.append(image, createElement('span', null, background.nome));
     button.addEventListener('click', () => {
       state.selectedBackground = background;
+      state.backgroundChosen = true;
+      setPanelCollapsed(backgroundPanel, true);
       renderBackgrounds();
       renderPreview();
-      setPanelCollapsed(backgroundPanel, true, background.nome || 'Fundo selecionado');
     });
     return button;
   });
@@ -1509,12 +1621,15 @@ function syncCompositionModeControls() {
 
 function setCompositionMode(value) {
   const nextMode = normalizeCompositionMode(value);
+  state.compositionChosen = true;
   if (state.compositionMode === nextMode) {
     syncCompositionModeControls();
+    setPanelCollapsed(compositionPanel, true);
     return;
   }
 
   const previousMode = state.compositionMode;
+  setProductRemovalStatus();
   state.compositionMode = nextMode;
   if (getCompositionProductLimit() === 1) {
     state.secondaryProduct = null;
@@ -1524,10 +1639,11 @@ function setCompositionMode(value) {
   }
   resetProductCompositionState();
   syncCompositionModeControls();
+  syncProductPanel();
   renderProducts();
   syncProductEditor();
   renderPreview();
-  setPanelCollapsed(compositionPanel, true, compositionLabel(nextMode));
+  setPanelCollapsed(compositionPanel, true);
 }
 
 function resetProductCompositionState() {
@@ -1547,28 +1663,61 @@ function resetProductCompositionState() {
   state.activeEditor = null;
 }
 
-function clearSelectedProduct() {
-  state.selectedProduct = null;
-  state.secondaryProduct = null;
-  state.secondaryPrice = '';
+function refreshProductSelection({ collapseWhenComplete = false } = {}) {
+  syncProductPanel({ collapseWhenComplete });
   resetProductCompositionState();
-  syncProductEditor();
+  renderProducts();
+  // Clear obsolete images and disable export immediately, including during image loading.
+  drawPreviewNow();
+  updateAvailability();
+  void renderPreview();
+}
+
+function removeProductFromComposition(position) {
+  if (position === 'primary' && !state.selectedProduct) return;
+  if (position === 'secondary' && !state.secondaryProduct) return;
+  if (!state.selectedProduct && !state.secondaryProduct) return;
+
+  const restoreFocus = elements.productContent.contains(document.activeElement);
+  let message;
+  if (position === 'all') {
+    state.selectedProduct = null;
+    state.secondaryProduct = null;
+    state.price = '';
+    state.secondaryPrice = '';
+    message = 'Todos os produtos foram removidos da arte.';
+  } else if (position === 'primary') {
+    const promoted = Boolean(state.secondaryProduct);
+    state.selectedProduct = state.secondaryProduct;
+    // A combo has one shared price; separate offers keep the remaining product's price.
+    state.price = promoted ? (isTwoProductsMode() ? state.secondaryPrice : state.price) : '';
+    state.secondaryProduct = null;
+    state.secondaryPrice = '';
+    message = promoted
+      ? 'Produto 1 removido. O produto 2 agora ocupa a posição 1.'
+      : 'Produto 1 removido da arte.';
+  } else {
+    state.secondaryProduct = null;
+    state.secondaryPrice = '';
+    message = 'Produto 2 removido da arte.';
+  }
+
+  refreshProductSelection();
+  setProductRemovalStatus(message);
+  if (restoreFocus) elements.search.focus({ preventScroll: true });
 }
 
 function selectProductForComposition(product) {
   if (product.id === state.selectedProduct?.id) {
-    if (state.secondaryProduct) {
-      state.selectedProduct = state.secondaryProduct;
-      state.price = state.secondaryPrice;
-      state.secondaryProduct = null;
-      state.secondaryPrice = '';
-    } else {
-      state.selectedProduct = null;
-    }
-  } else if (product.id === state.secondaryProduct?.id) {
-    state.secondaryProduct = null;
-    state.secondaryPrice = '';
-  } else if (!state.selectedProduct) {
+    removeProductFromComposition('primary');
+    return;
+  }
+  if (product.id === state.secondaryProduct?.id) {
+    removeProductFromComposition('secondary');
+    return;
+  }
+  setProductRemovalStatus();
+  if (!state.selectedProduct) {
     state.selectedProduct = product;
   } else if (getCompositionProductLimit() === 1) {
     state.selectedProduct = product;
@@ -1577,9 +1726,7 @@ function selectProductForComposition(product) {
     state.secondaryPrice = '';
   }
 
-  resetProductCompositionState();
-  renderProducts();
-  renderPreview();
+  refreshProductSelection({ collapseWhenComplete: true });
 }
 
 function addProductToResults(product) {
@@ -1599,6 +1746,7 @@ async function preselectProductFromLocation() {
 
     state.selectedProduct = product;
     state.secondaryProduct = null;
+    syncProductPanel({ collapseWhenComplete: true });
     resetProductCompositionState();
     addProductToResults(product);
     renderProducts();
@@ -2165,6 +2313,8 @@ function downloadStory() {
     return;
   }
 
+  // Keep the export name tied to this snapshot if products change while encoding.
+  const productName = state.selectedProduct.nome;
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width = STORY_WIDTH;
   exportCanvas.height = STORY_HEIGHT;
@@ -2183,7 +2333,7 @@ function downloadStory() {
       return;
     }
 
-    const safeName = state.selectedProduct.nome
+    const safeName = productName
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '-')
@@ -2271,7 +2421,17 @@ function bindEvents() {
   syncCompositionModeControls();
   compositionPanel.toggle?.addEventListener('click', () => togglePanel(compositionPanel));
   backgroundPanel.toggle?.addEventListener('click', () => togglePanel(backgroundPanel));
+  productPanel.toggle?.addEventListener('click', () => togglePanel(productPanel));
+  elements.removeProduct.addEventListener('click', () => removeProductFromComposition('primary'));
+  elements.removeSecondaryProduct.addEventListener('click', () => removeProductFromComposition('secondary'));
+  elements.removeAllProducts.addEventListener('click', () => removeProductFromComposition('all'));
   elements.compositionModes.forEach((input) => {
+    // Confirming the initially checked option does not emit a change event.
+    input.addEventListener('click', () => {
+      if (input.checked && normalizeCompositionMode(input.value) === state.compositionMode) {
+        setCompositionMode(input.value);
+      }
+    });
     input.addEventListener('change', () => {
       if (input.checked) setCompositionMode(input.value);
     });
@@ -2294,40 +2454,13 @@ function bindEvents() {
   elements.clearSearch.addEventListener('click', clearProductSearch);
   elements.products.addEventListener('scroll', loadMoreProductsOnScroll, { passive: true });
 
-  elements.price.addEventListener('input', () => {
-    const typedValue = elements.price.value.replace(/[^\d,.-]/g, '');
-    elements.price.value = typedValue;
-    state.price = typedValue;
-    syncPriceValidation();
-    schedulePreview();
-    updateAvailability();
-  });
-
-  elements.price.addEventListener('blur', () => {
-    const formatted = formatPrice(elements.price.value);
-    state.price = formatted;
-    elements.price.value = formatted;
-    syncPriceValidation();
-    schedulePreview();
-    updateAvailability();
-  });
-
-  elements.secondaryPrice.addEventListener('input', () => {
-    const typedValue = elements.secondaryPrice.value.replace(/[^\d,.-]/g, '');
-    elements.secondaryPrice.value = typedValue;
-    state.secondaryPrice = typedValue;
-    syncPriceValidation();
-    schedulePreview();
-    updateAvailability();
-  });
-
-  elements.secondaryPrice.addEventListener('blur', () => {
-    const formatted = formatPrice(elements.secondaryPrice.value);
-    state.secondaryPrice = formatted;
-    elements.secondaryPrice.value = formatted;
-    syncPriceValidation();
-    schedulePreview();
-    updateAvailability();
+  [[elements.price, 'price'], [elements.secondaryPrice, 'secondaryPrice']].forEach(([input, key]) => {
+    bindPriceInput(input, (value) => {
+      state[key] = value;
+      syncPriceValidation();
+      schedulePreview();
+      updateAvailability();
+    });
   });
 
   elements.freeText.addEventListener('input', () => {
@@ -2393,6 +2526,7 @@ function bindEvents() {
   elements.thirdsGridToggle.addEventListener('click', () => {
     setThirdsGridVisible(!state.thirdsGridVisible);
   });
+  elements.autoLayout.addEventListener('click', applyAutoLayout);
   elements.download.addEventListener('click', downloadStory);
 }
 

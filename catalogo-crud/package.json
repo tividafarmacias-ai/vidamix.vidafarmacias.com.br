@@ -11,7 +11,10 @@
     "check": "node scripts/check.mjs",
     "check:production": "node scripts/production-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
-    "verify": "npm run check && npm run test:smoke"
+    "test:tour": "node --test scripts/tour-storage.test.mjs",
+    "test:stories-layout": "node --test scripts/stories-auto-layout.test.mjs",
+    "test:stories-prices": "node --test scripts/stories-price-input.test.mjs",
+    "verify": "npm run check && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:smoke"
   },
   "engines": {
     "node": ">=22.13.0 <25",

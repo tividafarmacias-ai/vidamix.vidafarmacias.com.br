@@ -3,30 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b2b33" />
+    <meta name="theme-color" content="#084F98" />
     <meta
       name="description"
       content="Crie artes de produtos no formato vertical para Stories."
     />
     <title>Criador de Stories | Catálogo</title>
+    <link rel="stylesheet" href="/brand.css" />
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="/stories.css" />
+    <link rel="stylesheet" href="/tour.css" />
   </head>
-  <body class="stories-page">
+  <body class="stories-page" data-tour-page="stories">
     <header class="stories-topbar">
-      <a class="stories-back-link" href="/" aria-label="Voltar ao catálogo">
+      <a class="stories-back-link" href="/" aria-label="Voltar à central de criação">
         <span aria-hidden="true">←</span>
-        Catálogo de produtos
+        Central de criação
       </a>
 
       <div class="stories-title-block">
-    
+        <span class="stories-title-mark" aria-hidden="true">V</span>
+        <div>
+          <p class="eyebrow">VidaMix Studio</p>
+          <h1>Criador de Stories</h1>
+        </div>
       </div>
 
       <div class="stories-header-actions">
         <span class="stories-format">Story · 1080 × 1920</span>
-        <button class="primary-button" id="download-story-button" type="button" disabled>
+        <button class="tour-launcher" type="button" data-tour-start>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round" /></svg>
+          Tour guiado
+        </button>
+        <button class="primary-button" id="download-story-button" type="button" data-tour="stories-download" disabled>
           <span aria-hidden="true">↓</span>
           <span id="story-download-label">Baixar PNG</span>
         </button>
@@ -35,7 +45,24 @@
 
     <main class="stories-shell">
       <aside class="story-control-sidebar story-control-sidebar-left" aria-label="Cenário e produto">
-        <section class="story-control-section story-composition-section story-collapsible-section" id="story-composition-section" aria-labelledby="story-composition-heading">
+        <section class="story-control-section story-collapsible-section" id="story-background-section" aria-labelledby="story-background-heading" data-tour="stories-background">
+          <div class="story-section-heading">
+            <span class="story-section-icon" aria-hidden="true">◒</span>
+            <div>
+              <h2 id="story-background-heading">Fundo da arte</h2>
+              <p>Escolha o visual que melhor valoriza o produto.</p>
+              <p class="story-section-selection" id="story-background-selection" hidden></p>
+            </div>
+            <button class="story-section-collapse-toggle" id="story-background-toggle" type="button" aria-expanded="true" aria-controls="story-background-content" aria-label="Recolher fundo da arte">
+              <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="story-panel-content" id="story-background-content">
+            <div class="story-background-grid" id="story-background-grid" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="story-control-section story-composition-section story-collapsible-section" id="story-composition-section" aria-labelledby="story-composition-heading" data-tour="stories-composition">
           <div class="story-section-heading">
             <span class="story-section-icon" aria-hidden="true"><i class="fa-solid fa-layer-group"></i></span>
             <div>
@@ -79,42 +106,40 @@
           </div>
         </section>
 
-        <section class="story-control-section story-collapsible-section" id="story-background-section" aria-labelledby="story-background-heading">
-          <div class="story-section-heading">
-            <span class="story-section-icon" aria-hidden="true">◒</span>
-            <div>
-              <h2 id="story-background-heading">Fundo da arte</h2>
-              <p>Escolha o visual que melhor valoriza o produto.</p>
-              <p class="story-section-selection" id="story-background-selection" hidden></p>
-            </div>
-            <button class="story-section-collapse-toggle" id="story-background-toggle" type="button" aria-expanded="true" aria-controls="story-background-content" aria-label="Recolher fundo da arte">
-              <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
-            </button>
-          </div>
-          <div class="story-panel-content" id="story-background-content">
-            <div class="story-background-grid" id="story-background-grid" aria-live="polite"></div>
-          </div>
-        </section>
-
-        <section class="story-control-section">
+        <section class="story-control-section story-collapsible-section" id="story-product-section" aria-labelledby="story-product-heading" data-tour="stories-product">
           <div class="story-section-heading">
             <span class="story-section-icon" aria-hidden="true">⌕</span>
             <div>
-              <h2>Produto</h2>
+              <h2 id="story-product-heading">Produto</h2>
               <p>Busque por nome, marca, princípio ativo ou código.</p>
+              <p class="story-section-selection" id="story-product-selection-summary" hidden></p>
             </div>
+            <button class="story-section-collapse-toggle" id="story-product-toggle" type="button" aria-expanded="true" aria-controls="story-product-content" aria-label="Recolher produto">
+              <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+            </button>
           </div>
-          <div class="story-search-shell">
-            <label class="story-search-field" for="story-product-search">
-              <span aria-hidden="true">⌕</span>
-              <input id="story-product-search" type="search" autocomplete="off" placeholder="Buscar produto" aria-describedby="story-product-search-summary" />
-            </label>
-            <button class="story-search-clear" id="clear-product-search-button" type="button" hidden aria-label="Limpar busca">×</button>
+          <div class="story-panel-content" id="story-product-content">
+            <div class="story-product-actions" role="group" aria-labelledby="story-product-actions-label">
+              <p class="story-product-actions-label" id="story-product-actions-label">Produtos na arte</p>
+              <div class="story-product-actions-grid">
+                <button class="story-product-remove" id="remove-story-product-button" type="button" disabled>Remover produto 1</button>
+                <button class="story-product-remove" id="remove-story-secondary-product-button" type="button" disabled>Remover produto 2</button>
+                <button class="story-product-remove story-product-remove-all" id="remove-all-story-products-button" type="button" disabled>Remover todos os produtos</button>
+              </div>
+              <p id="story-product-removal-status" class="story-product-removal-status" role="status" aria-live="polite" hidden></p>
+            </div>
+            <div class="story-search-shell">
+              <label class="story-search-field" for="story-product-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="story-product-search" type="search" autocomplete="off" placeholder="Buscar produto" aria-describedby="story-product-search-summary" />
+              </label>
+              <button class="story-search-clear" id="clear-product-search-button" type="button" hidden aria-label="Limpar busca">×</button>
+            </div>
+            <div class="story-search-context">
+              <p id="story-product-search-summary">Produtos em destaque</p>
+            </div>
+            <div class="story-product-results" id="story-product-results" aria-live="polite"></div>
           </div>
-          <div class="story-search-context">
-            <p id="story-product-search-summary">Produtos em destaque</p>
-          </div>
-          <div class="story-product-results" id="story-product-results" aria-live="polite"></div>
         </section>
 
         <p class="story-status" id="story-status" role="status" aria-live="polite">Carregando backgrounds disponíveis…</p>
@@ -122,7 +147,7 @@
 
       <aside class="story-control-sidebar story-control-sidebar-right" aria-label="Oferta e ajustes da arte">
 
-        <section class="story-control-section">
+        <section class="story-control-section" data-tour="stories-offer">
           <div class="story-section-heading">
             <span class="story-section-icon story-section-icon-price" aria-hidden="true">R$</span>
             <div>
@@ -135,18 +160,33 @@
               <span class="story-price-field-label" id="story-primary-price-label">Preço da oferta</span>
               <span class="story-price-input is-missing">
                 <span>R$</span>
-                <input id="story-price" type="text" inputmode="decimal" autocomplete="off" placeholder="00,00" aria-labelledby="story-primary-price-label" aria-invalid="true" required />
+                <input id="story-price" type="text" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-labelledby="story-primary-price-label" aria-describedby="story-price-hint" aria-invalid="true" required />
               </span>
             </label>
             <label class="story-price-field is-disabled" id="story-secondary-price-field" aria-disabled="true">
               <span class="story-price-field-label" id="story-secondary-price-label">Preço do produto 2</span>
               <span class="story-price-input">
                 <span>R$</span>
-                <input id="story-secondary-price" type="text" inputmode="decimal" autocomplete="off" placeholder="00,00" aria-labelledby="story-secondary-price-label" disabled />
+                <input id="story-secondary-price" type="text" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-labelledby="story-secondary-price-label" aria-describedby="story-price-hint" disabled />
               </span>
             </label>
           </div>
-          <p class="story-field-hint">Digite apenas o valor, por exemplo: 29,90.</p>
+          <p class="story-field-hint" id="story-price-hint">Digite só os números: 2990 vira 29,90. A vírgula é automática.</p>
+        </section>
+
+        <section class="story-control-section story-auto-layout-section" aria-labelledby="story-auto-layout-heading">
+          <div class="story-section-heading">
+            <span class="story-section-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+            <div>
+              <h2 id="story-auto-layout-heading">Organização da arte</h2>
+              <p>Aproveite o espaço da composição escolhida.</p>
+            </div>
+          </div>
+          <button class="primary-button story-auto-layout-button" id="story-auto-layout-button" type="button" aria-describedby="story-auto-layout-status" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+            Ajuste automático
+          </button>
+          <p class="story-field-hint story-auto-layout-status" id="story-auto-layout-status" role="status" aria-live="polite">Selecione um produto para ajustar a arte.</p>
         </section>
 
         <section class="story-control-section story-free-text-section">
@@ -256,7 +296,7 @@
 
       <section class="story-workspace" aria-label="Prévia editável da arte">
         <div class="story-stage">
-          <div class="story-canvas-wrap" id="story-canvas-wrap">
+          <div class="story-canvas-wrap" id="story-canvas-wrap" data-tour="stories-preview">
             <canvas id="story-preview-canvas" width="1080" height="1920" aria-label="Prévia editável da arte para Story">
               Seu navegador não suporta a prévia da arte.
             </canvas>
@@ -348,5 +388,6 @@
     </main>
 
     <script type="module" src="/stories.js"></script>
+    <script type="module" src="/js/features/tour/index.js"></script>
   </body>
 </html>

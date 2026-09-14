@@ -3,13 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b2b33" />
+    <meta name="theme-color" content="#084F98" />
     <meta name="description" content="VidaMix Studio: central para criar artes comerciais a partir do catálogo de produtos." />
     <title>VidaMix Studio | Central de criação</title>
+    <link rel="stylesheet" href="/brand.css" />
     <link rel="stylesheet" href="/home.css" />
+    <link rel="stylesheet" href="/tour.css" />
   </head>
-  <body class="home-page">
+  <body class="home-page" data-tour-page="home">
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
+          <span class="site-brand-mark" aria-hidden="true">V</span>
+          <span><strong>VidaMix Studio</strong><small>Central de criação</small></span>
+        </a>
+        <nav class="site-nav" aria-label="Navegação principal">
+          <a href="/" aria-current="page">Central</a>
+          <a href="/catalogo">Catálogo</a>
+          <a href="/artes/stories">Stories</a>
+        </nav>
+      </div>
+    </header>
 
     <div class="studio-shell">
       <main class="studio-main" id="conteudo">
@@ -18,15 +34,19 @@
         <section class="studio-hero" aria-labelledby="hero-title">
           <div class="studio-hero-copy">
             <span class="hero-chip">NOVO FLUXO DE CRIAÇÃO</span>
-            <h2 id="hero-title">Transforme o seu catálogo em campanhas visuais.</h2>
+            <h1 id="hero-title">Transforme o seu catálogo em campanhas visuais.</h1>
             <p>Escolha o formato, combine produtos e publique artes consistentes em poucos minutos.</p>
             <div class="studio-hero-actions">
-              <a class="studio-primary-action" href="/artes/stories"><span aria-hidden="true">✦</span> Criar arte para Story</a>
-              <button class="ean-launch-button" id="ean-overlay-open" type="button">
+              <a class="studio-primary-action" href="/artes/stories" data-tour="home-create"><span aria-hidden="true">✦</span> Criar arte para Story</a>
+              <button class="ean-launch-button" id="ean-overlay-open" type="button" data-tour="home-barcode">
                 <span class="ean-launcher-icon" aria-hidden="true"></span>
                 Código de barras
               </button>
               <a class="studio-secondary-action" href="#formatos">Ver todos os formatos</a>
+              <button class="tour-launcher" type="button" data-tour-start>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round" /></svg>
+                Tour guiado
+              </button>
             </div>
           </div>
           <div class="hero-preview" aria-hidden="true">
@@ -41,7 +61,7 @@
           </div>
 
           <div class="format-grid">
-            <article class="format-card format-card-story">
+            <article class="format-card format-card-story" data-tour="home-formats">
               <div class="format-card-topline"><span class="format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="3" width="10" height="18" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M10 6h4M10.5 18h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="format-status is-available">Disponível agora</span></div>
               <div><h3>Stories</h3><p>Campanhas verticais para Instagram e WhatsApp.</p></div>
               <div class="format-card-footer"><span>1080 × 1920</span><a href="/artes/stories">Criar arte <b aria-hidden="true">→</b></a></div>
@@ -85,5 +105,6 @@
       </section>
     </div>
     <script type="module" src="/home.js"></script>
+    <script type="module" src="/js/features/tour/index.js"></script>
   </body>
 </html>

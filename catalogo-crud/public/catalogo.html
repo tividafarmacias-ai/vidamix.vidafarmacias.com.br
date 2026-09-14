@@ -3,22 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b2b33" />
+    <meta name="theme-color" content="#084F98" />
     <meta
       name="description"
       content="Catálogo de produtos com busca, visualização e edição local."
     />
     <title>Catálogo | VidaMix Studio</title>
+    <link rel="stylesheet" href="/brand.css" />
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/catalogue-stories-link.css" />
     <link rel="stylesheet" href="/catalogue.css" />
+    <link rel="stylesheet" href="/tour.css" />
   </head>
-  <body class="catalogue-page">
+  <body class="catalogue-page" data-tour-page="catalogue">
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
+          <span class="site-brand-mark" aria-hidden="true">V</span>
+          <span><strong>VidaMix Studio</strong><small>Catálogo de produtos</small></span>
+        </a>
+        <nav class="site-nav" aria-label="Navegação principal">
+          <a href="/">Central</a>
+          <a href="/catalogo" aria-current="page">Catálogo</a>
+          <a href="/artes/stories">Stories</a>
+        </nav>
+      </div>
+    </header>
     <main class="catalogue-app">
       <div class="workspace catalogue-content">
         <header class="workspace-header catalogue-header">
-         
-          <div class="workspace-actions">
+          <div class="catalogue-heading">
+            <div>
+              <p class="eyebrow">Gestão de produtos</p>
+              <h1>Catálogo de produtos</h1>
+            </div>
+          </div>
+          <div class="workspace-actions" data-tour="catalogue-actions">
+            <button class="tour-launcher" type="button" data-tour-start>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round" /></svg>
+              Tour guiado
+            </button>
             <a class="primary-button story-launch-button" id="story-creator-button" href="/artes/stories">
               <span aria-hidden="true">✦</span>
               Criar arte
@@ -41,7 +65,7 @@
             <button class="filter-reset-button" id="clear-filters-button" type="button">Limpar filtros</button>
           </div>
 
-          <label class="search-field" for="search-input">
+          <label class="search-field" for="search-input" data-tour="catalogue-search">
             <span class="search-icon" aria-hidden="true">⌕</span>
             <input
               id="search-input"
@@ -59,7 +83,7 @@
             <div class="category-chips" id="category-chips" role="group" aria-label="Filtros por categoria"></div>
           </div>
 
-          <div class="filter-row">
+          <div class="filter-row" data-tour="catalogue-filters">
             <label>
               <span>Categoria</span>
               <select id="category-filter">
@@ -86,7 +110,7 @@
         </section>
 
         <section class="catalogue-section" aria-live="polite">
-          <div class="results-heading">
+          <div class="results-heading" data-tour="catalogue-results">
             <div>
               <p class="eyebrow" id="results-kicker">Carregando catálogo</p>
               <h3 id="results-title">Produtos</h3>
@@ -233,5 +257,6 @@
     <datalist id="category-options"></datalist>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/js/features/tour/index.js"></script>
   </body>
 </html>

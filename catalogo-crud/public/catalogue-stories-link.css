@@ -10,7 +10,7 @@
 }
 
 .story-launch-button span {
-  color: var(--lime);
+  color: #fff;
   font-size: 1.15rem;
 }
 
@@ -22,7 +22,7 @@
 }
 
 .workspace-actions .ghost-button span {
-  color: var(--teal);
+  color: var(--azul);
   font-size: 1.12rem;
   line-height: 1;
 }

@@ -2,7 +2,9 @@ export function createStoriesEditorState() {
   return {
     backgrounds: [],
     selectedBackground: null,
+    backgroundChosen: false,
     compositionMode: 'single',
+    compositionChosen: false,
     selectedProduct: null,
     secondaryProduct: null,
     productResults: [],

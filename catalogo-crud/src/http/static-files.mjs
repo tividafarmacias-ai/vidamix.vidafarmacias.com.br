@@ -15,6 +15,7 @@ const mimeTypes = new Map([
   ['.gif', 'image/gif'],
   ['.svg', 'image/svg+xml'],
   ['.ico', 'image/x-icon'],
+  ['.woff2', 'font/woff2'],
 ]);
 
 export function fileExists(filePath) {
