@@ -31,8 +31,7 @@ html.tour-is-open * { scroll-behavior: auto; }
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: rgba(6, 35, 67, 0.58);
-  backdrop-filter: blur(3px);
+  background: rgba(44, 68, 96, .3);
 }
 
 .tour-spotlight {
@@ -41,7 +40,7 @@ html.tour-is-open * { scroll-behavior: auto; }
   pointer-events: none;
   border: 2px solid var(--vermelho);
   border-radius: var(--radius-lg);
-  box-shadow: 0 0 0 5px rgba(242, 30, 38, 0.2), 0 0 0 9999px rgba(6, 35, 67, 0.66);
+  box-shadow: 0 0 0 5px rgba(242, 30, 38, .12), 0 0 0 9999px rgba(44, 68, 96, .4);
   transition: top 150ms ease, left 150ms ease, width 150ms ease, height 150ms ease;
 }
 
@@ -58,8 +57,10 @@ html.tour-is-open * { scroll-behavior: auto; }
   text-align: left;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  background: var(--color-panel);
-  box-shadow: 0 24px 80px rgba(8, 79, 152, 0.28), 0 2px 8px rgba(8, 79, 152, 0.08);
+  background: var(--glass-surface-strong);
+  box-shadow: var(--glass-highlight), 0 24px 64px rgba(49, 84, 122, .16);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: #bfd0e3 transparent;
@@ -70,7 +71,7 @@ html.tour-is-open * { scroll-behavior: auto; }
 .tour-card[data-mode="complete"] {
   width: 420px;
   padding: 32px;
-  background: linear-gradient(180deg, rgba(8, 79, 152, 0.06), transparent 200px), var(--color-panel);
+  background: linear-gradient(180deg, rgba(215, 233, 251, .4), transparent 200px), var(--glass-surface-strong);
 }
 
 .tour-dialog button,
@@ -271,24 +272,25 @@ html.tour-is-open * { scroll-behavior: auto; }
   font-size: 0.75rem;
   white-space: nowrap;
   border-color: var(--color-line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--glass-surface-strong);
+  box-shadow: var(--glass-highlight);
 }
 
 .tour-launcher svg { width: 16px; height: 16px; flex: none; }
-.tour-launcher:hover { border-color: var(--azul); background: var(--color-blue-soft); }
+.tour-launcher:hover { border-color: var(--glass-selected-line); background: var(--glass-selected); }
 
 .stories-topbar .tour-launcher {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--azul);
+  border-color: var(--glass-line);
+  background: var(--glass-surface);
 }
 
 .stories-topbar .tour-launcher:hover {
-  border-color: rgba(255, 255, 255, 0.38);
-  background: rgba(255, 255, 255, 0.18);
+  border-color: var(--glass-selected-line);
+  background: var(--glass-selected);
 }
 
-.stories-topbar .tour-launcher:focus-visible { outline-color: #fff; }
+.stories-topbar .tour-launcher:focus-visible { outline-color: var(--azul); }
 .catalogue-header .workspace-actions,
 .stories-header-actions { flex-wrap: wrap; }
 

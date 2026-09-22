@@ -75,5 +75,18 @@ export function getStoriesEditorElements(root = document) {
     status: root.querySelector('#story-status'),
     download: root.querySelector('#download-story-button'),
     downloadLabel: root.querySelector('#story-download-label'),
+    downloadVideo: root.querySelector('#download-story-video-button'),
+    downloadVideoLabel: root.querySelector('#story-video-download-label'),
+    videoExportPanel: root.querySelector('#story-video-export-panel'),
+    videoExportStatus: root.querySelector('#story-video-export-status'),
+    videoProgress: root.querySelector('#story-video-progress'),
+    cancelVideo: root.querySelector('#cancel-story-video-button'),
+    videoDownloadLink: root.querySelector('#story-video-download-link'),
+    mobileEditTargets: [...root.querySelectorAll('[data-mobile-edit-target]')],
+    mobileNudges: [...root.querySelectorAll('[data-mobile-nudge]')],
+    mobileScaleSteps: [...root.querySelectorAll('[data-mobile-scale-step]')],
+    mobileCenter: root.querySelector('[data-mobile-center]'),
+    mobileScaleValue: root.querySelector('#story-mobile-scale-value'),
+    mobileEditHint: root.querySelector('#story-mobile-edit-hint'),
   };
 }

@@ -15,9 +15,6 @@ const numberFormatter = new Intl.NumberFormat('pt-BR');
 const formatNumber = (value) => numberFormatter.format(value);
 
 const elements = {
-  summaryTotal: document.querySelector('#summary-total'),
-  summaryActive: document.querySelector('#summary-active'),
-  summaryImages: document.querySelector('#summary-images'),
   search: document.querySelector('#search-input'),
   category: document.querySelector('#category-filter'),
   categoryChips: document.querySelector('#category-chips'),
@@ -25,7 +22,6 @@ const elements = {
   image: document.querySelector('#image-filter'),
   categoryOptions: document.querySelector('#category-options'),
   grid: document.querySelector('#product-grid'),
-  empty: document.querySelector('#empty-state'),
   resultsKicker: document.querySelector('#results-kicker'),
   resultsTitle: document.querySelector('#results-title'),
   previousPage: document.querySelector('#previous-page-button'),
@@ -165,13 +161,6 @@ function renderProducts(data) {
   elements.nextPage.disabled = pagination.page >= pagination.totalPages;
 }
 
-async function loadSummary() {
-  const summary = await requestJson('/api/summary');
-  elements.summaryTotal.textContent = formatNumber(summary.total);
-  elements.summaryActive.textContent = formatNumber(summary.ativos);
-  elements.summaryImages.textContent = formatNumber(summary.com_imagem);
-}
-
 async function loadCategories() {
   const response = await requestJson('/api/categories');
   const currentValue = state.category;
@@ -248,7 +237,6 @@ async function loadProducts() {
     if (currentRequest !== state.requestId) return;
     elements.grid.replaceChildren();
     elements.grid.hidden = true;
-    elements.empty.hidden = false;
     elements.resultsKicker.textContent = 'Não foi possível carregar';
     elements.resultsTitle.textContent = 'Tente novamente';
     showToast(error.message, true);
@@ -380,7 +368,7 @@ async function saveProduct(event) {
     });
     closeDialog();
     if (!editing) state.page = 1;
-    await Promise.all([loadSummary(), loadCategories(), loadProducts()]);
+    await Promise.all([loadCategories(), loadProducts()]);
     showToast(editing ? `${product.nome} foi atualizado.` : `${product.nome} foi criado.`);
   } catch (error) {
     showToast(error.message, true);
@@ -401,7 +389,7 @@ async function deleteCurrentProduct() {
   try {
     await requestJson(`/api/products/${state.editingId}`, { method: 'DELETE' });
     closeDialog();
-    await Promise.all([loadSummary(), loadCategories(), loadProducts()]);
+    await Promise.all([loadCategories(), loadProducts()]);
     showToast('Produto excluído.');
   } catch (error) {
     showToast(error.message, true);
@@ -471,7 +459,7 @@ async function initialize() {
   bindEvents();
   renderSkeletons();
   try {
-    await Promise.all([loadSummary(), loadCategories(), loadProducts()]);
+    await Promise.all([loadCategories(), loadProducts()]);
   } catch (error) {
     showToast(error.message, true);
   }

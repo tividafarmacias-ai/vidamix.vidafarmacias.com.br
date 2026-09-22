@@ -17,12 +17,17 @@ import { getStoriesEditorElements } from './dom.js';
 import { createStoriesEditorState } from './state.js';
 import { createAutoLayout } from './auto-layout.js';
 import { bindPriceInput } from './price-input.js';
+import { drawStoryVideoFrame } from './video-animation.js';
+import { initStoriesMobileEditor } from './mobile-editor.js';
 
 const state = createStoriesEditorState();
 const elements = getStoriesEditorElements();
 
 let searchTimer;
 let detailsMeasureContext;
+let videoDownloadUrl;
+let mobileEditor;
+let artworkReady = false;
 
 const COMPOSITION_MODES = new Set(['single', 'two-products', 'combo']);
 
@@ -53,10 +58,13 @@ function getPreselectedProductId() {
 function setStatus(message, isError = false) {
   elements.status.textContent = message;
   elements.status.classList.toggle('is-error', isError);
+  mobileEditor?.sync();
 }
 
 function setPanelCollapsed({ section, content, toggle, selection, name, isComplete, summary }, collapsed) {
   if (!section || !content || !toggle) return;
+  // Mobile already shows one creation step at a time; its choices stay reachable.
+  if (document.body.classList.contains('is-mobile-editor')) collapsed = false;
 
   const complete = isComplete();
   const restoreFocus = collapsed && content.contains(document.activeElement);
@@ -200,6 +208,7 @@ function updateAvailability() {
     || Boolean(
       state.secondaryProduct
         && state.secondaryProductImage
+        && state.secondaryProductImageUrl === state.secondaryProduct.imagem_local_url
         && state.secondaryProductTransform,
     );
   const detailsReady = Boolean(
@@ -211,21 +220,28 @@ function updateAvailability() {
     state.selectedBackground
       && state.selectedProduct
       && state.backgroundImage
+      && state.backgroundImageUrl === state.selectedBackground.url
       && state.productImage
+      && state.productImageUrl === state.selectedProduct.imagem_local_url
       && state.productTransform
       && detailsReady
       && secondaryProductReady
       && pricesReady,
   );
-  elements.download.disabled = !ready;
+  const exporting = state.pngExporting || Boolean(state.videoExportController);
+  artworkReady = ready;
+  elements.download.disabled = !ready || exporting;
+  elements.downloadVideo.disabled = !ready || exporting;
 
   if (!state.selectedBackground) {
     setStatus('Carregando backgrounds disponíveis...');
+  } else if (!state.backgroundImage || state.backgroundImageUrl !== state.selectedBackground.url) {
+    setStatus('Carregando o fundo da arte...');
   } else if (!state.selectedProduct) {
     setStatus('Escolha um produto com imagem para começar a composição.');
   } else if (!state.selectedProduct.imagem_local_url) {
     setStatus('Este produto ainda não possui uma imagem disponível para a arte.', true);
-  } else if (!state.productImage) {
+  } else if (!state.productImage || state.productImageUrl !== state.selectedProduct.imagem_local_url) {
     setStatus('Carregando a imagem do produto...');
   } else if (compositionRequiresSecondaryProduct() && !state.secondaryProduct) {
     setStatus('Selecione o segundo produto para completar esta composição.');
@@ -238,7 +254,7 @@ function updateAvailability() {
   } else if (isTwoProductsMode() && !hasPrice('details-secondary')) {
     setStatus('Informe o preço do segundo produto para finalizar a arte.');
   } else {
-    setStatus('Arte pronta. Ajuste a imagem e o cartão separadamente ou baixe o PNG.');
+    setStatus('Arte pronta. Baixe em PNG ou em MP4 animado de 15 segundos.');
   }
 }
 
@@ -1123,6 +1139,36 @@ function drawPlaceholder(context) {
   context.restore();
 }
 
+function getCompositionLayers() {
+  const layers = [];
+  ['product', 'product-secondary'].forEach((target, index) => {
+    const productImage = getProductImage(target);
+    const bounds = getProductBox(undefined, target);
+    if (!productImage || !bounds) return;
+    layers.push({
+      kind: 'product', index, bounds, compositeOperation: 'multiply',
+      draw: (context) => context.drawImage(productImage, bounds.x, bounds.y, bounds.width, bounds.height),
+    });
+  });
+  const detailsTargets = isTwoProductsMode() ? ['details', 'details-secondary'] : ['details'];
+  detailsTargets.forEach((target, index) => {
+    const product = getDetailsProduct(target);
+    const bounds = getDetailsBox(undefined, target);
+    if (!product || !bounds) return;
+    layers.push({
+      kind: 'details', index, bounds, compositeOperation: 'source-over',
+      draw: (context) => drawDetailsCard(context, product, hasPrice(target) ? getPriceForDetailsTarget(target) : '', target),
+    });
+  });
+  const textBounds = getFreeTextBox();
+  if (textBounds) {
+    layers.push({
+      kind: 'text', index: 0, bounds: textBounds, compositeOperation: 'source-over', draw: drawFreeText,
+    });
+  }
+  return layers;
+}
+
 function drawComposition(context) {
   context.save();
   context.setTransform(1, 0, 0, 1, 0, 0);
@@ -1136,26 +1182,12 @@ function drawComposition(context) {
 
   drawImageCover(context, state.backgroundImage, 0, 0, STORY_WIDTH, STORY_HEIGHT);
 
-  ['product', 'product-secondary'].forEach((target) => {
-    const productImage = getProductImage(target);
-    const productBox = getProductBox(undefined, target);
-    if (!productImage || !productBox) return;
+  getCompositionLayers().forEach((layer) => {
     context.save();
-    context.globalCompositeOperation = 'multiply';
-    context.drawImage(productImage, productBox.x, productBox.y, productBox.width, productBox.height);
+    context.globalCompositeOperation = layer.compositeOperation;
+    layer.draw(context);
     context.restore();
   });
-
-  drawDetailsCard(context, state.selectedProduct, hasPrice() ? state.price : '', 'details');
-  if (isTwoProductsMode()) {
-    drawDetailsCard(
-      context,
-      state.secondaryProduct,
-      hasPrice('details-secondary') ? state.secondaryPrice : '',
-      'details-secondary',
-    );
-  }
-  drawFreeText(context);
 
   context.restore();
 }
@@ -1264,6 +1296,7 @@ function ensureSecondaryDetailsControls() {
 function syncSelection(selection, box, visible, target) {
   if (!selection) return;
   selection.hidden = !visible;
+  selection.tabIndex = visible && !isMobilePreviewLocked() ? 0 : -1;
   selection.classList.toggle('is-active', visible && state.activeEditor === target);
   if (!visible) return;
 
@@ -1334,6 +1367,14 @@ function syncProductEditor() {
   const anchorVisible = productVisible
     && detailsVisible
     && (!isTwoProductsMode() || (secondaryProductVisible && secondaryDetailsVisible));
+  const visibleTargets = [
+    ['product', productVisible], ['product-secondary', secondaryProductVisible],
+    ['details', detailsVisible], ['details-secondary', secondaryDetailsVisible],
+    ['free-text', freeTextVisible],
+  ].filter(([, visible]) => visible).map(([target]) => target);
+  if (document.body.classList.contains('is-mobile-editor') && !visibleTargets.includes(state.activeEditor)) {
+    state.activeEditor = visibleTargets[0] || null;
+  }
   syncPriceInputs();
   elements.positionSection.hidden = !productVisible;
   elements.secondaryPositionSection.hidden = !secondaryProductVisible;
@@ -1412,6 +1453,56 @@ function syncProductEditor() {
       state.freeTextTransform.width,
     );
   }
+  syncMobileEditControls(visibleTargets);
+}
+
+function syncMobileEditControls(visibleTargets) {
+  const controls = [
+    ['product', elements.positionSection],
+    ['product-secondary', elements.secondaryPositionSection],
+    ['details', elements.detailsPositionSection],
+    ['details-secondary', elements.secondaryDetailsPositionSection],
+    ['free-text', elements.freeTextPositionSection],
+  ];
+  controls.forEach(([target, section]) => {
+    section?.classList.toggle('is-mobile-selected-control', state.activeEditor === target);
+  });
+  elements.mobileEditTargets.forEach((button) => {
+    const target = button.dataset.mobileEditTarget;
+    button.hidden = !visibleTargets.includes(target);
+    button.setAttribute('aria-pressed', String(state.activeEditor === target));
+    if (target === 'details') button.textContent = isTwoProductsMode() ? 'Oferta 1' : isComboMode() ? 'Oferta do combo' : 'Oferta';
+  });
+  const selected = visibleTargets.includes(state.activeEditor);
+  [...elements.mobileNudges, elements.mobileCenter, ...elements.mobileScaleSteps].forEach((button) => {
+    if (button) button.disabled = !selected;
+  });
+  if (elements.mobileScaleValue) {
+    const value = selected ? `${getScaleInputForEditorTarget(state.activeEditor)?.value || 100}%` : '—';
+    elements.mobileScaleValue.value = value;
+    elements.mobileScaleValue.textContent = value;
+  }
+  if (elements.mobileEditHint) {
+    elements.mobileEditHint.textContent = selected
+      ? 'Toque no elemento. Arraste na prévia ou use os controles abaixo.'
+      : 'Adicione um produto para ajustar a arte.';
+  }
+  mobileEditor?.sync();
+}
+
+function getMobileProgress() {
+  const background = Boolean(state.backgroundImage && state.backgroundImageUrl === state.selectedBackground?.url);
+  const primary = Boolean(state.productImage && state.productImageUrl === state.selectedProduct?.imagem_local_url);
+  const secondary = !compositionRequiresSecondaryProduct()
+    || Boolean(state.secondaryProductImage && state.secondaryProductImageUrl === state.secondaryProduct?.imagem_local_url);
+  return {
+    background,
+    products: primary && secondary,
+    offer: hasPrice() && (!isTwoProductsMode() || hasPrice('details-secondary')),
+    ready: artworkReady,
+    exporting: state.pngExporting || Boolean(state.videoExportController),
+    selection: state.activeEditor,
+  };
 }
 
 async function renderPreview() {
@@ -1420,6 +1511,7 @@ async function renderPreview() {
   const backgroundUrl = state.selectedBackground?.url || null;
   const productUrl = state.selectedProduct?.imagem_local_url || null;
   const secondaryProductUrl = state.secondaryProduct?.imagem_local_url || null;
+  updateAvailability();
 
   if (!backgroundUrl) {
     state.backgroundImage = null;
@@ -1488,6 +1580,7 @@ async function renderPreview() {
   } catch (error) {
     if (requestId !== state.previewRequestId) return;
     elements.download.disabled = true;
+    elements.downloadVideo.disabled = true;
     setStatus(error.message, true);
   }
 }
@@ -1911,7 +2004,7 @@ function loadMoreProductsOnScroll() {
 }
 
 function artPointFromEvent(event) {
-  const rect = elements.canvas.getBoundingClientRect();
+  const rect = elements.interactionLayer.getBoundingClientRect();
   return {
     x: ((event.clientX - rect.left) / rect.width) * STORY_WIDTH,
     y: ((event.clientY - rect.top) / rect.height) * STORY_HEIGHT,
@@ -2153,14 +2246,19 @@ function transformFromResizeGesture(target, handle, point, startTransform) {
   });
 }
 
+function isMobilePreviewLocked() {
+  return document.body.classList.contains('is-mobile-editor') && document.body.dataset.mobileStep !== 'adjust';
+}
+
 function beginGesture(event) {
   const target = event.currentTarget.dataset.editTarget;
   const transform = getEditorTransform(target);
-  if (!transform || event.button !== 0) return;
+  if (!transform || event.button !== 0 || state.gesture || event.isPrimary === false) return;
+  if (isMobilePreviewLocked()) return;
 
   setActiveEditor(target);
   const handle = event.target.closest('[data-resize-handle]')?.dataset.resizeHandle || null;
-  const linkedStartTransforms = !handle && hasAnchoredEditors()
+  const linkedStartTransforms = !handle && target !== 'free-text' && hasAnchoredEditors()
     ? Object.fromEntries(
       getAnchoredEditorTargets()
         .filter((editorTarget) => editorTarget !== target)
@@ -2216,9 +2314,11 @@ function moveGesture(event) {
 
 function finishGesture(event) {
   if (!state.gesture || (event && state.gesture.pointerId !== event.pointerId)) return;
+  const pointerId = state.gesture.pointerId;
   const selection = getEditorSelection(state.gesture.target);
   state.gesture = null;
   selection.classList.remove('is-dragging');
+  if (selection.hasPointerCapture(pointerId)) selection.releasePointerCapture(pointerId);
   syncProductEditor();
   updateAvailability();
 }
@@ -2226,7 +2326,7 @@ function finishGesture(event) {
 function moveEditorBy(target, horizontal, vertical) {
   const transform = getEditorTransform(target);
   if (!transform) return;
-  if (hasAnchoredEditors()) {
+  if (target !== 'free-text' && hasAnchoredEditors()) {
     moveAnchoredEditorsBy(horizontal, vertical);
   } else {
     setEditorTransform(target, clampEditorTransform(target, {
@@ -2264,7 +2364,7 @@ function centerEditor(target) {
   const box = getEditorBox(target);
   if (!box) return;
 
-  if (hasAnchoredEditors()) {
+  if (target !== 'free-text' && hasAnchoredEditors()) {
     moveAnchoredEditorsBy(
       (STORY_WIDTH / 2) - (box.x + (box.width / 2)),
       (STORY_HEIGHT / 2) - (box.y + (box.height / 2)),
@@ -2307,6 +2407,118 @@ function updateDownloadLabel(label) {
   else elements.download.textContent = label;
 }
 
+function storyDownloadName(productName, extension) {
+  const safeName = productName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase() || 'produto';
+  return `story-${safeName}.${extension}`;
+}
+
+function createExportCanvas(alpha = true) {
+  const canvas = document.createElement('canvas');
+  canvas.width = STORY_WIDTH;
+  canvas.height = STORY_HEIGHT;
+  const context = canvas.getContext('2d', { alpha });
+  if (!context) throw new Error('Não foi possível preparar a arte para exportação.');
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  return { canvas, context };
+}
+
+function captureVideoSnapshot(canvases) {
+  const background = createExportCanvas(false);
+  canvases.push(background.canvas);
+  drawImageCover(background.context, state.backgroundImage, 0, 0, STORY_WIDTH, STORY_HEIGHT);
+  const layers = getCompositionLayers().map(({ draw, ...layer }) => {
+    const { canvas, context } = createExportCanvas();
+    canvases.push(canvas);
+    // Rasterize synchronously, before awaiting the encoder or allowing edits.
+    // Blending is applied when compositing, so white product backgrounds stay transparent visually.
+    draw(context);
+    return { ...layer, canvas };
+  });
+  return { width: STORY_WIDTH, height: STORY_HEIGHT, background: background.canvas, layers };
+}
+
+async function downloadStoryVideo() {
+  if (elements.downloadVideo.disabled) return;
+
+  const controller = new AbortController();
+  state.videoExportController = controller;
+  updateAvailability();
+  elements.downloadVideo.setAttribute('aria-busy', 'true');
+  elements.downloadVideoLabel.textContent = 'Preparando MP4…';
+  elements.videoExportPanel.hidden = false;
+  elements.videoExportPanel.classList.remove('is-error');
+  elements.videoExportStatus.textContent = 'Preparando vídeo de 15 segundos…';
+  elements.videoProgress.value = 0;
+  elements.videoProgress.hidden = false;
+  elements.cancelVideo.disabled = false;
+  elements.cancelVideo.hidden = false;
+  elements.videoDownloadLink.hidden = true;
+  elements.videoDownloadLink.removeAttribute('href');
+  if (videoDownloadUrl) URL.revokeObjectURL(videoDownloadUrl);
+  videoDownloadUrl = null;
+
+  const canvases = [];
+  let resultMessage;
+  let failed = false;
+  try {
+    const filename = storyDownloadName(state.selectedProduct.nome, 'mp4');
+    const snapshot = captureVideoSnapshot(canvases);
+    const { canvas, context } = createExportCanvas(false);
+    canvases.push(canvas);
+    // Load the MP4 library only when requested; PNG and the editor stay independent.
+    const { exportStoryVideo } = await import('./video-export.js');
+    let lastPercent = -1;
+    const blob = await exportStoryVideo({
+      canvas,
+      signal: controller.signal,
+      renderFrame: (seconds) => drawStoryVideoFrame(context, snapshot, seconds),
+      onProgress: (progress) => {
+        const percent = Math.min(100, Math.max(0, Math.floor(progress * 100)));
+        if (percent === lastPercent) return;
+        lastPercent = percent;
+        elements.videoProgress.value = percent;
+        elements.downloadVideoLabel.textContent = `Gerando MP4 · ${percent}%`;
+        // Announce coarse milestones without flooding screen readers on every frame.
+        if (percent % 10 === 0) {
+          elements.videoExportStatus.textContent = `Gerando vídeo de 15 segundos: ${percent}%.`;
+        }
+      },
+    });
+    controller.signal.throwIfAborted();
+    videoDownloadUrl = URL.createObjectURL(blob);
+    elements.videoDownloadLink.href = videoDownloadUrl;
+    elements.videoDownloadLink.download = filename;
+    elements.videoDownloadLink.hidden = false;
+    elements.videoDownloadLink.click();
+    resultMessage = 'MP4 pronto: 15 segundos, com animações de entrada e saída. Se o download não iniciar, use o link abaixo.';
+  } catch (error) {
+    if (controller.signal.aborted || error.name === 'AbortError') {
+      resultMessage = 'Exportação cancelada. Sua arte continua disponível no editor.';
+    } else {
+      failed = true;
+      resultMessage = error.message || 'Não foi possível gerar o MP4. Tente novamente.';
+    }
+  } finally {
+    // Release full-resolution pixel buffers even after unsupported codecs or cancellation.
+    canvases.forEach((canvas) => { canvas.width = 0; canvas.height = 0; });
+    state.videoExportController = null;
+    elements.downloadVideo.removeAttribute('aria-busy');
+    elements.downloadVideoLabel.textContent = 'Baixar MP4 · 15 s';
+    elements.videoProgress.hidden = true;
+    elements.cancelVideo.hidden = true;
+    elements.videoExportPanel.classList.toggle('is-error', failed);
+    elements.videoExportStatus.textContent = resultMessage;
+    updateAvailability();
+    setStatus(resultMessage, failed);
+  }
+}
+
 function downloadStory() {
   if (elements.download.disabled) {
     updateAvailability();
@@ -2323,9 +2535,11 @@ function downloadStory() {
   context.imageSmoothingQuality = 'high';
   drawComposition(context);
 
-  elements.download.disabled = true;
+  state.pngExporting = true;
+  updateAvailability();
   updateDownloadLabel('Preparando PNG…');
   exportCanvas.toBlob((blob) => {
+    state.pngExporting = false;
     updateDownloadLabel('Baixar PNG');
     updateAvailability();
     if (!blob) {
@@ -2333,16 +2547,10 @@ function downloadStory() {
       return;
     }
 
-    const safeName = productName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase() || 'produto';
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `story-${safeName}.png`;
+    link.download = storyDownloadName(productName, 'png');
     document.body.append(link);
     link.click();
     link.remove();
@@ -2360,6 +2568,7 @@ function getScaleInputForEditorTarget(target) {
 }
 
 function handleSelectionKeydown(event) {
+  if (isMobilePreviewLocked()) return;
   const target = event.currentTarget.dataset.editTarget;
   if (!getEditorTransform(target)) return;
   const moveStep = event.shiftKey ? 20 : 5;
@@ -2439,6 +2648,7 @@ function bindEvents() {
 
   document.addEventListener('pointerdown', (event) => {
     if (event.target.closest?.('[data-edit-target]')) return;
+    if (document.body.classList.contains('is-mobile-editor')) return;
     setActiveEditor();
   });
 
@@ -2447,6 +2657,13 @@ function bindEvents() {
   });
   elements.search.addEventListener('search', queueProductSearch);
   elements.search.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && document.body.classList.contains('is-mobile-editor')) {
+      event.preventDefault();
+      clearTimeout(searchTimer);
+      void loadProducts();
+      elements.search.blur();
+      return;
+    }
     if (event.key !== 'Escape' || !elements.search.value) return;
     event.preventDefault();
     clearProductSearch();
@@ -2527,18 +2744,68 @@ function bindEvents() {
     setThirdsGridVisible(!state.thirdsGridVisible);
   });
   elements.autoLayout.addEventListener('click', applyAutoLayout);
+  elements.mobileEditTargets.forEach((button) => {
+    button.addEventListener('click', () => setActiveEditor(button.dataset.mobileEditTarget));
+  });
+  elements.mobileNudges.forEach((button) => {
+    button.addEventListener('click', () => {
+      const movements = { up: [0, -8], down: [0, 8], left: [-8, 0], right: [8, 0] };
+      const movement = movements[button.dataset.mobileNudge];
+      if (state.activeEditor && movement) moveEditorBy(state.activeEditor, ...movement);
+    });
+  });
+  elements.mobileCenter?.addEventListener('click', () => {
+    if (state.activeEditor) centerEditor(state.activeEditor);
+  });
+  elements.mobileScaleSteps.forEach((button) => {
+    button.addEventListener('click', () => {
+      const input = state.activeEditor && getScaleInputForEditorTarget(state.activeEditor);
+      if (!input) return;
+      const value = clamp(Number(input.value) + Number(button.dataset.mobileScaleStep), Number(input.min), Number(input.max));
+      resizeEditorByPercentage(state.activeEditor, value);
+    });
+  });
+  [elements.price, elements.secondaryPrice, elements.freeText].forEach((input) => {
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && document.body.classList.contains('is-mobile-editor')) {
+        event.preventDefault();
+        input.blur();
+      }
+    });
+  });
   elements.download.addEventListener('click', downloadStory);
+  elements.downloadVideo.addEventListener('click', downloadStoryVideo);
+  elements.cancelVideo.addEventListener('click', () => {
+    state.videoExportController?.abort();
+    elements.cancelVideo.disabled = true;
+    elements.videoExportStatus.textContent = 'Cancelando exportação…';
+  });
+  window.addEventListener('pagehide', () => {
+    state.videoExportController?.abort();
+    if (videoDownloadUrl) URL.revokeObjectURL(videoDownloadUrl);
+    videoDownloadUrl = null;
+    elements.videoDownloadLink.hidden = true;
+    elements.videoDownloadLink.removeAttribute('href');
+  });
 }
 
 export async function initStoriesEditor() {
   bindEvents();
+  mobileEditor = initStoriesMobileEditor({
+    getProgress: getMobileProgress,
+    onStepChange: () => {
+      finishGesture();
+      syncProductEditor();
+    },
+  });
   setPreviewZoom(state.previewZoom);
   setThirdsGridVisible(state.thirdsGridVisible);
   drawPreviewNow();
   try {
     await Promise.all([loadBackgrounds(), loadProducts()]);
-    await preselectProductFromLocation();
+    const preselected = await preselectProductFromLocation();
     await renderPreview();
+    if (preselected) mobileEditor.showStep('offer');
   } catch {
     // The individual loading functions already show a useful error in the interface.
   }

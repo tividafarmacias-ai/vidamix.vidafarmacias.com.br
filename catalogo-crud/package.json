@@ -11,10 +11,13 @@
     "check": "node scripts/check.mjs",
     "check:production": "node scripts/production-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:catalogue": "node --test scripts/catalogue-loading.test.mjs",
     "test:tour": "node --test scripts/tour-storage.test.mjs",
     "test:stories-layout": "node --test scripts/stories-auto-layout.test.mjs",
     "test:stories-prices": "node --test scripts/stories-price-input.test.mjs",
-    "verify": "npm run check && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:smoke"
+    "test:stories-video": "node --test scripts/stories-video-*.test.mjs",
+    "test:stories-mobile": "node --test scripts/stories-mobile.test.mjs",
+    "verify": "npm run check && npm run test:catalogue && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:smoke"
   },
   "engines": {
     "node": ">=22.13.0 <25",

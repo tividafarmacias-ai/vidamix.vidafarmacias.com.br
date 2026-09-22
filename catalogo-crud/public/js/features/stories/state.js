@@ -44,5 +44,7 @@ export function createStoriesEditorState() {
     gesture: null,
     activeEditor: null,
     animationFrame: null,
+    pngExporting: false,
+    videoExportController: null,
   };
 }

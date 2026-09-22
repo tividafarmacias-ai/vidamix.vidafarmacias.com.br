@@ -55,18 +55,27 @@
   --brand-red-dark: #cf1720;
   --color-ink: var(--azul);
   --color-muted: #526d8c;
-  --color-line: rgba(8, 79, 152, .16);
+  --color-line: rgba(142, 172, 201, .32);
   --color-panel: #fff;
-  --color-page: #fff;
+  --color-page: #f5f8fc;
   --color-surface: #f3f7fc;
   --color-blue-soft: #eaf2fb;
   --color-red-soft: #fff0f1;
   --color-blue: var(--azul);
   --color-red: var(--vermelho);
-  --shadow-soft: 0 18px 45px rgba(8, 79, 152, .10);
-  --radius-lg: 12px;
-  --radius-md: 8px;
-  --radius-sm: 6px;
+  --glass-surface: rgba(255, 255, 255, .72);
+  --glass-surface-strong: rgba(255, 255, 255, .9);
+  --glass-line: rgba(142, 172, 201, .32);
+  --glass-shadow: 0 8px 24px rgba(49, 84, 122, .07);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, .95);
+  --glass-selected: linear-gradient(135deg, rgba(229, 242, 255, .95), rgba(242, 247, 255, .9));
+  --glass-selected-line: #a6c6e4;
+  --glass-blur: blur(20px) saturate(135%);
+  --glass-page-background: radial-gradient(ellipse at 10% 0%, #e3eefb 0, transparent 52%), radial-gradient(ellipse at 95% 20%, #fff1ef 0, transparent 42%), #f5f8fc;
+  --shadow-soft: var(--glass-shadow);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
   font-family: "Poppins", Arial, Helvetica, sans-serif;
 }
 
@@ -75,16 +84,19 @@ button, input, select, textarea { font: inherit; }
 a { color: inherit; }
 a:focus-visible, button:focus-visible, input:focus-visible,
 select:focus-visible, textarea:focus-visible {
-  outline: 3px solid rgba(8, 79, 152, .35);
+  outline: 3px solid var(--azul);
   outline-offset: 3px;
 }
 button:disabled { cursor: not-allowed; }
-::selection { color: #fff; background: var(--azul); }
+::selection { color: var(--brand-blue-dark); background: #d3e7fb; }
 
 .site-header {
-  background: var(--azul);
-  color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, .14);
+  background: var(--glass-surface);
+  color: var(--azul);
+  border-bottom: 1px solid var(--glass-line);
+  box-shadow: var(--glass-highlight), 0 4px 18px rgba(49, 84, 122, .04);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 .site-header-inner {
   display: flex;
@@ -99,7 +111,7 @@ button:disabled { cursor: not-allowed; }
   display: inline-flex;
   gap: 12px;
   align-items: center;
-  color: #fff;
+  color: var(--azul);
   text-decoration: none;
 }
 .site-brand-mark {
@@ -115,21 +127,41 @@ button:disabled { cursor: not-allowed; }
   font-weight: 800;
 }
 .site-brand strong { display: block; font-size: 17px; line-height: 1.2; }
-.site-brand small { display: block; margin-top: 3px; color: rgba(255,255,255,.8); font-size: 11px; }
-.site-nav { display: flex; gap: 4px; align-items: center; }
+.site-brand small { display: block; margin-top: 3px; color: var(--color-muted); font-size: 11px; }
+.site-nav { display: flex; gap: 5px; align-items: center; }
 .site-nav a {
   display: inline-flex;
   min-height: 38px;
   padding: 8px 12px;
   align-items: center;
-  border-radius: var(--radius-sm);
-  color: rgba(255,255,255,.85);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.site-nav a:hover, .site-nav a[aria-current="page"] { color: #fff; background: rgba(255,255,255,.14); }
-.site-header a:focus-visible { outline-color: rgba(255,255,255,.75); }
+.site-nav a:hover { color: var(--azul); background: var(--glass-surface-strong); }
+.site-nav a[aria-current="page"] { color: var(--brand-blue-dark); border-color: var(--glass-selected-line); background: var(--glass-selected); box-shadow: var(--glass-highlight); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-surface: #f8fbff;
+    --glass-surface-strong: #fff;
+    --glass-selected: linear-gradient(135deg, #e5f2ff, #f2f7ff);
+    --glass-blur: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-surface: #f8fbff;
+    --glass-surface-strong: #fff;
+    --glass-selected: linear-gradient(135deg, #e5f2ff, #f2f7ff);
+    --glass-blur: none;
+  }
+}
 
 @media (max-width: 640px) {
   .site-header-inner { width: calc(100% - 32px); padding: 14px 0; gap: 12px; flex-wrap: wrap; }

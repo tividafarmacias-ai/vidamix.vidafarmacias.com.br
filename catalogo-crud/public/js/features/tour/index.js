@@ -95,6 +95,8 @@ function initTour() {
       return;
     }
     index = stepIndex;
+    const nextTarget = document.querySelector(steps[index].target);
+    if (nextTarget) document.dispatchEvent(new CustomEvent('story:reveal-target', { detail: { target: nextTarget } }));
     target = getTarget(steps[index]);
     // A panel removed/hidden after startup should not break the rest of the tour.
     if (!target) {
@@ -255,6 +257,7 @@ function initTour() {
     frame = 0;
     dialog.close();
     document.documentElement.classList.remove('tour-is-open');
+    document.dispatchEvent(new CustomEvent('story:tour-end'));
     for (const entry of scrollPositions) {
       entry.element.scrollTo({ top: entry.top, left: entry.left, behavior: 'instant' });
     }
@@ -274,7 +277,9 @@ function initTour() {
       autoPending = false;
       return;
     }
-    steps = tour.steps.filter(getTarget);
+    steps = tour.steps.filter((step) => getTarget(step)
+      || (page === 'stories' && document.body.classList.contains('is-mobile-editor')
+        && document.querySelector(step.target)?.closest('[data-mobile-group]')));
     if (!steps.length) return;
     autoPending = false;
     clearTimeout(autoTimer);
