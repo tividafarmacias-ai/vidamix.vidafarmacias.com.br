@@ -1,0 +1,2720 @@
+{
+  "createdAt": "2026-09-22T17:55:32.206Z",
+  "backupDirectory": "D:\\vidafarmacias.com.br\\vidamix\\backups\\produtos-20260922-145532",
+  "databasePath": "D:\\vidafarmacias.com.br\\vidamix\\catalogo-crud\\data\\catalogo.sqlite",
+  "sourcePath": "D:\\vidafarmacias.com.br\\vidamix\\produtos.json",
+  "workbook": {
+    "source": "D:\\vidafarmacias.com.br\\vidamix\\BASE_MIDIA_MIX 19_08.xlsx",
+    "sha256": "b194b6300f3da5b2ba2078e4bd8b67a4900e8f6528e8d889777e9c1604c8083d",
+    "sheets": [
+      {
+        "name": "Mídia Mix",
+        "dimension": "A1:P10770",
+        "header": "EAN",
+        "dataCells": 10766,
+        "eanRows": 10712,
+        "distinctEans": 10681,
+        "duplicates": 31,
+        "numericCells": 0,
+        "formulas": 0,
+        "leadingZeros": 37,
+        "anomalies": [
+          {
+            "cell": "A73",
+            "value": "203548",
+            "raw": "339",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A132",
+            "value": "761678187489198",
+            "raw": "541",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A369",
+            "value": "4006000194950 2",
+            "raw": "1458",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A481",
+            "value": "7654915159159190",
+            "raw": "1908",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A620",
+            "value": "7654516515616510",
+            "raw": "2389",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A622",
+            "value": "48346",
+            "raw": "2398",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A624",
+            "value": "48935",
+            "raw": "2404",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A743",
+            "value": "711061",
+            "raw": "2839",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A978",
+            "value": "45817",
+            "raw": "3700",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A995",
+            "value": "7896528",
+            "raw": "3761",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A1346",
+            "value": "48902",
+            "raw": "5109",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A1347",
+            "value": "36523",
+            "raw": "5112",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A2238",
+            "value": "789987891988789",
+            "raw": "8246",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A2349",
+            "value": "145679841321689",
+            "raw": "8611",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A2396",
+            "value": "30146",
+            "raw": "8750",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A2698",
+            "value": "784516516516516",
+            "raw": "9696",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A3693",
+            "value": "5519819181981810",
+            "raw": "12997",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A4019",
+            "value": "712168798451651",
+            "raw": "14133",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A4197",
+            "value": "157688",
+            "raw": "14761",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A4226",
+            "value": "789451564545456",
+            "raw": "14856",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A4253",
+            "value": "781989798198198",
+            "raw": "14945",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A4637",
+            "value": "generico sen teste",
+            "raw": "16190",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5025",
+            "value": "1",
+            "raw": "6356",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5026",
+            "value": "2",
+            "raw": "2853",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5027",
+            "value": "3",
+            "raw": "17517",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5028",
+            "value": "5",
+            "raw": "3653",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5075",
+            "value": "imagem generico",
+            "raw": "17686",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5076",
+            "value": "imagem somente",
+            "raw": "17689",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5343",
+            "value": "94843",
+            "raw": "18576",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5388",
+            "value": "93269",
+            "raw": "18718",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5686",
+            "value": "132165456498496",
+            "raw": "19666",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A5849",
+            "value": "53561",
+            "raw": "20205",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6279",
+            "value": "77848151561651600",
+            "raw": "21624",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6286",
+            "value": "29588",
+            "raw": "21646",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6334",
+            "value": "20252",
+            "raw": "21798",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6336",
+            "value": "20678",
+            "raw": "21807",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6509",
+            "value": "784984987878998",
+            "raw": "22433",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6546",
+            "value": "75944",
+            "raw": "22554",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6702",
+            "value": "789548",
+            "raw": "23154",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6970",
+            "value": "784984515616515",
+            "raw": "24087",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6988",
+            "value": "7456165165498160",
+            "raw": "24140",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A6989",
+            "value": "716165165193126",
+            "raw": "24144",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A7160",
+            "value": "789465156156165",
+            "raw": "24706",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A7383",
+            "value": "72861",
+            "raw": "25416",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A7527",
+            "value": "789456",
+            "raw": "25899",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A7538",
+            "value": "789451916518498",
+            "raw": "25934",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A7642",
+            "value": "767830",
+            "raw": "26281",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A7815",
+            "value": "745615165165165",
+            "raw": "26860",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A8586",
+            "value": "790008300346811",
+            "raw": "29275",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A8612",
+            "value": "787878",
+            "raw": "29356",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A8782",
+            "value": "78749849879498704",
+            "raw": "29875",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A8853",
+            "value": "745161654849498",
+            "raw": "30131",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A9414",
+            "value": "789456156165156",
+            "raw": "31785",
+            "type": "s",
+            "style": "",
+            "formula": null
+          },
+          {
+            "cell": "A10693",
+            "value": "78945615151564896",
+            "raw": "35925",
+            "type": "s",
+            "style": "",
+            "formula": null
+          }
+        ],
+        "matchesDatabase": 10694,
+        "distinctCodes": 10735
+      },
+      {
+        "name": "Revista Agosto",
+        "dimension": "A1:I194",
+        "header": "COD.BARRAS",
+        "dataCells": 193,
+        "eanRows": 193,
+        "distinctEans": 192,
+        "duplicates": 1,
+        "numericCells": 193,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 189,
+        "distinctCodes": 192
+      },
+      {
+        "name": "Revista Setembro",
+        "dimension": "A1:G212",
+        "header": "COD.BARRAS",
+        "dataCells": 211,
+        "eanRows": 211,
+        "distinctEans": 211,
+        "duplicates": 0,
+        "numericCells": 211,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 160,
+        "distinctCodes": 211
+      },
+      {
+        "name": "Principia",
+        "dimension": "A1:F65",
+        "header": "COD.BARRAS",
+        "dataCells": 64,
+        "eanRows": 64,
+        "distinctEans": 64,
+        "duplicates": 0,
+        "numericCells": 64,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 63,
+        "distinctCodes": 64
+      },
+      {
+        "name": "Skelt",
+        "dimension": "A1:G30",
+        "header": "COD.BARRAS",
+        "dataCells": 29,
+        "eanRows": 29,
+        "distinctEans": 29,
+        "duplicates": 0,
+        "numericCells": 29,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 29,
+        "distinctCodes": 29
+      },
+      {
+        "name": "Creamy",
+        "dimension": "A1:G36",
+        "header": "COD.BARRAS",
+        "dataCells": 35,
+        "eanRows": 35,
+        "distinctEans": 35,
+        "duplicates": 0,
+        "numericCells": 35,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 35,
+        "distinctCodes": 35
+      },
+      {
+        "name": "Simple",
+        "dimension": "A1:F10",
+        "header": "EAN",
+        "dataCells": 9,
+        "eanRows": 9,
+        "distinctEans": 9,
+        "duplicates": 0,
+        "numericCells": 9,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 9,
+        "distinctCodes": 9
+      },
+      {
+        "name": "Unilever",
+        "dimension": "A1:J634",
+        "header": "EAN",
+        "dataCells": 633,
+        "eanRows": 633,
+        "distinctEans": 633,
+        "duplicates": 0,
+        "numericCells": 7,
+        "formulas": 0,
+        "leadingZeros": 46,
+        "anomalies": [],
+        "matchesDatabase": 638,
+        "distinctCodes": 633
+      },
+      {
+        "name": "Oniz P&G",
+        "dimension": "A1:G570",
+        "header": "EAN",
+        "dataCells": 569,
+        "eanRows": 569,
+        "distinctEans": 568,
+        "duplicates": 1,
+        "numericCells": 569,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 570,
+        "distinctCodes": 568
+      },
+      {
+        "name": "Kimberly",
+        "dimension": "A1:I162",
+        "header": "Cod. EAN",
+        "dataCells": 161,
+        "eanRows": 161,
+        "distinctEans": 161,
+        "duplicates": 0,
+        "numericCells": 161,
+        "formulas": 0,
+        "leadingZeros": 0,
+        "anomalies": [],
+        "matchesDatabase": 157,
+        "distinctCodes": 161
+      }
+    ]
+  },
+  "original": {
+    "databaseCount": 11104,
+    "jsonCount": 11104,
+    "jsonSha256": "05466a302b276ac25547dce923e203dd15951e992030d2a8a15a8b2c1fba30b6",
+    "databaseSha256": "d3c0091bf3cbe205a84b67e95a19edc51afae5e51404e909413bf138d3ab3d58",
+    "schema": [
+      {
+        "type": "index",
+        "name": "idx_products_categoria",
+        "sql": "CREATE INDEX idx_products_categoria ON products(categoria_produtos)"
+      },
+      {
+        "type": "index",
+        "name": "idx_products_ean",
+        "sql": "CREATE INDEX idx_products_ean ON products(ean)"
+      },
+      {
+        "type": "index",
+        "name": "idx_products_nome",
+        "sql": "CREATE INDEX idx_products_nome ON products(nome)"
+      },
+      {
+        "type": "index",
+        "name": "idx_products_status",
+        "sql": "CREATE INDEX idx_products_status ON products(status)"
+      },
+      {
+        "type": "index",
+        "name": "sqlite_autoindex_app_meta_1",
+        "sql": null
+      },
+      {
+        "type": "table",
+        "name": "app_meta",
+        "sql": "CREATE TABLE app_meta (\n      key TEXT PRIMARY KEY,\n      value TEXT NOT NULL\n    )"
+      },
+      {
+        "type": "table",
+        "name": "products",
+        "sql": "CREATE TABLE products (\n      id INTEGER PRIMARY KEY,\n      nome TEXT NOT NULL,\n      subtitulo TEXT,\n      caracteres TEXT,\n      grupo TEXT,\n      principio_ativo TEXT,\n      ms TEXT,\n      fabricante TEXT,\n      categoria_id INTEGER,\n      categoria_produtos TEXT,\n      categoria_nome TEXT,\n      frases_encarte TEXT,\n      status TEXT NOT NULL DEFAULT 'ativo',\n      data_vigencia_inicio TEXT,\n      data_vigencia_fim TEXT,\n      generico INTEGER NOT NULL DEFAULT 0,\n      produto_destaque INTEGER NOT NULL DEFAULT 0,\n      ean TEXT,\n      direcao_imagem TEXT,\n      imagem_url TEXT,\n      imagem_arquivo TEXT,\n      imagem_status TEXT,\n      created_at TEXT NOT NULL,\n      updated_at TEXT NOT NULL\n    )"
+      }
+    ],
+    "metadata": [
+      {
+        "key": "catalog_imported_at",
+        "value": "2026-09-03T17:30:45.114Z"
+      }
+    ]
+  },
+  "main": {
+    "distinctCodes": 10735,
+    "keptDatabase": 10694,
+    "removedDatabase": 410,
+    "foundCodes": 10666,
+    "missingCodes": [
+      "7898687735819",
+      "7896004817477",
+      "7896104991510",
+      "7897947621886",
+      "7896523206943",
+      "7897947610965",
+      "7908289900697",
+      "7896018700765",
+      "7896018704152",
+      "35115154564",
+      "7890042360407",
+      "7898684480323",
+      "7896007550692",
+      "7896007511624",
+      "7896007552696",
+      "7896007548446",
+      "7896007549634",
+      "7896007552795",
+      "7896007548484",
+      "7896007551309",
+      "7896007553150",
+      "7896007553174",
+      "7896007551347",
+      "7896007551330",
+      "7896007553143",
+      "7896007553167",
+      "7896007543922",
+      "10121610166302",
+      "7984119819819",
+      "7896007510788",
+      "745616894845",
+      "78961049920290",
+      "7500435132756",
+      "7500435132718",
+      "7500435146159",
+      "7501007498690",
+      "7500435181747",
+      "7500435106818",
+      "71519549805615",
+      "7500435106597",
+      "7500435132589",
+      "7500435146142",
+      "7500435146135",
+      "7500435146166",
+      "7500435146234",
+      "7500435132442",
+      "17500435157527",
+      "7501001275884",
+      "7500435132732",
+      "7500435132749",
+      "7500435132794",
+      "7500435158411",
+      "7500435158343",
+      "7500435158312",
+      "7500435132800",
+      "7506339391312",
+      "7891010974886",
+      "7896004705682",
+      "7898005718869",
+      "7897947600843",
+      "7897947615397",
+      "7896018700659",
+      "7897947600560",
+      "7896004714578",
+      "7898687730869",
+      "7896018700369",
+      "7896018700338",
+      "7896018703469",
+      "48195191"
+    ],
+    "keptJson": 10694
+  },
+  "all": {
+    "distinctCodes": 11160,
+    "keptDatabase": 11067,
+    "removedDatabase": 37,
+    "foundCodes": 11039,
+    "missingCodes": [
+      "7898687735819",
+      "7896004817477",
+      "7896104991510",
+      "7897947621886",
+      "7896523206943",
+      "7897947610965",
+      "7908289900697",
+      "7896018700765",
+      "7896018704152",
+      "35115154564",
+      "7890042360407",
+      "7898684480323",
+      "7896007550692",
+      "7896007511624",
+      "7896007552696",
+      "7896007548446",
+      "7896007549634",
+      "7896007552795",
+      "7896007548484",
+      "7896007551309",
+      "7896007553150",
+      "7896007553174",
+      "7896007551347",
+      "7896007551330",
+      "7896007553143",
+      "7896007553167",
+      "7896007543922",
+      "10121610166302",
+      "7984119819819",
+      "7896007510788",
+      "745616894845",
+      "78961049920290",
+      "7500435132756",
+      "7500435132718",
+      "7500435146159",
+      "7501007498690",
+      "7500435181747",
+      "7500435106818",
+      "71519549805615",
+      "7500435106597",
+      "7500435132589",
+      "7500435146142",
+      "7500435146135",
+      "7500435146166",
+      "7500435146234",
+      "7500435132442",
+      "17500435157527",
+      "7501001275884",
+      "7500435132732",
+      "7500435132749",
+      "7500435132794",
+      "7500435158411",
+      "7500435158343",
+      "7500435158312",
+      "7500435132800",
+      "7506339391312",
+      "7891010974886",
+      "7896004705682",
+      "7898005718869",
+      "7897947600843",
+      "7897947615397",
+      "7896018700659",
+      "7897947600560",
+      "7896004714578",
+      "7898687730869",
+      "7896018700369",
+      "7896018700338",
+      "7896018703469",
+      "48195191",
+      "7896061996610",
+      "42882100669",
+      "7500435230957",
+      "7896023791581",
+      "7896023791666",
+      "7896023791697",
+      "7897947621657",
+      "7897947621664",
+      "7897947621688",
+      "7897947621855",
+      "7897947621862",
+      "7897947621879",
+      "7899674038548",
+      "7899674027641",
+      "7899674027672",
+      "7896227620151",
+      "7896227630365",
+      "7896227630358",
+      "7896227620014",
+      "7899095221338",
+      "7896914012276",
+      "7896914012283",
+      "7896914012290",
+      "7896914012306",
+      "7896914012313",
+      "76660008625",
+      "37000308935",
+      "7898930283227",
+      "7898930283210",
+      "7896094212763",
+      "7896321032386",
+      "7896321040015",
+      "7896321040008",
+      "7896321037237",
+      "7896321040022",
+      "7899838834092",
+      "7899838834108",
+      "7899838832005",
+      "7899838831992",
+      "7899838831985",
+      "7908414456990",
+      "7899838832012",
+      "7898949253303",
+      "7898949253839",
+      "7908791002254",
+      "7898085940495",
+      "7898085940518",
+      "7898085940501",
+      "7898593051966",
+      "7898593050631",
+      "7891150104808",
+      "7891150096226"
+    ],
+    "keptJson": 11067
+  },
+  "additionalProductsFromOtherSheets": [
+    {
+      "id": 43098,
+      "ean": "7896007553754",
+      "nome": "Huggies Máxima Proteção"
+    },
+    {
+      "id": 43099,
+      "ean": "7896007548507",
+      "nome": "Huggies Máxima Proteção"
+    },
+    {
+      "id": 43100,
+      "ean": "7896007548361",
+      "nome": "Huggies Máxima Proteção"
+    },
+    {
+      "id": 43101,
+      "ean": "7896007548378",
+      "nome": "Huggies Máxima Proteção"
+    },
+    {
+      "id": 43102,
+      "ean": "7896007548385",
+      "nome": "Huggies Máxima Proteção"
+    },
+    {
+      "id": 43103,
+      "ean": "7896007552023",
+      "nome": "Huggies Natural Care"
+    },
+    {
+      "id": 43104,
+      "ean": "7896007552214",
+      "nome": "Huggies Praia e Piscina"
+    },
+    {
+      "id": 43105,
+      "ean": "7896007551279",
+      "nome": "Huggies Supreme Care"
+    },
+    {
+      "id": 43106,
+      "ean": "7896007549726",
+      "nome": "Huggies Supreme Care"
+    },
+    {
+      "id": 43107,
+      "ean": "7896007549696",
+      "nome": "Huggies Supreme Care"
+    },
+    {
+      "id": 43108,
+      "ean": "7896007549689",
+      "nome": "Huggies Supreme Care"
+    },
+    {
+      "id": 43109,
+      "ean": "7896007552474",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43110,
+      "ean": "7896007552467",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43111,
+      "ean": "7896007552450",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43112,
+      "ean": "7896007552443",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43113,
+      "ean": "7896007553730",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43114,
+      "ean": "7896007549252",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43115,
+      "ean": "7896007549276",
+      "nome": "Huggies Tripla Proteção"
+    },
+    {
+      "id": 43116,
+      "ean": "7500435106672",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43117,
+      "ean": "7500435132619",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43118,
+      "ean": "7500435250184",
+      "nome": "Pampers Supersequinha"
+    },
+    {
+      "id": 43119,
+      "ean": "7500435250238",
+      "nome": "Pampers Supersequinha"
+    },
+    {
+      "id": 43120,
+      "ean": "7500435106610",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43121,
+      "ean": "7500435239196",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43122,
+      "ean": "7500435250214",
+      "nome": "Pampers Supersequinha"
+    },
+    {
+      "id": 43123,
+      "ean": "7500435250221",
+      "nome": "Pampers Supersequinha"
+    },
+    {
+      "id": 43124,
+      "ean": "7500435250191",
+      "nome": "Pampers Supersequinha"
+    },
+    {
+      "id": 43125,
+      "ean": "7500435260879",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43126,
+      "ean": "7500435260862",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43127,
+      "ean": "7500435260848",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43128,
+      "ean": "7500435260831",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43129,
+      "ean": "7500435246637",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43130,
+      "ean": "7500435132350",
+      "nome": "Pampers Premium Care"
+    },
+    {
+      "id": 43131,
+      "ean": "7500435132367",
+      "nome": "Pampers Premium Care"
+    },
+    {
+      "id": 43132,
+      "ean": "7500435132374",
+      "nome": "Pampers Premium Care"
+    },
+    {
+      "id": 43133,
+      "ean": "7500435132381",
+      "nome": "Pampers Premium Care"
+    },
+    {
+      "id": 43134,
+      "ean": "7500435132398",
+      "nome": "Pampers Premium Care"
+    },
+    {
+      "id": 43135,
+      "ean": "7500435132527",
+      "nome": "Pampers Premium Care"
+    },
+    {
+      "id": 43142,
+      "ean": "7500435146227",
+      "nome": "Pampers Confortsec"
+    },
+    {
+      "id": 43148,
+      "ean": "7891150095793",
+      "nome": "Sérum Corporal Dove"
+    },
+    {
+      "id": 43149,
+      "ean": "7891150017368",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43150,
+      "ean": "7891150096578",
+      "nome": "Hidratante Facial Dove"
+    },
+    {
+      "id": 43151,
+      "ean": "7891150050082",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43152,
+      "ean": "7506306255654",
+      "nome": "Sab Esfoliante Dove"
+    },
+    {
+      "id": 43153,
+      "ean": "7506306255678",
+      "nome": "Sab Esfoliante Dove"
+    },
+    {
+      "id": 43154,
+      "ean": "0079400526366",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43155,
+      "ean": "7891037169555",
+      "nome": "Shampoo Dimension"
+    },
+    {
+      "id": 43156,
+      "ean": "7891150091221",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43157,
+      "ean": "7891150101760",
+      "nome": "Sérum Capilar Seda"
+    },
+    {
+      "id": 43158,
+      "ean": "7891150096257",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43159,
+      "ean": "7891150096493",
+      "nome": "Gel de Limpeza Dove"
+    },
+    {
+      "id": 43160,
+      "ean": "7891150102859",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43161,
+      "ean": "0079400526359",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43162,
+      "ean": "7891150060296",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43163,
+      "ean": "7891150060883",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43164,
+      "ean": "7891150083622",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43165,
+      "ean": "7891150097681",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43166,
+      "ean": "7891150054462",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43167,
+      "ean": "7891150095311",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43168,
+      "ean": "7891150044562",
+      "nome": "Condicionador BabyDove"
+    },
+    {
+      "id": 43169,
+      "ean": "7891150096288",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43170,
+      "ean": "7891150075238",
+      "nome": "Shampoo BabyDove"
+    },
+    {
+      "id": 43171,
+      "ean": "7891150102675",
+      "nome": "Leave In Dove"
+    },
+    {
+      "id": 43172,
+      "ean": "7891150103917",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43173,
+      "ean": "7891150106352",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43174,
+      "ean": "7891150088344",
+      "nome": "Creme Dental CloseUp"
+    },
+    {
+      "id": 43175,
+      "ean": "7891150097957",
+      "nome": "Shampoo BabyDove"
+    },
+    {
+      "id": 43176,
+      "ean": "7891150054448",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43177,
+      "ean": "7891150028463",
+      "nome": "Hidratante Vasenol"
+    },
+    {
+      "id": 43178,
+      "ean": "7891150070356",
+      "nome": "Desodorante Suave"
+    },
+    {
+      "id": 43179,
+      "ean": "7891150104860",
+      "nome": "Óleo Sérum Corporal Dove"
+    },
+    {
+      "id": 43180,
+      "ean": "7891150083639",
+      "nome": "Creme Pentear Seda"
+    },
+    {
+      "id": 43181,
+      "ean": "7891150029538",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43182,
+      "ean": "7891150102866",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43183,
+      "ean": "7891150104853",
+      "nome": "Óleo Sérum Corporal Dove"
+    },
+    {
+      "id": 43184,
+      "ean": "7891150023321",
+      "nome": "Máscara Capilar Tresemme"
+    },
+    {
+      "id": 43185,
+      "ean": "7891150102842",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43186,
+      "ean": "7891150091214",
+      "nome": "Shampoo Tresemme"
+    },
+    {
+      "id": 43187,
+      "ean": "7891150017337",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43188,
+      "ean": "7891150050112",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43189,
+      "ean": "7891150099791",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43190,
+      "ean": "7891150023338",
+      "nome": "Máscara Capilar Tresemme"
+    },
+    {
+      "id": 43191,
+      "ean": "7891150095915",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43192,
+      "ean": "7891150103276",
+      "nome": "Creme Dental CloseUp"
+    },
+    {
+      "id": 43193,
+      "ean": "7891150103689",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43194,
+      "ean": "7891150104846",
+      "nome": "Óleo Sérum Corporal Dove"
+    },
+    {
+      "id": 43195,
+      "ean": "0000075062842",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43196,
+      "ean": "7891150058965",
+      "nome": "Creme Pentear Tresemme"
+    },
+    {
+      "id": 43197,
+      "ean": "7891150059924",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43198,
+      "ean": "7891150084810",
+      "nome": "Creme Dental CloseUp"
+    },
+    {
+      "id": 43199,
+      "ean": "7891150096318",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43200,
+      "ean": "7891150106376",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43201,
+      "ean": "0000075076702",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43202,
+      "ean": "7891037169258",
+      "nome": "Shampoo Dimension"
+    },
+    {
+      "id": 43203,
+      "ean": "7891150008816",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43205,
+      "ean": "0000075076696",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43206,
+      "ean": "0000075076719",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43207,
+      "ean": "7891150017351",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43208,
+      "ean": "7891150028425",
+      "nome": "Hidratante Vasenol"
+    },
+    {
+      "id": 43209,
+      "ean": "7891150067172",
+      "nome": "Sabonete Rexona"
+    },
+    {
+      "id": 43210,
+      "ean": "7891150029583",
+      "nome": "Máscara Capilar Tresemme"
+    },
+    {
+      "id": 43211,
+      "ean": "7891150083240",
+      "nome": "Sabonete Rexona"
+    },
+    {
+      "id": 43212,
+      "ean": "7891150094895",
+      "nome": "Máscara Capilar Dove"
+    },
+    {
+      "id": 43213,
+      "ean": "7891150105454",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43214,
+      "ean": "7891150045347",
+      "nome": "Condicionador BabyDove"
+    },
+    {
+      "id": 43215,
+      "ean": "7891150053229",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43216,
+      "ean": "7891150084162",
+      "nome": "Enxaguante CloseUp"
+    },
+    {
+      "id": 43217,
+      "ean": "7891150060302",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43218,
+      "ean": "7891150103665",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43219,
+      "ean": "7891150095908",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43220,
+      "ean": "7891037169654",
+      "nome": "Shampoo Dimension"
+    },
+    {
+      "id": 43221,
+      "ean": "7891150041646",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43222,
+      "ean": "7891150096509",
+      "nome": "Gel de Limpeza Dove"
+    },
+    {
+      "id": 43223,
+      "ean": "7891150091238",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43224,
+      "ean": "7891150075283",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43225,
+      "ean": "7891150103672",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43226,
+      "ean": "7891150021662",
+      "nome": "Shampoo DoveMen"
+    },
+    {
+      "id": 43227,
+      "ean": "7891150035874",
+      "nome": "Sabonete Líq. BabyDove"
+    },
+    {
+      "id": 43228,
+      "ean": "7891150088351",
+      "nome": "Creme Dental CloseUp"
+    },
+    {
+      "id": 43229,
+      "ean": "7891150095922",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43231,
+      "ean": "7891150106109",
+      "nome": "Sérum Corporal Dove"
+    },
+    {
+      "id": 43232,
+      "ean": "7891150054479",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43233,
+      "ean": "7891150096271",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43234,
+      "ean": "7891150060289",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43235,
+      "ean": "7891150091153",
+      "nome": "Creme Pentear Tresemme"
+    },
+    {
+      "id": 43236,
+      "ean": "7891150095939",
+      "nome": "Creme Seda Boom"
+    },
+    {
+      "id": 43237,
+      "ean": "7891150096240",
+      "nome": "Óleo em Gel Seda Boom"
+    },
+    {
+      "id": 43238,
+      "ean": "0000078944831",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43239,
+      "ean": "7891150059917",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43240,
+      "ean": "7891150075405",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43241,
+      "ean": "7891150079229",
+      "nome": "Sabonete Líq. BabyDove"
+    },
+    {
+      "id": 43242,
+      "ean": "7891150080119",
+      "nome": "Máscara Capilar Seda"
+    },
+    {
+      "id": 43243,
+      "ean": "7891150090538",
+      "nome": "Shampoo ClearWomen"
+    },
+    {
+      "id": 43244,
+      "ean": "7891150095694",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43245,
+      "ean": "7891150096479",
+      "nome": "Gel de Limpeza Dove"
+    },
+    {
+      "id": 43246,
+      "ean": "8934868194330",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43247,
+      "ean": "7891150057487",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43248,
+      "ean": "7891150070318",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43249,
+      "ean": "7891150105652",
+      "nome": "Máscara Capilar Dove"
+    },
+    {
+      "id": 43250,
+      "ean": "7891037002647",
+      "nome": "Creme Dental CloseUp"
+    },
+    {
+      "id": 43251,
+      "ean": "7891150091429",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43252,
+      "ean": "7891150096387",
+      "nome": "Emulsão Seda Boom"
+    },
+    {
+      "id": 43253,
+      "ean": "7891150099784",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43254,
+      "ean": "7891150053717",
+      "nome": "Sabonete Líq. Rexona"
+    },
+    {
+      "id": 43255,
+      "ean": "7891150083462",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43256,
+      "ean": "7891150096561",
+      "nome": "Hidratante Facial Dove"
+    },
+    {
+      "id": 43257,
+      "ean": "7891150101814",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43258,
+      "ean": "8934868194378",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43259,
+      "ean": "7891150102828",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43260,
+      "ean": "8934868194354",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43261,
+      "ean": "7891150096530",
+      "nome": "Hidratante Facial Dove"
+    },
+    {
+      "id": 43262,
+      "ean": "0000078931633",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43263,
+      "ean": "7891150018853",
+      "nome": "Shampoo Tresemme"
+    },
+    {
+      "id": 43264,
+      "ean": "7891150100046",
+      "nome": "Sérum Tresemme"
+    },
+    {
+      "id": 43265,
+      "ean": "7891150029293",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43266,
+      "ean": "7891150083486",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43267,
+      "ean": "7891150096233",
+      "nome": "Gel creme Seda Boom"
+    },
+    {
+      "id": 43268,
+      "ean": "7891150096301",
+      "nome": "Sérum Gel Seda Boom"
+    },
+    {
+      "id": 43269,
+      "ean": "7891150096431",
+      "nome": "Sérum Facial Dove"
+    },
+    {
+      "id": 43270,
+      "ean": "7891150091115",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43271,
+      "ean": "7891150083523",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43272,
+      "ean": "7891150088573",
+      "nome": "Máscara Capilar Seda"
+    },
+    {
+      "id": 43273,
+      "ean": "0000075063559",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43274,
+      "ean": "7891150068551",
+      "nome": "Sabonete Rexona"
+    },
+    {
+      "id": 43275,
+      "ean": "7891150095892",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43276,
+      "ean": "7891150106420",
+      "nome": "Kit Seda Shampoo + Cond"
+    },
+    {
+      "id": 43277,
+      "ean": "7891150105447",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43278,
+      "ean": "7891150102811",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43279,
+      "ean": "8934868194316",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43280,
+      "ean": "7891150075962",
+      "nome": "Gel Fixador ClearMen"
+    },
+    {
+      "id": 43281,
+      "ean": "7891150082786",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43282,
+      "ean": "7891150095236",
+      "nome": "Tratamento Noturno Dove"
+    },
+    {
+      "id": 43283,
+      "ean": "7891150095762",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43284,
+      "ean": "7891150097971",
+      "nome": "Sabonete BabyDove"
+    },
+    {
+      "id": 43285,
+      "ean": "7891150095885",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43286,
+      "ean": "7891150026001",
+      "nome": "Loção Hidratante BabyDove"
+    },
+    {
+      "id": 43287,
+      "ean": "7891150101821",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43288,
+      "ean": "7891150103702",
+      "nome": "Creme Pentear Seda"
+    },
+    {
+      "id": 43289,
+      "ean": "7891150083547",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43290,
+      "ean": "7891150105430",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43291,
+      "ean": "7891150060166",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43292,
+      "ean": "7891150093850",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43293,
+      "ean": "7891150095670",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43294,
+      "ean": "7891150096219",
+      "nome": "Soro Hidratante Seda Boom"
+    },
+    {
+      "id": 43295,
+      "ean": "8934868194293",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43296,
+      "ean": "7891150018761",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43297,
+      "ean": "7891150060159",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43298,
+      "ean": "7891150074484",
+      "nome": "Loção Relaxante BabyDove"
+    },
+    {
+      "id": 43299,
+      "ean": "7791293033242",
+      "nome": "Desodorante Dove"
+    },
+    {
+      "id": 43300,
+      "ean": "7891150065550",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43301,
+      "ean": "7891150091467",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43302,
+      "ean": "7891150093034",
+      "nome": "Shampoo Tresemme"
+    },
+    {
+      "id": 43303,
+      "ean": "7891150083141",
+      "nome": "Sabonete Líq. Rexona"
+    },
+    {
+      "id": 43304,
+      "ean": "7891150091252",
+      "nome": "Máscara Capilar Tresemme"
+    },
+    {
+      "id": 43305,
+      "ean": "7891150091436",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43306,
+      "ean": "7891150008168",
+      "nome": "Condicionador ClearWomen"
+    },
+    {
+      "id": 43307,
+      "ean": "7891150096486",
+      "nome": "Gel de Limpeza Dove"
+    },
+    {
+      "id": 43308,
+      "ean": "7891150083097",
+      "nome": "Sabonete Líq. Rexona"
+    },
+    {
+      "id": 43309,
+      "ean": "7891150086760",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43310,
+      "ean": "7891150096295",
+      "nome": "Gel Capilar Seda Boom"
+    },
+    {
+      "id": 43311,
+      "ean": "7891150059856",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43312,
+      "ean": "7891150065574",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43313,
+      "ean": "7891150079694",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43314,
+      "ean": "7891150087309",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43315,
+      "ean": "7891150103924",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43316,
+      "ean": "7891150107656",
+      "nome": "Creme de Pentear Dove"
+    },
+    {
+      "id": 43317,
+      "ean": "7891150083479",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43318,
+      "ean": "7891150090088",
+      "nome": "Shampoo + Cond Dove"
+    },
+    {
+      "id": 43319,
+      "ean": "7891150106093",
+      "nome": "Serum Deo Hidrat. Dove"
+    },
+    {
+      "id": 43320,
+      "ean": "7891150106475",
+      "nome": "Serum Deo Hidrat. Dove"
+    },
+    {
+      "id": 43321,
+      "ean": "7891150028326",
+      "nome": "Hidratante para mãos Vasenol"
+    },
+    {
+      "id": 43322,
+      "ean": "7891150106468",
+      "nome": "Serum Deo Hidrat. Dove"
+    },
+    {
+      "id": 43323,
+      "ean": "7891150106734",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43324,
+      "ean": "7891150197800",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43325,
+      "ean": "7891150046559",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43326,
+      "ean": "7891150084490",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43327,
+      "ean": "7891150106383",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43328,
+      "ean": "7891150060333",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43329,
+      "ean": "7891150091276",
+      "nome": "Sérum Tresemme"
+    },
+    {
+      "id": 43330,
+      "ean": "7891150107687",
+      "nome": "Máscara Capilar Seda"
+    },
+    {
+      "id": 43331,
+      "ean": "47891150046557",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43332,
+      "ean": "7891150055179",
+      "nome": "Condicionador Dove"
+    },
+    {
+      "id": 43333,
+      "ean": "7891150083530",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43334,
+      "ean": "7891150095779",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43335,
+      "ean": "7891150096028",
+      "nome": "Bálsamo para os Pés Dove"
+    },
+    {
+      "id": 43336,
+      "ean": "7891150087293",
+      "nome": "Creme de Pentear Dove"
+    },
+    {
+      "id": 43337,
+      "ean": "7891150090989",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43338,
+      "ean": "7891150096547",
+      "nome": "Serum Antiolheiras Dove"
+    },
+    {
+      "id": 43339,
+      "ean": "7891150099869",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43340,
+      "ean": "7891150029309",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43341,
+      "ean": "7891150070325",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43342,
+      "ean": "7891150090569",
+      "nome": "Condicionador ClearWomen"
+    },
+    {
+      "id": 43343,
+      "ean": "7891150028456",
+      "nome": "Hidratante Vasenol"
+    },
+    {
+      "id": 43344,
+      "ean": "7891150050105",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43345,
+      "ean": "7891150082793",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43346,
+      "ean": "7891150083134",
+      "nome": "Sabonete Líq. Rexona"
+    },
+    {
+      "id": 43347,
+      "ean": "7891150091009",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43348,
+      "ean": "7891150091474",
+      "nome": "Máscara Capilar Seda"
+    },
+    {
+      "id": 43349,
+      "ean": "7891150094932",
+      "nome": "Máscara Capilar Dove"
+    },
+    {
+      "id": 43350,
+      "ean": "7891150096011",
+      "nome": "Sérum Corporal Dove"
+    },
+    {
+      "id": 43351,
+      "ean": "7891150103931",
+      "nome": "Máscara Capilar Seda"
+    },
+    {
+      "id": 43352,
+      "ean": "7891150093898",
+      "nome": "Leave In Tresemme"
+    },
+    {
+      "id": 43353,
+      "ean": "7891150037632",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43354,
+      "ean": "7891150036369",
+      "nome": "Sabonete Líquido BabyDove"
+    },
+    {
+      "id": 43355,
+      "ean": "7891150083493",
+      "nome": "Desodorante Axe"
+    },
+    {
+      "id": 43356,
+      "ean": "7891150083509",
+      "nome": "Desodorante Axe"
+    },
+    {
+      "id": 43357,
+      "ean": "7891150091443",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43358,
+      "ean": "7891150093096",
+      "nome": "Condicionador Tresemme"
+    },
+    {
+      "id": 43359,
+      "ean": "7891150107649",
+      "nome": "Creme de Pentear Dove"
+    },
+    {
+      "id": 43360,
+      "ean": "7891150042230",
+      "nome": "Condicionador Suave"
+    },
+    {
+      "id": 43361,
+      "ean": "7891150053236",
+      "nome": "Sabonete Líquido Dove"
+    },
+    {
+      "id": 43362,
+      "ean": "7891150055704",
+      "nome": "Shampoo ClearWomen"
+    },
+    {
+      "id": 43363,
+      "ean": "7891150083080",
+      "nome": "Sabonete Líq. Rexona"
+    },
+    {
+      "id": 43364,
+      "ean": "7891150090972",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43365,
+      "ean": "7891150090996",
+      "nome": "Sabonete Lux"
+    },
+    {
+      "id": 43366,
+      "ean": "7891150095243",
+      "nome": "Leave In Dove"
+    },
+    {
+      "id": 43367,
+      "ean": "0000078944725",
+      "nome": "Booster Dove"
+    },
+    {
+      "id": 43368,
+      "ean": "0000078944732",
+      "nome": "Booster Dove"
+    },
+    {
+      "id": 43369,
+      "ean": "7891150055162",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43370,
+      "ean": "7891150083042",
+      "nome": "Sabonete Líq. Rexona"
+    },
+    {
+      "id": 43371,
+      "ean": "7891150090583",
+      "nome": "Tônico Capilar ClearWomen"
+    },
+    {
+      "id": 43372,
+      "ean": "7891150070332",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43373,
+      "ean": "7891150080089",
+      "nome": "Shampoo Seda"
+    },
+    {
+      "id": 43374,
+      "ean": "7891150080768",
+      "nome": "Máscara Capilar Dove"
+    },
+    {
+      "id": 43375,
+      "ean": "7891150083455",
+      "nome": "Sabonete Líquido Lux"
+    },
+    {
+      "id": 43376,
+      "ean": "7891150107694",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43377,
+      "ean": "7891150084483",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43378,
+      "ean": "7891150086975",
+      "nome": "Shampoo Dove"
+    },
+    {
+      "id": 43379,
+      "ean": "7891150095625",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43380,
+      "ean": "7891150099814",
+      "nome": "Condicionador Seda"
+    },
+    {
+      "id": 43381,
+      "ean": "0003335571597",
+      "nome": "Desodorante Rexona"
+    },
+    {
+      "id": 43382,
+      "ean": "7891150088450",
+      "nome": "Creme de Pentear Seda"
+    },
+    {
+      "id": 43383,
+      "ean": "7891150090521",
+      "nome": "Tônico Capilar ClearMen"
+    },
+    {
+      "id": 43384,
+      "ean": "7891150096127",
+      "nome": "Sabonete Dove"
+    },
+    {
+      "id": 43387,
+      "ean": "7898996125837",
+      "nome": "Inalador Compressor"
+    },
+    {
+      "id": 43388,
+      "ean": "7896331701036",
+      "nome": "Stilgrip 400mg"
+    },
+    {
+      "id": 43389,
+      "ean": "3282770153484",
+      "nome": "Gel de limpeza Actine"
+    },
+    {
+      "id": 43405,
+      "ean": "7901062405426",
+      "nome": "Hydra Boost Equaliv"
+    },
+    {
+      "id": 43406,
+      "ean": "7901062405433",
+      "nome": "Hydra Boost Equaliv"
+    },
+    {
+      "id": 43407,
+      "ean": "7901062405440",
+      "nome": "Hydra Boost Equaliv"
+    },
+    {
+      "id": 43408,
+      "ean": "7901062405495",
+      "nome": "Gut Defense Equaliv"
+    },
+    {
+      "id": 43409,
+      "ean": "7901062405464",
+      "nome": "Gut Defense Equaliv"
+    },
+    {
+      "id": 43410,
+      "ean": "7901062405525",
+      "nome": "Vitamina D3 600UI Equaliv"
+    },
+    {
+      "id": 43411,
+      "ean": "7901062401251",
+      "nome": "Pinus Pinaster 50mg Althaia"
+    },
+    {
+      "id": 43412,
+      "ean": "7901062405105",
+      "nome": "Ômega 3 Equaliv"
+    },
+    {
+      "id": 43413,
+      "ean": "7896023704475",
+      "nome": "Ômega 3 de Algas Veg"
+    },
+    {
+      "id": 43414,
+      "ean": "7896023704451",
+      "nome": "Ômega 3 de Algas Veg"
+    },
+    {
+      "id": 43415,
+      "ean": "7896023708107",
+      "nome": "Ômega 3 Kids"
+    },
+    {
+      "id": 43416,
+      "ean": "7896023709258",
+      "nome": "Ômega 3 ImunoPro"
+    },
+    {
+      "id": 43417,
+      "ean": "7896023704512",
+      "nome": "Ômega 3 Q10"
+    },
+    {
+      "id": 43418,
+      "ean": "7896023703751",
+      "nome": "Ômega 3 Plus Concentrado"
+    },
+    {
+      "id": 43419,
+      "ean": "7896023703737",
+      "nome": "Ômega 3 Plus Concentrado"
+    },
+    {
+      "id": 43420,
+      "ean": "7896523206288",
+      "nome": "Ciflogex Spray"
+    },
+    {
+      "id": 43421,
+      "ean": "7897230307107",
+      "nome": "Body Cream Hidrabene"
+    },
+    {
+      "id": 43422,
+      "ean": "7897230307114",
+      "nome": "Body Cream Hidrabene"
+    },
+    {
+      "id": 43423,
+      "ean": "7897230307121",
+      "nome": "Body Cream Hidrabene"
+    },
+    {
+      "id": 43424,
+      "ean": "7897230307138",
+      "nome": "Body Cream Hidrabene"
+    },
+    {
+      "id": 43425,
+      "ean": "7897230306872",
+      "nome": "Body Splash Hidrabene"
+    },
+    {
+      "id": 43426,
+      "ean": "7897230306889",
+      "nome": "Body Splash Hidrabene"
+    },
+    {
+      "id": 43427,
+      "ean": "7897230306896",
+      "nome": "Body Splash Hidrabene"
+    },
+    {
+      "id": 43428,
+      "ean": "7897230306902",
+      "nome": "Body Splash Hidrabene"
+    },
+    {
+      "id": 43429,
+      "ean": "7897230305967",
+      "nome": "Água Micelar Hidrabene"
+    },
+    {
+      "id": 43430,
+      "ean": "7897230302577",
+      "nome": "Esfoliante Hidrabene"
+    },
+    {
+      "id": 43431,
+      "ean": "7509546702605",
+      "nome": "Creme Dental Colgate"
+    },
+    {
+      "id": 43432,
+      "ean": "3282770402100",
+      "nome": "Gel de Limpeza Actine"
+    },
+    {
+      "id": 43433,
+      "ean": "3282770391442",
+      "nome": "Gel Limpeza Actine"
+    },
+    {
+      "id": 43434,
+      "ean": "3282770144437",
+      "nome": "Sabonete Líq. Darrow"
+    },
+    {
+      "id": 43435,
+      "ean": "3282770143935",
+      "nome": "Shampoo Anticaspa Darrow"
+    },
+    {
+      "id": 43436,
+      "ean": "3282770388497",
+      "nome": "Hidratante Darrow"
+    },
+    {
+      "id": 43437,
+      "ean": "3282770143942",
+      "nome": "Shampoo Anticaspa Darrow"
+    },
+    {
+      "id": 43438,
+      "ean": "3282770146172",
+      "nome": "Creme Cicalfate + Avène"
+    },
+    {
+      "id": 43439,
+      "ean": "7896082900276",
+      "nome": "Sinustrat Descongestionante"
+    },
+    {
+      "id": 43440,
+      "ean": "7896112403326",
+      "nome": "Sinustrat Hidratante Nasal"
+    },
+    {
+      "id": 43441,
+      "ean": "7896082900337",
+      "nome": "Sinustrat Descongestionante"
+    },
+    {
+      "id": 43442,
+      "ean": "7896112408611",
+      "nome": "Beneflora Lactobacilus"
+    },
+    {
+      "id": 43443,
+      "ean": "7896112408130",
+      "nome": "Pantogar Men"
+    },
+    {
+      "id": 43444,
+      "ean": "7896112408147",
+      "nome": "Pantogar Men"
+    },
+    {
+      "id": 43445,
+      "ean": "7896094208407",
+      "nome": "Maxidrate 6mg"
+    },
+    {
+      "id": 43446,
+      "ean": "4005900807861",
+      "nome": "Sabonete Nivea"
+    },
+    {
+      "id": 43447,
+      "ean": "4005900036728",
+      "nome": "Desodorante Nivea"
+    },
+    {
+      "id": 43457,
+      "ean": "7896061990632",
+      "nome": "Toalhas Umedecidas Babysec"
+    },
+    {
+      "id": 43458,
+      "ean": "7500435245333",
+      "nome": "Pastilha Vick Drops"
+    },
+    {
+      "id": 43459,
+      "ean": "7500435258272",
+      "nome": "Vick Pyrena Paracetamol 500mg"
+    },
+    {
+      "id": 43460,
+      "ean": "8710103779803",
+      "nome": "Copo Easy Sip com Alça"
+    },
+    {
+      "id": 43461,
+      "ean": "8710103779810",
+      "nome": "Copo Easy Sip com Alça"
+    },
+    {
+      "id": 43462,
+      "ean": "8720689045629",
+      "nome": "Extrator de Leite Manual"
+    },
+    {
+      "id": 43463,
+      "ean": "8710103867654",
+      "nome": "Absorventes para seios"
+    },
+    {
+      "id": 43464,
+      "ean": "8710103637363",
+      "nome": "Saco para armaz. leite materno"
+    },
+    {
+      "id": 43465,
+      "ean": "7898593053151",
+      "nome": "Óleo de semente de Abóbora"
+    },
+    {
+      "id": 43466,
+      "ean": "7908080030449",
+      "nome": "Ap Barb Vida Men"
+    },
+    {
+      "id": 43467,
+      "ean": "7896298130023",
+      "nome": "Vida Gel Fix"
+    },
+    {
+      "id": 43468,
+      "ean": "7896321005557",
+      "nome": "Bala Flopi"
+    },
+    {
+      "id": 43469,
+      "ean": "7896321020826",
+      "nome": "Bala Flopi"
+    },
+    {
+      "id": 43470,
+      "ean": "7896321005595",
+      "nome": "Bala Flopi"
+    },
+    {
+      "id": 43471,
+      "ean": "7896321005588",
+      "nome": "Bala Flopi"
+    },
+    {
+      "id": 43472,
+      "ean": "7896321005571",
+      "nome": "Bala Flopi"
+    },
+    {
+      "id": 43473,
+      "ean": "7896321011220",
+      "nome": "Chicle Cliss"
+    },
+    {
+      "id": 43474,
+      "ean": "7896321016522",
+      "nome": "Chicle Cliss"
+    },
+    {
+      "id": 43475,
+      "ean": "7896321009920",
+      "nome": "Chicle Cliss"
+    },
+    {
+      "id": 43476,
+      "ean": "7896321024503",
+      "nome": "Chicle Cliss"
+    },
+    {
+      "id": 43477,
+      "ean": "7896321009937",
+      "nome": "Chicle Cliss"
+    },
+    {
+      "id": 43478,
+      "ean": "7896321009913",
+      "nome": "Chicle Cliss"
+    },
+    {
+      "id": 43479,
+      "ean": "7896321033383",
+      "nome": "Suplemento pastilha"
+    },
+    {
+      "id": 43480,
+      "ean": "7896321033420",
+      "nome": "Suplemento pastilha"
+    },
+    {
+      "id": 43481,
+      "ean": "7896321033369",
+      "nome": "Suplemento pastilha"
+    },
+    {
+      "id": 43482,
+      "ean": "73796803285",
+      "nome": "Inalador Omron"
+    },
+    {
+      "id": 43483,
+      "ean": "73796720285",
+      "nome": "Termometro Digital de Testa"
+    },
+    {
+      "id": 43484,
+      "ean": "7896914012184",
+      "nome": "Babysec Ultra Sec"
+    },
+    {
+      "id": 43485,
+      "ean": "7896061996603",
+      "nome": "Babysec Ultra Sec"
+    },
+    {
+      "id": 43486,
+      "ean": "7896061996832",
+      "nome": "Babysec Ultra Sec"
+    },
+    {
+      "id": 43487,
+      "ean": "7896914012122",
+      "nome": "Babysec Ultra Sec"
+    },
+    {
+      "id": 43488,
+      "ean": "7896914012115",
+      "nome": "Babysec Ultra Sec"
+    },
+    {
+      "id": 43489,
+      "ean": "7896061996849",
+      "nome": "Babysec Premium"
+    },
+    {
+      "id": 43490,
+      "ean": "7896061996368",
+      "nome": "Babysec Premium"
+    },
+    {
+      "id": 43491,
+      "ean": "7896061996375",
+      "nome": "Babysec Premium"
+    },
+    {
+      "id": 43492,
+      "ean": "7896061996887",
+      "nome": "Babysec Premium"
+    },
+    {
+      "id": 43493,
+      "ean": "42389248",
+      "nome": "Creme Facial Nivea"
+    },
+    {
+      "id": 43496,
+      "ean": "7898687735802",
+      "nome": "Coenzima Q10 Equaliv"
+    },
+    {
+      "id": 43497,
+      "ean": "7898946433012",
+      "nome": "Nutri Imunidade A-Z Equaliv"
+    },
+    {
+      "id": 43498,
+      "ean": "7898687730838",
+      "nome": "Palatinose Equaliv"
+    },
+    {
+      "id": 43499,
+      "ean": "7898687738186",
+      "nome": "Upgrade Energy Equaliv"
+    },
+    {
+      "id": 43500,
+      "ean": "7898946435986",
+      "nome": "Glutamina Equaliv"
+    },
+    {
+      "id": 43501,
+      "ean": "7898687738407",
+      "nome": "Probigut Fast Equaliv"
+    },
+    {
+      "id": 43503,
+      "ean": "7898687736427",
+      "nome": "Beauty Equaliv"
+    },
+    {
+      "id": 43504,
+      "ean": "7898687730920",
+      "nome": "Magnesio Dimalato Equaliv"
+    },
+    {
+      "id": 43505,
+      "ean": "7896112402343",
+      "nome": "Doss 2.000ui"
+    },
+    {
+      "id": 43506,
+      "ean": "7896112402558",
+      "nome": "Doss Zinco 2000ui + 20mg"
+    },
+    {
+      "id": 43507,
+      "ean": "7896112407034",
+      "nome": "Doss Zinco 2000ui + 20mg"
+    },
+    {
+      "id": 43508,
+      "ean": "7896082900054",
+      "nome": "Sabonete Acnase"
+    },
+    {
+      "id": 43509,
+      "ean": "7896082900504",
+      "nome": "Lapiseira Secativa Acnase"
+    },
+    {
+      "id": 43510,
+      "ean": "7898549756617",
+      "nome": "Sabonete Acnase"
+    },
+    {
+      "id": 43511,
+      "ean": "7898549756624",
+      "nome": "Sabonete Acnase"
+    },
+    {
+      "id": 43512,
+      "ean": "7898549756631",
+      "nome": "Sabonete Acnase"
+    }
+  ],
+  "matchingRule": "Compare every nonempty column A value below A1 as trimmed text, preserving leading zeros and atypical identifiers; do not validate or correct barcode format, or deduplicate product IDs."
+}

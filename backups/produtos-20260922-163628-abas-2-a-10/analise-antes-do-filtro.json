@@ -1,0 +1,187 @@
+{
+  "createdAt": "2026-09-22T19:36:28.489Z",
+  "backupDirectory": "D:\\vidafarmacias.com.br\\vidamix\\backups\\produtos-20260922-163628-abas-2-a-10",
+  "databasePath": "D:\\vidafarmacias.com.br\\vidamix\\catalogo-crud\\data\\catalogo.sqlite",
+  "sourcePath": "D:\\vidafarmacias.com.br\\vidamix\\produtos.json",
+  "matchingRule": "Use only column A of sheets 2 through the last sheet, skipping A1 headers and blank values. Compare EAN as trimmed text, preserving leading zeros, every matching product ID and all retained fields. Ignore the first sheet entirely.",
+  "workbook": {
+    "source": "D:\\vidafarmacias.com.br\\vidamix\\BASE_MIDIA_MIX 19_08.xlsx",
+    "sha256": "b194b6300f3da5b2ba2078e4bd8b67a4900e8f6528e8d889777e9c1604c8083d",
+    "ignoredSheet": "Mídia Mix",
+    "sheets": [
+      {
+        "name": "Revista Agosto",
+        "entries": 193,
+        "distinctCodes": 192,
+        "matchingProducts": 189
+      },
+      {
+        "name": "Revista Setembro",
+        "entries": 211,
+        "distinctCodes": 211,
+        "matchingProducts": 160
+      },
+      {
+        "name": "Principia",
+        "entries": 64,
+        "distinctCodes": 64,
+        "matchingProducts": 63
+      },
+      {
+        "name": "Skelt",
+        "entries": 29,
+        "distinctCodes": 29,
+        "matchingProducts": 29
+      },
+      {
+        "name": "Creamy",
+        "entries": 35,
+        "distinctCodes": 35,
+        "matchingProducts": 35
+      },
+      {
+        "name": "Simple",
+        "entries": 9,
+        "distinctCodes": 9,
+        "matchingProducts": 9
+      },
+      {
+        "name": "Unilever",
+        "entries": 633,
+        "distinctCodes": 633,
+        "matchingProducts": 638
+      },
+      {
+        "name": "Oniz P&G",
+        "entries": 569,
+        "distinctCodes": 568,
+        "matchingProducts": 570
+      },
+      {
+        "name": "Kimberly",
+        "entries": 161,
+        "distinctCodes": 161,
+        "matchingProducts": 157
+      }
+    ]
+  },
+  "original": {
+    "databaseCount": 11067,
+    "jsonCount": 11067,
+    "jsonSha256": "1a93daeab0d79f934ba7ff9dc79512db12b94729880225f9286f96d4f4d2957e",
+    "databaseSha256": "b5354b4f8ee806039949d4bc3ab9a85d31edce8654856ea018237b7dce6c3844",
+    "schema": [
+      {
+        "type": "index",
+        "name": "idx_products_categoria",
+        "sql": "CREATE INDEX idx_products_categoria ON products(categoria_produtos)"
+      },
+      {
+        "type": "index",
+        "name": "idx_products_ean",
+        "sql": "CREATE INDEX idx_products_ean ON products(ean)"
+      },
+      {
+        "type": "index",
+        "name": "idx_products_nome",
+        "sql": "CREATE INDEX idx_products_nome ON products(nome)"
+      },
+      {
+        "type": "index",
+        "name": "idx_products_status",
+        "sql": "CREATE INDEX idx_products_status ON products(status)"
+      },
+      {
+        "type": "index",
+        "name": "sqlite_autoindex_app_meta_1",
+        "sql": null
+      },
+      {
+        "type": "table",
+        "name": "app_meta",
+        "sql": "CREATE TABLE app_meta (\n      key TEXT PRIMARY KEY,\n      value TEXT NOT NULL\n    )"
+      },
+      {
+        "type": "table",
+        "name": "products",
+        "sql": "CREATE TABLE products (\n      id INTEGER PRIMARY KEY,\n      nome TEXT NOT NULL,\n      subtitulo TEXT,\n      caracteres TEXT,\n      grupo TEXT,\n      principio_ativo TEXT,\n      ms TEXT,\n      fabricante TEXT,\n      categoria_id INTEGER,\n      categoria_produtos TEXT,\n      categoria_nome TEXT,\n      frases_encarte TEXT,\n      status TEXT NOT NULL DEFAULT 'ativo',\n      data_vigencia_inicio TEXT,\n      data_vigencia_fim TEXT,\n      generico INTEGER NOT NULL DEFAULT 0,\n      produto_destaque INTEGER NOT NULL DEFAULT 0,\n      ean TEXT,\n      direcao_imagem TEXT,\n      imagem_url TEXT,\n      imagem_arquivo TEXT,\n      imagem_status TEXT,\n      created_at TEXT NOT NULL,\n      updated_at TEXT NOT NULL\n    )"
+      }
+    ],
+    "metadata": [
+      {
+        "key": "catalog_imported_at",
+        "value": "2026-09-03T17:30:45.114Z"
+      }
+    ]
+  },
+  "secondary": {
+    "distinctCodes": 1768,
+    "keptDatabase": 1718,
+    "removedDatabase": 9349,
+    "foundCodes": 1708,
+    "missingCodes": [
+      "7896061996610",
+      "42882100669",
+      "7500435230957",
+      "7896023791581",
+      "7896023791666",
+      "7896023791697",
+      "7897947621657",
+      "7897947621664",
+      "7897947621688",
+      "7897947621855",
+      "7897947621862",
+      "7897947621879",
+      "7897947621886",
+      "7897947615397",
+      "7897947600843",
+      "7899674038548",
+      "7899674027641",
+      "7899674027672",
+      "7896227620151",
+      "7896227630365",
+      "7896227630358",
+      "7896227620014",
+      "7899095221338",
+      "7896914012276",
+      "7896914012283",
+      "7896914012290",
+      "7896914012306",
+      "7896914012313",
+      "76660008625",
+      "37000308935",
+      "7898930283227",
+      "7898930283210",
+      "7896094212763",
+      "7896321032386",
+      "7896321040015",
+      "7896321040008",
+      "7896321037237",
+      "7896321040022",
+      "7899838834092",
+      "7899838834108",
+      "7899838832005",
+      "7899838831992",
+      "7899838831985",
+      "7908414456990",
+      "7899838832012",
+      "7898949253303",
+      "7898949253839",
+      "7908791002254",
+      "7898085940495",
+      "7898085940518",
+      "7898085940501",
+      "7898593051966",
+      "7898593050631",
+      "7891150104808",
+      "7891150096226",
+      "7896018700765",
+      "7896018704152",
+      "7896018700338",
+      "7896018703469",
+      "7896018700659"
+    ],
+    "keptJson": 1718
+  },
+  "previouslyRemovedButNowAllowed": []
+}
