@@ -4,20 +4,20 @@ import path from 'node:path';
 
 export const storyBackgroundExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
-function makeStoryBackgroundUrl(backgroundFile) {
-  return `/story-backgrounds/${backgroundFile.split('/').map(encodeURIComponent).join('/')}`;
+function makeStoryBackgroundUrl(backgroundFile, urlPrefix) {
+  return `${urlPrefix}/${backgroundFile.split('/').map(encodeURIComponent).join('/')}`;
 }
 
-function storyBackgroundLabel(backgroundFile) {
+function storyBackgroundLabel(backgroundFile, format) {
   const name = path.basename(backgroundFile, path.extname(backgroundFile))
     .replace(/^gabarito\s+/i, '')
-    .replace(/(?:[_\s-]+stories?)$/i, '')
+    .replace(format === 'feed' ? /(?:[_\s-]+feed)$/i : /(?:[_\s-]+stories?)$/i, '')
     .replace(/_/g, ' ')
     .replace(/\s+-\s+$/g, '')
     .trim()
     .toLocaleLowerCase('pt-BR');
 
-  if (!name) return 'Background para Story';
+  if (!name) return format === 'feed' ? 'Background para Feed' : 'Background para Story';
 
   return name
     .split(' ')
@@ -37,7 +37,7 @@ export function isSupportedStoryBackground(filePath) {
     && storyBackgroundExtensions.has(path.extname(decodedPath).toLowerCase());
 }
 
-export function createStoryBackgroundService({ storyBackgroundsDirectory }) {
+export function createStoryBackgroundService({ storyBackgroundsDirectory, format = 'stories', urlPrefix = '/story-backgrounds' }) {
   async function listStoryBackgrounds() {
     if (!existsSync(storyBackgroundsDirectory)) return [];
 
@@ -46,8 +46,8 @@ export function createStoryBackgroundService({ storyBackgroundsDirectory }) {
       .filter((entry) => entry.isFile() && isSupportedStoryBackground(entry.name))
       .map((entry) => ({
         arquivo: entry.name,
-        nome: storyBackgroundLabel(entry.name),
-        url: makeStoryBackgroundUrl(entry.name),
+        nome: storyBackgroundLabel(entry.name, format),
+        url: makeStoryBackgroundUrl(entry.name, urlPrefix),
       }))
       .sort((first, second) => first.nome.localeCompare(second.nome, 'pt-BR'));
   }

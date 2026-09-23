@@ -128,11 +128,15 @@ function renderProductCard(product) {
   openButton.setAttribute('aria-label', `Ver detalhes de ${product.nome}`);
   openButton.addEventListener('click', () => openProduct(product.id));
 
-  const storyLink = createElement('a', 'product-story-action', 'Criar arte');
+  const storyLink = createElement('a', 'product-story-action', 'Story');
   storyLink.href = `/artes/stories?productId=${encodeURIComponent(String(product.id))}`;
-  storyLink.setAttribute('aria-label', `Criar arte para ${product.nome}`);
+  storyLink.setAttribute('aria-label', `Criar Story para ${product.nome}`);
   storyLink.append(createElement('span', 'product-story-action-icon', '→'));
-  actions.append(openButton, storyLink);
+  const feedLink = createElement('a', 'product-story-action', 'Feed');
+  feedLink.href = `/artes/feed?productId=${encodeURIComponent(String(product.id))}`;
+  feedLink.setAttribute('aria-label', `Criar Feed para ${product.nome}`);
+  feedLink.append(createElement('span', 'product-story-action-icon', '→'));
+  actions.append(openButton, storyLink, feedLink);
 
   content.append(meta, title, subtitle, footer, actions);
   card.append(image, content);

@@ -4,6 +4,7 @@ const eanCloseButton = document.querySelector('#ean-overlay-close');
 const eanForm = document.querySelector('#ean-launcher');
 const eanInput = document.querySelector('#ean-input');
 const eanStatus = document.querySelector('#ean-status');
+const eanFormat = document.querySelector('#ean-format');
 
 let scanTimer;
 let lastSubmittedEan = '';
@@ -46,10 +47,11 @@ function openScanner() {
   requestAnimationFrame(() => eanInput.focus());
 }
 
-async function openStoryForEan(ean) {
+async function openArtworkForEan(ean) {
   if (lookupInProgress || ean === lastSubmittedEan) return;
   lookupInProgress = true;
   lastSubmittedEan = ean;
+  const format = eanFormat?.value === 'feed' ? 'feed' : 'stories';
   setEanStatus('Localizando produto…');
 
   try {
@@ -58,7 +60,7 @@ async function openStoryForEan(ean) {
     });
     const product = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(product.error || 'Produto não encontrado para este EAN.');
-    window.location.assign(`/artes/stories?productId=${encodeURIComponent(String(product.id))}`);
+    window.location.assign(`/artes/${format}?productId=${encodeURIComponent(String(product.id))}`);
   } catch (error) {
     lastSubmittedEan = '';
     setEanStatus(error.message || 'Não foi possível localizar o produto.', true);
@@ -76,10 +78,11 @@ function submitEan({ showValidation = true } = {}) {
     if (showValidation) setEanStatus('Código não reconhecido. Tente novamente.', true);
     return;
   }
-  openStoryForEan(ean);
+  openArtworkForEan(ean);
 }
 
 if (eanOverlay && eanOpenButton && eanCloseButton && eanForm && eanInput) {
+  eanFormat?.addEventListener('change', () => eanInput.focus());
   eanOpenButton.addEventListener('click', openScanner);
   eanCloseButton.addEventListener('click', closeScanner);
   eanOverlay.addEventListener('click', (event) => {

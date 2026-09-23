@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { createApplication } from '../src/app.mjs';
 import { loadConfig } from '../src/config.mjs';
@@ -40,6 +41,14 @@ try {
     ['/artes/stories', 200, 'text/html'],
     ['/artes/stories?productId=1', 200, 'text/html'],
     ['/stories.html', 200, 'text/html'],
+    ['/artes/feed', 200, 'text/html'],
+    ['/artes/feed/', 200, 'text/html'],
+    ['/artes/feed?productId=1', 200, 'text/html'],
+    ['/feed.html', 200, 'text/html'],
+    ['/feed.css', 200, 'text/css'],
+    ['/api/story-backgrounds', 200, 'application/json'],
+    ['/api/feed-backgrounds', 200, 'application/json'],
+    ['/js/features/stories/formats.js', 200, 'text/javascript'],
     ['/stories-mobile.css', 200, 'text/css'],
     ['/api/health', 200, 'application/json'],
     ['/api/summary', 200, 'application/json'],
@@ -57,6 +66,9 @@ try {
     ['/api/inexistente', 404, 'application/json'],
     ['/assets/arquivo-fora-do-escopo.png', 403, 'application/json'],
     ['/story-backgrounds/imagens%20originais/arquivo.png', 403, 'application/json'],
+    ['/feed-backgrounds/subpasta/arquivo.png', 403, 'application/json'],
+    ['/feed-backgrounds/%2e%2e%2f.env', 403, 'application/json'],
+    ['/feed-backgrounds/arquivo.svg', 403, 'application/json'],
   ];
 
   for (const [pathname, expectedStatus, expectedContentType] of checks) {
@@ -68,6 +80,29 @@ try {
       `${pathname} retornou Content-Type inesperado`,
     );
   }
+
+  for (const [format, directory] of [['story', config.storyBackgroundsDirectory], ['feed', config.feedBackgroundsDirectory]]) {
+    const { items } = await (await fetch(`${baseUrl}/api/${format}-backgrounds`)).json();
+    const files = (await readdir(directory)).filter((name) => /\.(png|jpe?g|webp)$/i.test(name));
+    assert.deepEqual(items.map((item) => item.arquivo).sort(), files.sort(), `${format}: lista completa de fundos`);
+    assert.ok(items.length > 0);
+    for (const item of items) {
+      assert.ok(item.url.startsWith(`/${format}-backgrounds/`), 'Fundos dos formatos devem permanecer separados');
+      const response = await fetch(baseUrl + item.url);
+      assert.equal(response.status, 200, item.url);
+      assert.match(response.headers.get('content-type'), /^image\//);
+      assert.ok((await response.arrayBuffer()).byteLength > 0);
+    }
+  }
+
+  const feedPage = await (await fetch(baseUrl + '/artes/feed')).text();
+  const storiesPage = await (await fetch(baseUrl + '/artes/stories')).text();
+  assert.match(feedPage, /data-artwork-format="feed"/);
+  assert.match(feedPage, /width="1080" height="1350"/);
+  assert.doesNotMatch(feedPage, /1920/, 'Feed deve mostrar as dimensões corretas também nos textos');
+  assert.match(storiesPage, /width="1080" height="1920"/);
+  const ids = (html) => [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]).sort();
+  assert.deepEqual(ids(feedPage), ids(storiesPage), 'Feed deve oferecer todos os controles do editor de Stories');
 
   const eanProductsResponse = await fetch(baseUrl + '/api/products?page=1&pageSize=100');
   const eanProducts = await eanProductsResponse.json();

@@ -74,18 +74,15 @@ if (!config.auth.enabled) {
 }
 
 await checkWritableDatabaseParent(config.databasePath);
-const backgroundsReadable = await checkReadableDirectory(
-  'Diretório de backgrounds',
-  config.storyBackgroundsDirectory,
-);
 await checkReadableDirectory('Diretório de imagens de produtos', config.imagesDirectory);
 
-if (backgroundsReadable) {
-  const backgroundEntries = await fs.readdir(config.storyBackgroundsDirectory, { withFileTypes: true });
+for (const [format, directory] of [['Stories', config.storyBackgroundsDirectory], ['Feed', config.feedBackgroundsDirectory]]) {
+  if (!await checkReadableDirectory(`Diretório de backgrounds de ${format}`, directory)) continue;
+  const backgroundEntries = await fs.readdir(directory, { withFileTypes: true });
   const backgroundCount = backgroundEntries.filter(
     (entry) => entry.isFile() && storyBackgroundExtensions.has(path.extname(entry.name).toLowerCase()),
   ).length;
-  if (!backgroundCount) addIssue('Nenhum background compatível foi encontrado para Stories.');
+  if (!backgroundCount) addIssue(`Nenhum background compatível foi encontrado para ${format}.`);
 }
 
 if (!existsSync(config.databasePath)) {

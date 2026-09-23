@@ -278,7 +278,7 @@ function initTour() {
       return;
     }
     steps = tour.steps.filter((step) => getTarget(step)
-      || (page === 'stories' && document.body.classList.contains('is-mobile-editor')
+      || (['stories', 'feed'].includes(page) && document.body.classList.contains('is-mobile-editor')
         && document.querySelector(step.target)?.closest('[data-mobile-group]')));
     if (!steps.length) return;
     autoPending = false;

@@ -79,7 +79,7 @@ function installEncoder(t, behavior = {}) {
               copyTo(destination) { destination.set(data); },
             }, input.index === 0 ? {
               decoderConfig: {
-                codec: this.config.codec, codedWidth: 1080, codedHeight: 1920,
+                codec: this.config.codec, codedWidth: this.config.width, codedHeight: this.config.height,
                 description: AVC_DESCRIPTION,
               },
             } : undefined);
@@ -209,6 +209,24 @@ test('exports a 15-second 1080 × 1920 MP4 with 450 timed frames and bounded enc
   assert.equal(buffer.readUInt32BE(trackHeader.end - 4) / 65536, 1920);
   assert.equal(buffer.readUInt32BE(findBox(boxes, 'stsz').start + 16), 450);
   assert.ok(buffer.includes(Buffer.from('avcC')));
+});
+
+test('exports Feed MP4 at 1080 × 1350 with 450 frames and 15 seconds', async (t) => {
+  const recordings = installEncoder(t);
+  const canvas = { width: 1080, height: 1350 };
+  const blob = await exportStoryVideo(options({ canvas }));
+  assert.equal(blob.type, 'video/mp4');
+  assert.equal(recordings.frames.length, 450);
+  assert.equal(recordings.supportChecks[0].height, 1350);
+  assert.ok(recordings.frames.every((frame) => frame.canvas === canvas));
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const boxes = readBoxes(buffer);
+  assert.equal(boxDuration(buffer, findBox(boxes, 'mvhd')), 15);
+  assert.equal(boxDuration(buffer, findBox(boxes, 'mdhd')), 15);
+  const header = findBox(boxes, 'tkhd');
+  assert.equal(buffer.readUInt32BE(header.end - 8) / 65536, 1080);
+  assert.equal(buffer.readUInt32BE(header.end - 4) / 65536, 1350);
+  assertReleased(recordings);
 });
 
 test('tries alternate compatible H.264 configurations before rendering', async (t) => {

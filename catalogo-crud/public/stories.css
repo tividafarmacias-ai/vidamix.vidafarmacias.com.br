@@ -202,7 +202,7 @@ body.stories-page {
 .story-background-option img {
   display: block;
   width: 100%;
-  aspect-ratio: 9 / 16;
+  aspect-ratio: var(--artwork-aspect-ratio, 9 / 16);
   object-fit: cover;
   border-radius: 8px;
   background: var(--color-surface);

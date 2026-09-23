@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createAutoLayout } from '../public/js/features/stories/auto-layout.js';
+import { getArtworkFormat } from '../public/js/features/stories/formats.js';
 
 const SAFE_AREA = { left: 56, top: 408, right: 1024, bottom: 1864 };
 const GAP = 32;
@@ -61,6 +62,10 @@ function assertSeparated(first, second) {
 }
 
 function assertUsableLayout(input) {
+  const safeArea = input.format ? {
+    left: 56, top: input.format.safeTop + 24,
+    right: input.format.width - 56, bottom: input.format.height - 56,
+  } : SAFE_AREA;
   const layout = createAutoLayout(input);
   assert.ok(layout, `expected a usable ${input.mode} composition`);
   assert.equal(typeof layout.arrangement, 'string');
@@ -75,10 +80,10 @@ function assertUsableLayout(input) {
   for (const box of boxes) {
     assert.ok([box.x, box.y, box.width, box.height].every(Number.isFinite), `${box.target} has invalid geometry`);
     assert.ok(box.width > 0 && box.height > 0, `${box.target} must remain visible`);
-    assert.ok(box.x >= SAFE_AREA.left - EPSILON, `${box.target} exceeds the left margin`);
-    assert.ok(box.y >= SAFE_AREA.top - EPSILON, `${box.target} overlaps the brand header`);
-    assert.ok(box.x + box.width <= SAFE_AREA.right + EPSILON, `${box.target} exceeds the right margin`);
-    assert.ok(box.y + box.height <= SAFE_AREA.bottom + EPSILON, `${box.target} exceeds the bottom margin`);
+    assert.ok(box.x >= safeArea.left - EPSILON, `${box.target} exceeds the left margin`);
+    assert.ok(box.y >= safeArea.top - EPSILON, `${box.target} overlaps the brand header`);
+    assert.ok(box.x + box.width <= safeArea.right + EPSILON, `${box.target} exceeds the right margin`);
+    assert.ok(box.y + box.height <= safeArea.bottom + EPSILON, `${box.target} exceeds the bottom margin`);
     if (input.freeTextBox) assertSeparated(box, { target: 'free text', ...input.freeTextBox });
   }
   for (let index = 0; index < boxes.length; index += 1) {
@@ -88,6 +93,23 @@ function assertUsableLayout(input) {
 }
 
 for (const mode of ['single', 'two-products', 'combo']) {
+  test(`Feed ${mode} fits products, offers and free text in the shorter canvas`, () => {
+    const format = getArtworkFormat('feed');
+    for (const aspects of [[1, 1], [0.25, 0.3], [3.5, 4], [0.25, 3.5], [3.5, 0.25], [0.65, 1.7]]) {
+      assertUsableLayout(inputFor(mode, aspects, { format }));
+      assertUsableLayout(inputFor(mode, aspects, {
+        format, freeTextBox: { x: 220, y: 445, width: 640, height: 100 },
+      }));
+    }
+  });
+
+  test(`explicit Stories format preserves the original ${mode} layout`, () => {
+    const input = inputFor(mode);
+    assert.deepEqual(createAutoLayout({ ...input, format: getArtworkFormat('stories') }), createAutoLayout(input));
+    createAutoLayout({ ...input, format: getArtworkFormat('feed') });
+    assert.deepEqual(createAutoLayout(input), createAutoLayout({ ...input, format: getArtworkFormat('stories') }));
+  });
+
   test(`${mode} preserves composition structure and safe spacing for different product shapes`, () => {
     for (const aspects of [[1, 1], [0.25, 0.3], [3.5, 4], [0.25, 3.5], [3.5, 0.25], [0.65, 1.7]]) {
       assertUsableLayout(inputFor(mode, aspects));

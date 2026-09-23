@@ -164,3 +164,6 @@ a:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
 @media (max-width: 520px) { .ean-scanner-overlay { padding: 16px; } .ean-scanner-dialog { padding: 37px 23px 25px; border-radius: var(--radius-lg); } }
 .studio-hero .tour-launcher { color: var(--azul); border-color: transparent; background: transparent; }
 .studio-hero .tour-launcher:hover { background: var(--glass-surface-strong); border-color: var(--glass-line); }
+
+.ean-format-label { display: block; margin: 16px 0 6px; color: var(--color-muted); font-size: .8rem; }
+#ean-format { width: 100%; min-height: 44px; padding: 8px 12px; color: var(--azul); font: inherit; border: 1px solid var(--glass-line); border-radius: 10px; background: #fff; }

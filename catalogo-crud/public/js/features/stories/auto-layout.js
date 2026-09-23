@@ -2,12 +2,6 @@ import { MIN_DETAILS_WIDTH, STORY_HEIGHT, STORY_SAFE_TOP, STORY_WIDTH } from './
 
 const GAP = 32;
 const MARGIN = 56;
-const SAFE_AREA = {
-  x: MARGIN,
-  y: STORY_SAFE_TOP + 24,
-  width: STORY_WIDTH - MARGIN * 2,
-  height: STORY_HEIGHT - MARGIN - STORY_SAFE_TOP - 24,
-};
 const EPSILON = 0.01;
 
 function intersects(first, second) {
@@ -23,7 +17,7 @@ function contains(area, box) {
     && box.y + box.height <= area.y + area.height + EPSILON;
 }
 
-function availableAreas(obstacle) {
+function availableAreas(obstacle, SAFE_AREA) {
   if (!obstacle || !intersects(SAFE_AREA, obstacle)) return [SAFE_AREA];
   const right = SAFE_AREA.x + SAFE_AREA.width;
   const bottom = SAFE_AREA.y + SAFE_AREA.height;
@@ -52,6 +46,14 @@ function fitProduct(product, area, scale = 1) {
  */
 export function createAutoLayout(options) {
   if (!options || typeof options !== 'object') return null;
+  const { width = STORY_WIDTH, height = STORY_HEIGHT, safeTop = STORY_SAFE_TOP } = options.format || {};
+  if (![width, height, safeTop].every(Number.isFinite)
+      || width <= MARGIN * 2 || safeTop < 0 || height <= safeTop + MARGIN + 24) return null;
+  const SAFE_AREA = {
+    x: MARGIN, y: safeTop + 24,
+    width: width - MARGIN * 2, height: height - MARGIN - safeTop - 24,
+  };
+  const maximumDetailsWidth = width - 48;
   const { mode, products, measureDetails, freeTextBox = null } = options;
   const count = mode === 'single' ? 1 : 2;
   if (!['single', 'two-products', 'combo'].includes(mode)
@@ -75,7 +77,7 @@ export function createAutoLayout(options) {
   let bestScore = -Infinity;
 
   function measure(target, width) {
-    if (width < MIN_DETAILS_WIDTH || width > STORY_WIDTH - 48) return null;
+    if (width < MIN_DETAILS_WIDTH || width > maximumDetailsWidth) return null;
     const key = `${target}:${width}`;
     if (!measurements.has(key)) {
       const size = measureDetails(target, width);
@@ -197,7 +199,7 @@ export function createAutoLayout(options) {
     consider(candidate, area);
   }
 
-  for (const area of availableAreas(obstacle)) {
+  for (const area of availableAreas(obstacle, SAFE_AREA)) {
     // Text wrapping can change abruptly with width, so evaluate several sizes
     // instead of assuming that a narrower card is always shorter.
     for (const factor of [1, 0.9, 0.8, 0.7, 0.6]) {

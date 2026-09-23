@@ -1,18 +1,13 @@
 import {
-  DEFAULT_DETAILS_WIDTH,
   DEFAULT_FREE_TEXT_WIDTH,
-  DEFAULT_PRODUCT_AREA,
-  DEFAULT_TWO_PRODUCT_AREAS,
   DESCRIPTION_CARD_PADDING,
   FREE_TEXT_LETTER_SPACING_RATIO,
   MIN_DETAILS_WIDTH,
   MIN_FREE_TEXT_WIDTH,
   MIN_PRODUCT_WIDTH,
   PRODUCT_PAGE_SIZE,
-  STORY_HEIGHT,
-  STORY_SAFE_TOP,
-  STORY_WIDTH,
 } from './constants.js';
+import { getArtworkFormat } from './formats.js';
 import { getStoriesEditorElements } from './dom.js';
 import { createStoriesEditorState } from './state.js';
 import { createAutoLayout } from './auto-layout.js';
@@ -20,6 +15,12 @@ import { bindPriceInput } from './price-input.js';
 import { drawStoryVideoFrame } from './video-animation.js';
 import { initStoriesMobileEditor } from './mobile-editor.js';
 
+const format = getArtworkFormat(document.body.dataset.artworkFormat);
+const {
+  width: STORY_WIDTH, height: STORY_HEIGHT, safeTop: STORY_SAFE_TOP,
+  productArea: DEFAULT_PRODUCT_AREA, twoProductAreas: DEFAULT_TWO_PRODUCT_AREAS,
+  detailsWidth: DEFAULT_DETAILS_WIDTH,
+} = format;
 const state = createStoriesEditorState();
 const elements = getStoriesEditorElements();
 
@@ -737,7 +738,7 @@ function makeDefaultDetailsTransform(target = 'details') {
     const productBottom = productBox
       ? productBox.y + productBox.height
       : productArea.y + productArea.height;
-    const desiredY = Math.max(1120, productBottom + 48);
+    const desiredY = Math.max(format.detailsTop, productBottom + 48);
     return getDetailsTransformFromVisualBox({
       x: centerX - (provisionalLayout.descriptionWidth / 2),
       y: Math.min(desiredY, STORY_HEIGHT - provisionalLayout.cardHeight - 56),
@@ -750,7 +751,7 @@ function makeDefaultDetailsTransform(target = 'details') {
     ...getAllProductBoxes().map((productBox) => productBox.y + productBox.height),
   );
   const provisionalLayout = getDetailsLayout({ x: 0, y: 0, width }, target);
-  const desiredY = Math.max(1120, productBottom + 64);
+  const desiredY = Math.max(format.detailsTop, productBottom + 64);
   return getDetailsTransformFromVisualBox({
     x: (STORY_WIDTH - provisionalLayout.descriptionWidth) / 2,
     y: Math.min(desiredY, STORY_HEIGHT - provisionalLayout.cardHeight - 56),
@@ -802,6 +803,7 @@ function applyAutoLayout() {
   // Tracked text can paint beyond its logical box when a word is very long.
   const textWidth = freeText ? Math.max(freeText.width, freeText.textWidth) : 0;
   const layout = createAutoLayout({
+    format,
     mode: state.compositionMode,
     products: targets.map((target) => ({ target, aspectRatio: getProductAspectRatio(target) })),
     measureDetails: (target, width) => {
@@ -1918,7 +1920,7 @@ function renderProducts() {
 async function loadBackgrounds() {
   if (state.backgroundRequest) return state.backgroundRequest;
 
-  state.backgroundRequest = requestJson('/api/story-backgrounds')
+  state.backgroundRequest = requestJson(format.backgroundsUrl)
     .then((response) => {
       state.backgrounds = response.items || [];
       state.selectedBackground = state.backgrounds[0] || null;
@@ -2414,7 +2416,7 @@ function storyDownloadName(productName, extension) {
     .replace(/[^a-zA-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .toLowerCase() || 'produto';
-  return `story-${safeName}.${extension}`;
+  return `${format.downloadPrefix}-${safeName}.${extension}`;
 }
 
 function createExportCanvas(alpha = true) {
@@ -2790,6 +2792,8 @@ function bindEvents() {
 }
 
 export async function initStoriesEditor() {
+  elements.canvas.width = STORY_WIDTH;
+  elements.canvas.height = STORY_HEIGHT;
   bindEvents();
   mobileEditor = initStoriesMobileEditor({
     getProgress: getMobileProgress,

@@ -26,7 +26,7 @@ export const tours = {
         target: '[data-tour="home-formats"]',
         eyebrow: 'Explore as possibilidades',
         title: 'Escolha o formato da campanha',
-        description: 'Stories já está disponível em 1080 × 1920. Os outros cartões mostram os formatos planejados. Ao entrar no editor, você terá um guia dos próximos passos.',
+        description: 'Crie Stories em 1080 × 1920 ou Feed em 1080 × 1350. Ao entrar no editor, você terá um guia dos próximos passos.',
         placement: 'right',
       },
     ],
@@ -64,7 +64,7 @@ export const tours = {
         target: '[data-tour="catalogue-actions"]',
         eyebrow: 'Pronto para criar',
         title: 'Cadastre ou crie uma arte',
-        description: 'Novo produto abre o cadastro. Criar arte leva ao editor de Stories, onde você escolhe os produtos da campanha. O botão Tour guiado fica aqui para rever estas dicas.',
+        description: 'Novo produto abre o cadastro. Criar Story e Criar Feed levam ao editor do formato escolhido. Nos cartões dos produtos, esses atalhos já levam o item para a arte. O botão Tour guiado permite rever estas dicas.',
         placement: 'bottom',
       },
     ],
@@ -123,4 +123,14 @@ export const tours = {
       },
     ],
   },
+};
+
+// Keep the same guide and mobile targets, with separate progress for each format.
+tours.feed = {
+  ...tours.stories,
+  description: tours.stories.description.replace('um Story', 'um Feed'),
+  steps: tours.stories.steps.map((step) => ({
+    ...step,
+    description: step.description.replace('1080 × 1920', '1080 × 1350'),
+  })),
 };

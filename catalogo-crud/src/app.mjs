@@ -25,7 +25,12 @@ export function createApplication({ config, database, logger = console }) {
   const storyBackgroundService = createStoryBackgroundService({
     storyBackgroundsDirectory: config.storyBackgroundsDirectory,
   });
-  const apiRouter = createApiRouter({ productService, storyBackgroundService });
+  const feedBackgroundService = createStoryBackgroundService({
+    storyBackgroundsDirectory: config.feedBackgroundsDirectory,
+    format: 'feed',
+    urlPrefix: '/feed-backgrounds',
+  });
+  const apiRouter = createApiRouter({ productService, storyBackgroundService, feedBackgroundService });
 
   return async function requestHandler(request, response) {
     try {
@@ -62,8 +67,10 @@ export function createApplication({ config, database, logger = console }) {
         return;
       }
 
-      if (url.pathname.startsWith('/story-backgrounds/')) {
-        const backgroundPath = url.pathname.slice('/story-backgrounds/'.length);
+      if (url.pathname.startsWith('/story-backgrounds/') || url.pathname.startsWith('/feed-backgrounds/')) {
+        const isFeed = url.pathname.startsWith('/feed-backgrounds/');
+        const prefix = isFeed ? '/feed-backgrounds/' : '/story-backgrounds/';
+        const backgroundPath = url.pathname.slice(prefix.length);
         if (!isSupportedStoryBackground(backgroundPath)) {
           sendError(response, 403, 'Formato de background não permitido.');
           return;
@@ -71,7 +78,7 @@ export function createApplication({ config, database, logger = console }) {
         await serveFile({
           request,
           response,
-          rootDirectory: config.storyBackgroundsDirectory,
+          rootDirectory: isFeed ? config.feedBackgroundsDirectory : config.storyBackgroundsDirectory,
           urlPath: backgroundPath,
           cacheControl: 'public, max-age=86400',
         });

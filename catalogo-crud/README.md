@@ -1,7 +1,7 @@
 # VidaMix Studio
 
-Plataforma local para organizar produtos e criar artes comerciais. A aplicação
-começa com Stories, mas sua estrutura permite incluir novos formatos, documentos
+Plataforma local para organizar produtos e criar artes comerciais em Stories e
+Feed. Sua estrutura permite incluir novos formatos, documentos
 de frente e verso, exportações e integrações de publicação sem concentrar toda
 a lógica em uma única página ou arquivo.
 
@@ -9,7 +9,7 @@ a lógica em uma única página ou arquivo.
 
 A identidade compartilhada está em `public/brand.css`: Poppins, azul `#084F98`,
 vermelho `#F21E26`, superfícies claras e tokens de bordas, cantos e sombras.
-As três páginas carregam essa base antes dos estilos de cada tela; o tour também
+As páginas carregam essa base antes dos estilos de cada tela; o tour também
 usa os mesmos tokens. A fonte é servida localmente por `public/fonts/`, com sua
 licença SIL, sem depender do Google Fonts em tempo de execução.
 O tema da interface é independente da composição e das fontes das artes exportadas.
@@ -21,10 +21,34 @@ O tema da interface é independente da composição e das fontes das artes expor
 | `/` | Central do VidaMix Studio e formatos disponíveis |
 | `/catalogo` | Gestão de produtos |
 | `/artes/stories` | Editor de artes para Stories |
+| `/artes/feed` | Editor de artes para Feed vertical (4:5) |
 | `/api/*` | API JSON interna |
 
 Os caminhos antigos de arquivos continuam funcionando como compatibilidade, mas
 novas telas devem ser registradas por rota semântica.
+
+## Editor de Feed
+
+Abra **Feed** na central, na navegação ou no catálogo. O atalho **Feed** de cada
+produto abre `/artes/feed?productId=ID` com o item selecionado. O leitor de código
+de barras da central também permite escolher Stories ou Feed antes da leitura.
+
+Feed usa 1080 × 1350 pixels, acompanhando a proporção 4:5 dos fundos enviados em
+`camas-feed/`. A lista é carregada por `/api/feed-backgrounds`; as imagens são
+servidas em `/feed-backgrounds/`. Para outra localização, configure
+`FEED_BACKGROUNDS_ROOT`. Stories continua usando `camas-stories/` e 1080 × 1920.
+
+Os formatos compartilham o editor, incluindo um produto, dois produtos, combo,
+preços, texto livre, seleção, movimentação, redimensionamento, vínculo de
+elementos, zoom, grade, ajuste automático, interface mobile, tour e exportações.
+O PNG e o MP4 de 15 segundos usam o tamanho do formato selecionado e recebem
+prefixos `feed-` ou `story-` no nome do arquivo. As condições de suporte a MP4
+descritas abaixo também se aplicam ao Feed.
+
+A configuração em `public/js/features/stories/formats.js` separa dimensões,
+áreas iniciais de produtos, margem superior e origem dos fundos. O ajuste
+automático respeita a área mais curta do Feed. `npm run verify` verifica os dois
+formatos, incluindo geometria, dimensões do MP4, controles das páginas e fundos.
 
 ## Editor de Stories no celular
 

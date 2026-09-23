@@ -23,6 +23,7 @@
           <a href="/" aria-current="page">Central</a>
           <a href="/catalogo">Catálogo</a>
           <a href="/artes/stories">Stories</a>
+          <a href="/artes/feed">Feed</a>
         </nav>
       </div>
     </header>
@@ -71,16 +72,16 @@
               <div class="format-card-footer"><span>1080 × 1920</span><a href="/artes/stories">Criar arte <b aria-hidden="true">→</b></a></div>
             </article>
 
+            <article class="format-card format-card-feed" aria-label="Feed vertical, disponível agora">
+              <div class="format-card-topline"><span class="format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M9 16.3 11.3 13l1.8 2.1 1.7-1.7 1.2 1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="format-status is-available">Disponível agora</span></div>
+              <div><h3>Feed</h3><p>Artes em 4:5 para destacar suas ofertas no Instagram.</p></div>
+              <div class="format-card-footer"><span>1080 × 1350</span><a href="/artes/feed">Criar arte <b aria-hidden="true">→</b></a></div>
+            </article>
+
             <article class="format-card is-planned" aria-label="Feed quadrado, em breve">
               <div class="format-card-topline"><span class="format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2.3" stroke="currentColor" stroke-width="1.8"/><path d="M8 15.5 10.7 12l2.1 2.3 1.8-1.8 2.6 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="format-status">Em breve</span></div>
               <div><h3>Feed quadrado</h3><p>Peças de impacto para a grade do Instagram.</p></div>
               <div class="format-card-footer"><span>1080 × 1080</span><span class="format-muted">Planejado</span></div>
-            </article>
-
-            <article class="format-card is-planned" aria-label="Post vertical, em breve">
-              <div class="format-card-topline"><span class="format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M9 16.3 11.3 13l1.8 2.1 1.7-1.7 1.2 1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="format-status">Em breve</span></div>
-              <div><h3>Post vertical</h3><p>Mais espaço para catálogo, benefícios e chamadas.</p></div>
-              <div class="format-card-footer"><span>1080 × 1350</span><span class="format-muted">Planejado</span></div>
             </article>
 
             <article class="format-card format-card-duo is-planned" aria-label="Arte frente e verso, em breve">
@@ -102,6 +103,11 @@
         <h2 id="ean-scanner-title">Escaneie o código de barras</h2>
         <p>Aproxime o leitor. O produto será aberto automaticamente assim que o código for identificado.</p>
         <form id="ean-launcher" novalidate>
+          <label class="ean-format-label" for="ean-format">Formato da arte</label>
+          <select id="ean-format" name="format">
+            <option value="stories">Stories · 1080 × 1920</option>
+            <option value="feed">Feed · 1080 × 1350</option>
+          </select>
           <label class="screen-reader-only" for="ean-input">Código de barras</label>
           <input id="ean-input" name="ean" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]*" maxlength="14" />
         </form>

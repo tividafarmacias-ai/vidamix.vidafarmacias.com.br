@@ -346,6 +346,7 @@ body.catalogue-page {
 
 .product-card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding-top: 10px;
   align-items: center;

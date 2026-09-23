@@ -36,7 +36,8 @@ public/
     features/
       stories/               Bootstrap, estado, DOM e editor do formato
 
-camas-stories/               Assets de cenário locais
+camas-stories/               Fundos de Stories
+camas-feed/                  Fundos de Feed (4:5)
 data/                        Banco SQLite local (não versionado)
 docs/                        Decisões e contratos de arquitetura
 ```

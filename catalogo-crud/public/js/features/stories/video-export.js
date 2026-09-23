@@ -22,9 +22,12 @@ function timestampForFrame(frameIndex) {
   return Math.round(frameIndex * 1_000_000 / STORY_VIDEO_FPS);
 }
 
-/** Checks the actual H.264 encoder, including its required portrait resolution. */
-export async function getStoryVideoConfig({ signal } = {}) {
+/** Checks the actual H.264 encoder at the artwork's output resolution. */
+export async function getStoryVideoConfig({ signal, width = VIDEO_WIDTH, height = VIDEO_HEIGHT } = {}) {
   checkAborted(signal);
+  if (width !== VIDEO_WIDTH || ![VIDEO_HEIGHT, 1350].includes(height)) {
+    throw new Error('Use um canvas de 1080 × 1920 (Stories) ou 1080 × 1350 (Feed) pixels.');
+  }
   if (globalThis.isSecureContext === false) {
     throw new Error('Para exportar MP4, abra o editor por HTTPS ou em localhost. O navegador bloqueia a codificação de vídeo em conexões HTTP comuns.');
   }
@@ -40,8 +43,8 @@ export async function getStoryVideoConfig({ signal } = {}) {
   for (const codec of ['avc1.420028', 'avc1.42e028']) {
     const config = {
       codec,
-      width: VIDEO_WIDTH,
-      height: VIDEO_HEIGHT,
+      width,
+      height,
       framerate: STORY_VIDEO_FPS,
       bitrate: 8_000_000,
       latencyMode: 'quality',
@@ -62,25 +65,26 @@ export async function getStoryVideoConfig({ signal } = {}) {
 
 /**
  * Encode 450 explicitly timed frames as a real MP4/H.264 file, without audio.
- * renderFrame(seconds) paints the supplied 1080 × 1920 canvas and may be async.
+ * renderFrame(seconds) paints the supplied Stories or Feed canvas and may be async.
  * onProgress receives a fraction between 0 and 1; 1 means the MP4 is finalized.
  * The caller owns the canvas and any images/object URLs used while rendering.
  */
 export async function exportStoryVideo({ canvas, renderFrame, onProgress = () => {}, signal }) {
   checkAborted(signal);
-  if (!canvas || canvas.width !== VIDEO_WIDTH || canvas.height !== VIDEO_HEIGHT) {
-    throw new Error('A exportação do Story precisa de um canvas de 1080 × 1920 pixels.');
+  if (!canvas || canvas.width !== VIDEO_WIDTH || ![VIDEO_HEIGHT, 1350].includes(canvas.height)) {
+    throw new Error('Use um canvas de 1080 × 1920 (Stories) ou 1080 × 1350 (Feed) pixels.');
   }
   if (typeof renderFrame !== 'function' || typeof onProgress !== 'function') {
     throw new TypeError('Informe as funções de renderização e progresso do vídeo.');
   }
-  const config = await getStoryVideoConfig({ signal });
+  const { width, height } = canvas;
+  const config = await getStoryVideoConfig({ signal, width, height });
   checkAborted(signal);
 
   const target = new ArrayBufferTarget();
   let muxer = new Muxer({
     target,
-    video: { codec: 'avc', width: VIDEO_WIDTH, height: VIDEO_HEIGHT, frameRate: STORY_VIDEO_FPS },
+    video: { codec: 'avc', width, height, frameRate: STORY_VIDEO_FPS },
     fastStart: 'in-memory',
     firstTimestampBehavior: 'strict',
   });
@@ -147,7 +151,7 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
           const frameIndex = Math.round(chunk.timestamp * STORY_VIDEO_FPS / 1_000_000);
           const timestamp = timestampForFrame(frameIndex);
           if (frameIndex !== encodedFrames || chunk.timestamp !== timestamp) {
-            throw new Error('O codificador não preservou a sequência de quadros do Story.');
+            throw new Error('O codificador não preservou a sequência de quadros da arte.');
           }
           const data = new Uint8Array(chunk.byteLength);
           chunk.copyTo(data);
@@ -194,7 +198,7 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
 
     await waitForEncoder(encoder.flush());
     if (encodedFrames !== FRAME_COUNT) {
-      throw new Error('O navegador não codificou todos os quadros do Story. Tente exportar novamente.');
+      throw new Error('O navegador não codificou todos os quadros da arte. Tente exportar novamente.');
     }
     muxer.finalize();
     const blob = new Blob([target.buffer], { type: 'video/mp4' });
