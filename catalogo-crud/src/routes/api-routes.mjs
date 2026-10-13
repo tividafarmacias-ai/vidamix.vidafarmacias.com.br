@@ -5,7 +5,7 @@ function getRequestedProductId(productService, value) {
   return productService.productId(value);
 }
 
-export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService }) {
+export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService }) {
   const router = createRouter();
 
   router.get('/api/health', ({ response }) => {
@@ -26,6 +26,10 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
 
   router.get('/api/feed-backgrounds', async ({ response }) => {
     sendJson(response, 200, { items: await feedBackgroundService.listStoryBackgrounds() });
+  });
+
+  router.get('/api/indoor-backgrounds', async ({ response }) => {
+    sendJson(response, 200, { items: await indoorBackgroundService.listStoryBackgrounds() });
   });
 
   router.get('/api/products', ({ response, url }) => {

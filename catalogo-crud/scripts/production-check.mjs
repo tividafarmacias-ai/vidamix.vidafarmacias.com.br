@@ -85,6 +85,11 @@ for (const [format, directory] of [['Stories', config.storyBackgroundsDirectory]
   if (!backgroundCount) addIssue(`Nenhum background compatível foi encontrado para ${format}.`);
 }
 
+// Allow deployment before Indoor assets are copied; exporting still requires a selected background.
+if (existsSync(config.indoorBackgroundsDirectory)) {
+  await checkReadableDirectory('Diretório de backgrounds de Indoor', config.indoorBackgroundsDirectory);
+}
+
 if (!existsSync(config.databasePath)) {
   await checkReadableFile('Arquivo de catálogo para a importação inicial', config.sourceCatalogPath);
   await checkReadableFile('Manifesto de imagens para a importação inicial', config.sourceManifestPath);

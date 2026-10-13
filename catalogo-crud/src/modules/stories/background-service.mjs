@@ -9,15 +9,21 @@ function makeStoryBackgroundUrl(backgroundFile, urlPrefix) {
 }
 
 function storyBackgroundLabel(backgroundFile, format) {
+  const formatSuffix = format === 'indoor-h'
+    ? /(?:[_\s-]+indoor(?:[_\s-]+h(?:orizontal)?)?|[_\s-]+df\s*-\s*prec\s+tv)$/i
+    : format === 'feed' ? /(?:[_\s-]+feed)$/i : /(?:[_\s-]+stories?)$/i;
   const name = path.basename(backgroundFile, path.extname(backgroundFile))
     .replace(/^gabarito\s+/i, '')
-    .replace(format === 'feed' ? /(?:[_\s-]+feed)$/i : /(?:[_\s-]+stories?)$/i, '')
+    .replace(formatSuffix, '')
     .replace(/_/g, ' ')
     .replace(/\s+-\s+$/g, '')
     .trim()
     .toLocaleLowerCase('pt-BR');
 
-  if (!name) return format === 'feed' ? 'Background para Feed' : 'Background para Story';
+  if (!name) {
+    if (format === 'indoor-h') return 'Background para Indoor';
+    return format === 'feed' ? 'Background para Feed' : 'Background para Story';
+  }
 
   return name
     .split(' ')

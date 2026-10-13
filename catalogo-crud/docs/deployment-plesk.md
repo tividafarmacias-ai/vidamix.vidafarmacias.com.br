@@ -16,6 +16,7 @@ vidamix/
 └── catalogo-crud/
     ├── camas-stories/
     ├── camas-feed/
+    ├── camas-indoor-h/
     ├── data/
     ├── public/
     ├── package.json
@@ -32,7 +33,15 @@ Manifesto:          ../imagens-produtos/manifesto-imagens.json
 Imagens:            ../imagens-produtos
 Backgrounds Stories: ./camas-stories
 Backgrounds Feed:    ./camas-feed
+Backgrounds Indoor:  ./camas-indoor-h
 ```
+
+Os fundos de TV Indoor horizontal usam `camas-indoor-h`. Se estiverem em outra
+pasta, configure `INDOOR_BACKGROUNDS_ROOT` nas variáveis do Plesk. O caminho pode
+ser absoluto ou relativo à pasta da aplicação. A pasta pode ficar vazia durante
+a preparação dos fundos; a API continuará respondendo com uma lista vazia.
+Para exportar um vídeo Indoor, copie os fundos para essa pasta e selecione um
+fundo no editor, além dos cinco produtos.
 
 ## Antes de enviar
 
@@ -43,7 +52,7 @@ npm ci
 npm run verify
 ```
 
-Envie todos os arquivos, inclusive `package-lock.json`, `camas-stories`, `camas-feed`,
+Envie todos os arquivos, inclusive `package-lock.json`, `camas-stories`, `camas-feed`, `camas-indoor-h`,
 `produtos.json` e `imagens-produtos`. Não envie `node_modules`, `.env` ou a
 pasta `data` de desenvolvimento.
 
@@ -87,7 +96,8 @@ A resposta esperada é:
 {"status":"ok"}
 ```
 
-Depois valide `/`, `/catalogo` e `/artes/stories`.
+Depois valide `/`, `/catalogo`, `/artes/stories`, `/artes/feed` e `/artes/indoor-h`.
+Confira também `/api/indoor-backgrounds` para verificar a lista de fundos da TV.
 
 ## Atualizações, versionamento e backup
 

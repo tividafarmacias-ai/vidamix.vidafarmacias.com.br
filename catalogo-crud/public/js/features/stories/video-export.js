@@ -8,6 +8,7 @@ const VIDEO_HEIGHT = 1920;
 const FRAME_COUNT = STORY_VIDEO_DURATION * STORY_VIDEO_FPS;
 const MAX_QUEUED_FRAMES = 4;
 const ENCODER_TIMEOUT_MS = 30000;
+const DIMENSIONS_MESSAGE = 'Use um canvas de 1080 × 1920 (Stories), 1080 × 1350 (Feed) ou 1920 × 1080 (Indoor TV) pixels.';
 const UNSUPPORTED_MESSAGE = 'Este navegador não oferece exportação MP4 em H.264. Abra o editor em uma versão atual do Chrome ou Edge com suporte a H.264.';
 
 function abortError() {
@@ -22,11 +23,16 @@ function timestampForFrame(frameIndex) {
   return Math.round(frameIndex * 1_000_000 / STORY_VIDEO_FPS);
 }
 
+function supportsDimensions(width, height) {
+  return (width === VIDEO_WIDTH && [VIDEO_HEIGHT, 1350].includes(height))
+    || (width === 1920 && height === 1080);
+}
+
 /** Checks the actual H.264 encoder at the artwork's output resolution. */
 export async function getStoryVideoConfig({ signal, width = VIDEO_WIDTH, height = VIDEO_HEIGHT } = {}) {
   checkAborted(signal);
-  if (width !== VIDEO_WIDTH || ![VIDEO_HEIGHT, 1350].includes(height)) {
-    throw new Error('Use um canvas de 1080 × 1920 (Stories) ou 1080 × 1350 (Feed) pixels.');
+  if (!supportsDimensions(width, height)) {
+    throw new Error(DIMENSIONS_MESSAGE);
   }
   if (globalThis.isSecureContext === false) {
     throw new Error('Para exportar MP4, abra o editor por HTTPS ou em localhost. O navegador bloqueia a codificação de vídeo em conexões HTTP comuns.');
@@ -65,14 +71,14 @@ export async function getStoryVideoConfig({ signal, width = VIDEO_WIDTH, height 
 
 /**
  * Encode 450 explicitly timed frames as a real MP4/H.264 file, without audio.
- * renderFrame(seconds) paints the supplied Stories or Feed canvas and may be async.
+ * renderFrame(seconds) paints the supplied Stories, Feed or Indoor TV canvas and may be async.
  * onProgress receives a fraction between 0 and 1; 1 means the MP4 is finalized.
  * The caller owns the canvas and any images/object URLs used while rendering.
  */
 export async function exportStoryVideo({ canvas, renderFrame, onProgress = () => {}, signal }) {
   checkAborted(signal);
-  if (!canvas || canvas.width !== VIDEO_WIDTH || ![VIDEO_HEIGHT, 1350].includes(canvas.height)) {
-    throw new Error('Use um canvas de 1080 × 1920 (Stories) ou 1080 × 1350 (Feed) pixels.');
+  if (!canvas || !supportsDimensions(canvas.width, canvas.height)) {
+    throw new Error(DIMENSIONS_MESSAGE);
   }
   if (typeof renderFrame !== 'function' || typeof onProgress !== 'function') {
     throw new TypeError('Informe as funções de renderização e progresso do vídeo.');

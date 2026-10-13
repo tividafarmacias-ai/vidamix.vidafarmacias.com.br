@@ -7,6 +7,7 @@ const pages = new Map([
   ['/catalogo', 'catalogo.html'],
   ['/artes/stories', 'stories.html'],
   ['/artes/feed', 'feed.html'],
+  ['/artes/indoor-h', 'indoor-h.html'],
 ]);
 
 export function resolvePageRoute(pathname) {

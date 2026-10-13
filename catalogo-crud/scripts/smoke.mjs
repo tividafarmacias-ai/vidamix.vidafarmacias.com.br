@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import { readdir } from 'node:fs/promises';
+import { mkdtemp, readdir, rmdir, unlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createApplication } from '../src/app.mjs';
 import { loadConfig } from '../src/config.mjs';
 import { initializeCatalogDatabase } from '../src/database/catalog-database.mjs';
+import { createStoryBackgroundService } from '../src/modules/stories/background-service.mjs';
 
 function listen(server) {
   return new Promise((resolve, reject) => {
@@ -26,6 +29,16 @@ const config = loadConfig({
   NODE_ENV: 'test',
   APP_AUTH_ENABLED: 'false',
 });
+assert.equal(
+  loadConfig({ APP_AUTH_ENABLED: 'false' }).indoorBackgroundsDirectory,
+  path.join(config.projectDirectory, 'camas-indoor-h'),
+  'Indoor deve usar a pasta camas-indoor-h por padrão',
+);
+assert.equal(
+  loadConfig({ APP_AUTH_ENABLED: 'false', INDOOR_BACKGROUNDS_ROOT: 'fundos/indoor' }).indoorBackgroundsDirectory,
+  path.join(config.projectDirectory, 'fundos', 'indoor'),
+  'Indoor deve aceitar um diretório configurado',
+);
 const database = await initializeCatalogDatabase(config);
 const app = createApplication({ config, database, logger: { error() {} } });
 const server = createServer(app);
@@ -46,8 +59,16 @@ try {
     ['/artes/feed?productId=1', 200, 'text/html'],
     ['/feed.html', 200, 'text/html'],
     ['/feed.css', 200, 'text/css'],
+    ['/artes/indoor-h', 200, 'text/html'],
+    ['/artes/indoor-h/', 200, 'text/html'],
+    ['/indoor-h.html', 200, 'text/html'],
+    ['/indoor-h.css', 200, 'text/css'],
+    ['/js/features/indoor/editor.js', 200, 'text/javascript'],
+    ['/js/features/indoor/model.js', 200, 'text/javascript'],
+    ['/js/features/indoor/renderer.js', 200, 'text/javascript'],
     ['/api/story-backgrounds', 200, 'application/json'],
     ['/api/feed-backgrounds', 200, 'application/json'],
+    ['/api/indoor-backgrounds', 200, 'application/json'],
     ['/js/features/stories/formats.js', 200, 'text/javascript'],
     ['/stories-mobile.css', 200, 'text/css'],
     ['/api/health', 200, 'application/json'],
@@ -69,6 +90,9 @@ try {
     ['/feed-backgrounds/subpasta/arquivo.png', 403, 'application/json'],
     ['/feed-backgrounds/%2e%2e%2f.env', 403, 'application/json'],
     ['/feed-backgrounds/arquivo.svg', 403, 'application/json'],
+    ['/indoor-backgrounds/subpasta/arquivo.png', 403, 'application/json'],
+    ['/indoor-backgrounds/%2e%2e%2f.env', 403, 'application/json'],
+    ['/indoor-backgrounds/arquivo.svg', 403, 'application/json'],
   ];
 
   for (const [pathname, expectedStatus, expectedContentType] of checks) {
@@ -81,11 +105,19 @@ try {
     );
   }
 
-  for (const [format, directory] of [['story', config.storyBackgroundsDirectory], ['feed', config.feedBackgroundsDirectory]]) {
+  for (const [format, directory] of [
+    ['story', config.storyBackgroundsDirectory],
+    ['feed', config.feedBackgroundsDirectory],
+    ['indoor', config.indoorBackgroundsDirectory],
+  ]) {
     const { items } = await (await fetch(`${baseUrl}/api/${format}-backgrounds`)).json();
-    const files = (await readdir(directory)).filter((name) => /\.(png|jpe?g|webp)$/i.test(name));
+    const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
+      if (format === 'indoor' && error.code === 'ENOENT') return [];
+      throw error;
+    });
+    const files = entries.filter((entry) => entry.isFile() && /\.(png|jpe?g|webp)$/i.test(entry.name)).map((entry) => entry.name);
     assert.deepEqual(items.map((item) => item.arquivo).sort(), files.sort(), `${format}: lista completa de fundos`);
-    assert.ok(items.length > 0);
+    if (format !== 'indoor') assert.ok(items.length > 0);
     for (const item of items) {
       assert.ok(item.url.startsWith(`/${format}-backgrounds/`), 'Fundos dos formatos devem permanecer separados');
       const response = await fetch(baseUrl + item.url);
@@ -95,12 +127,72 @@ try {
     }
   }
 
+  const indoorFixtureDirectory = await mkdtemp(path.join(tmpdir(), 'vidamix-indoor-backgrounds-'));
+  const fixtureFilename = 'Gabarito Oferta da Semana_indoor-h.png';
+  const fixturePath = path.join(indoorFixtureDirectory, fixtureFilename);
+  const tvFixtureFilename = 'GABARITO BLACK FRIDAY_DF - PREC TV.png';
+  const tvFixturePath = path.join(indoorFixtureDirectory, tvFixtureFilename);
+  const indoorFixtureServer = createServer(createApplication({
+    config: { ...config, indoorBackgroundsDirectory: indoorFixtureDirectory },
+    database,
+    logger: { error() {} },
+  }));
+  try {
+    const fixturePort = await listen(indoorFixtureServer);
+    const fixtureBaseUrl = `http://127.0.0.1:${fixturePort}`;
+    const emptyResponse = await fetch(fixtureBaseUrl + '/api/indoor-backgrounds');
+    assert.equal(emptyResponse.status, 200);
+    assert.deepEqual(await emptyResponse.json(), { items: [] }, 'Pasta vazia deve permitir abrir o editor Indoor');
+
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=', 'base64');
+    await writeFile(fixturePath, png);
+    const populatedResponse = await fetch(fixtureBaseUrl + '/api/indoor-backgrounds');
+    const { items } = await populatedResponse.json();
+    assert.deepEqual(items, [{
+      arquivo: fixtureFilename,
+      nome: 'Oferta DA Semana',
+      url: `/indoor-backgrounds/${encodeURIComponent(fixtureFilename)}`,
+    }], 'Indoor deve listar nomes limpos e URLs próprias');
+    const backgroundResponse = await fetch(fixtureBaseUrl + items[0].url);
+    assert.equal(backgroundResponse.status, 200);
+    assert.match(backgroundResponse.headers.get('content-type'), /^image\/png/);
+    assert.match(backgroundResponse.headers.get('cache-control'), /max-age=86400/);
+    assert.deepEqual(Buffer.from(await backgroundResponse.arrayBuffer()), png);
+    for (const format of ['story', 'feed']) {
+      const otherFormatResponse = await fetch(fixtureBaseUrl + `/${format}-backgrounds/${encodeURIComponent(fixtureFilename)}`);
+      assert.equal(otherFormatResponse.status, 404, `Indoor não deve expor arquivos na rota de ${format}`);
+    }
+    await writeFile(tvFixturePath, png);
+    for (const [format, expectedLabel] of [
+      ['indoor-h', 'Black Friday'],
+      ['stories', 'Black Friday DF - Prec TV'],
+      ['feed', 'Black Friday DF - Prec TV'],
+    ]) {
+      const service = createStoryBackgroundService({ storyBackgroundsDirectory: indoorFixtureDirectory, format });
+      const background = (await service.listStoryBackgrounds()).find((item) => item.arquivo === tvFixtureFilename);
+      assert.equal(background.nome, expectedLabel, `Sufixo técnico de TV deve ser removido apenas de Indoor: ${format}`);
+    }
+    await unlink(fixturePath);
+    await unlink(tvFixturePath);
+    await rmdir(indoorFixtureDirectory);
+    const missingResponse = await fetch(fixtureBaseUrl + '/api/indoor-backgrounds');
+    assert.equal(missingResponse.status, 200);
+    assert.deepEqual(await missingResponse.json(), { items: [] }, 'Pasta ainda inexistente deve retornar lista vazia');
+  } finally {
+    await close(indoorFixtureServer);
+    await unlink(fixturePath).catch((error) => { if (error.code !== 'ENOENT') throw error; });
+    await unlink(tvFixturePath).catch((error) => { if (error.code !== 'ENOENT') throw error; });
+    await rmdir(indoorFixtureDirectory).catch((error) => { if (error.code !== 'ENOENT') throw error; });
+  }
+
   const feedPage = await (await fetch(baseUrl + '/artes/feed')).text();
   const storiesPage = await (await fetch(baseUrl + '/artes/stories')).text();
+  const indoorPage = await (await fetch(baseUrl + '/artes/indoor-h')).text();
   assert.match(feedPage, /data-artwork-format="feed"/);
   assert.match(feedPage, /width="1080" height="1350"/);
   assert.doesNotMatch(feedPage, /1920/, 'Feed deve mostrar as dimensões corretas também nos textos');
   assert.match(storiesPage, /width="1080" height="1920"/);
+  assert.match(indoorPage, /width="1920" height="1080"/, 'Indoor deve usar resolução Full HD horizontal');
   const ids = (html) => [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]).sort();
   assert.deepEqual(ids(feedPage), ids(storiesPage), 'Feed deve oferecer todos os controles do editor de Stories');
 
@@ -144,6 +236,10 @@ try {
       /^Basic /,
       'Aplicação protegida não informou desafio Basic',
     );
+    for (const pathname of ['/artes/indoor-h', '/api/indoor-backgrounds', '/indoor-backgrounds/teste.png']) {
+      const indoorDeniedResponse = await fetch(authenticatedBaseUrl + pathname);
+      assert.equal(indoorDeniedResponse.status, 401, `Indoor deve manter autenticação em ${pathname}`);
+    }
 
     const authorization = 'Basic ' + Buffer.from('smoke-user:smoke-password').toString('base64');
     const acceptedResponse = await fetch(authenticatedBaseUrl + '/api/health', {

@@ -10,7 +10,7 @@ export const tours = {
         target: '[data-tour="home-create"]',
         eyebrow: 'Seu ponto de partida',
         title: 'Uma oferta começa aqui',
-        description: 'Abra o editor de Stories para escolher um fundo, adicionar produtos e montar sua campanha para Instagram ou WhatsApp.',
+        description: 'Crie Stories e Feed em PNG ou MP4. Para a televisão da loja, escolha Criar vídeo para TV: selecione 5 produtos e monte um carrossel animado de 15 segundos.',
         placement: 'bottom',
       },
       {
@@ -18,7 +18,7 @@ export const tours = {
         target: '[data-tour="home-barcode"]',
         eyebrow: 'Do produto à arte',
         title: 'Use o código de barras',
-        description: 'Com um leitor conectado, escaneie o código do produto. Quando ele for encontrado no catálogo, o editor abrirá com o produto selecionado.',
+        description: 'Escolha Stories ou Feed e escaneie o código com um leitor conectado. Quando o produto for encontrado no catálogo, o editor do formato escolhido abrirá com ele selecionado.',
         placement: 'bottom',
       },
       {
@@ -26,8 +26,8 @@ export const tours = {
         target: '[data-tour="home-formats"]',
         eyebrow: 'Explore as possibilidades',
         title: 'Escolha o formato da campanha',
-        description: 'Crie Stories em 1080 × 1920 ou Feed em 1080 × 1350. Ao entrar no editor, você terá um guia dos próximos passos.',
-        placement: 'right',
+        description: 'Stories, Feed e TV Indoor aparecem em Disponível agora, com seus recursos e botões de criação. TV Indoor exporta um vídeo horizontal em 1920 × 1080. Mais abaixo, Em desenvolvimento reúne os formatos que ainda não podem ser usados.',
+        placement: 'bottom',
       },
     ],
   },

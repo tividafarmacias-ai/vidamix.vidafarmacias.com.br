@@ -1,11 +1,16 @@
 # VidaMix Studio
 
-Plataforma local para organizar produtos e criar artes comerciais em Stories e
-Feed. Sua estrutura permite incluir novos formatos, documentos
+Plataforma local para organizar produtos e criar artes comerciais em Stories,
+Feed e vídeos para TV Indoor. Sua estrutura permite incluir novos formatos, documentos
 de frente e verso, exportações e integrações de publicação sem concentrar toda
 a lógica em uma única página ou arquivo.
 
+Para medir usuários simultâneos na hospedagem, consulte
+[Testes de carga](docs/load-testing.md). O roteiro usa `scripts/load-test.js`
+com k6 em uma máquina externa e inclui catálogo, Stories, Feed e imagens.
+
 ## Identidade visual
+
 
 A identidade compartilhada está em `public/brand.css`: Poppins, azul `#084F98`,
 vermelho `#F21E26`, superfícies claras e tokens de bordas, cantos e sombras.
@@ -22,6 +27,7 @@ O tema da interface é independente da composição e das fontes das artes expor
 | `/catalogo` | Gestão de produtos |
 | `/artes/stories` | Editor de artes para Stories |
 | `/artes/feed` | Editor de artes para Feed vertical (4:5) |
+| `/artes/indoor-h` | Carrossel de cinco produtos para TV Indoor horizontal (16:9) |
 | `/api/*` | API JSON interna |
 
 Os caminhos antigos de arquivos continuam funcionando como compatibilidade, mas
@@ -49,6 +55,48 @@ A configuração em `public/js/features/stories/formats.js` separa dimensões,
 áreas iniciais de produtos, margem superior e origem dos fundos. O ajuste
 automático respeita a área mais curta do Feed. `npm run verify` verifica os dois
 formatos, incluindo geometria, dimensões do MP4, controles das páginas e fundos.
+
+## Vídeo para TV Indoor
+
+Abra **TV Indoor** na central ou acesse `/artes/indoor-h`. O editor cria um
+carrossel horizontal de **1920 × 1080 pixels**, com **cinco produtos** em um
+vídeo MP4 de **15 segundos**, sem áudio. Cada produto ocupa um intervalo de
+três segundos, com transições horizontais suaves; a última transição volta ao
+primeiro produto para permitir a reprodução em repetição na televisão.
+
+1. Busque e selecione cinco produtos diferentes do catálogo, todos com imagem
+   local disponível. A seleção mostra quantos produtos faltam para continuar.
+2. Reordene os produtos na sequência desejada e informe os preços de cada
+   oferta, se quiser. Os preços são opcionais e acompanham o produto quando
+   sua posição muda. Remova um item para substituí-lo por outro.
+3. Continue para escolher um fundo e conferir a prévia animada. Revise a ordem,
+   a descrição dos produtos e os preços antes da exportação.
+4. Clique em **Baixar MP4** e acompanhe a geração do arquivo. O vídeo é criado
+   no navegador; mantenha a página aberta até a conclusão. Depois, transfira
+   o arquivo para a televisão ou para o sistema de exibição da loja.
+
+Os fundos ficam em `catalogo-crud/camas-indoor-h/` (a pasta `camas-indoor-h`
+dentro da aplicação). Copie para ela as imagens **PNG, JPG, JPEG ou WebP**,
+preferencialmente em 1920 × 1080, e atualize a página. Se a pasta estiver vazia,
+o editor informa que é necessário adicionar os fundos antes de exportar.
+A lista é carregada por `/api/indoor-backgrounds`, e os arquivos são servidos
+em `/indoor-backgrounds/`. Use `INDOOR_BACKGROUNDS_ROOT` para configurar outra
+pasta, inclusive um diretório persistente na hospedagem.
+
+O fundo preenche a tela sem deformação; proporções diferentes podem sofrer
+recorte central. Produtos mantêm suas proporções e textos longos são limitados
+ao espaço disponível. Os nove fundos fornecidos concentram as marcas da campanha
+à esquerda; por isso, a composição reserva os primeiros 30% da largura (576 pixels),
+inclusive durante as transições, com margens de 84 pixels no topo e na base.
+A exportação
+gera MP4/H.264 a 30 quadros por segundo usando WebCodecs no próprio navegador.
+É necessário **HTTPS ou localhost** e codificação H.264 disponível, como em
+Chrome ou Edge compatíveis. O editor verifica o suporte antes de exportar.
+
+O fluxo tem módulos próprios em `public/js/features/indoor/`. O codificador
+MP4 é compartilhado com Stories e Feed; os editores desses formatos continuam
+usando suas próprias composições e dimensões. Execute `npm run test:indoor`
+para verificar seleção, ordem dos produtos, animação e exportação Full HD.
 
 ## Editor de Stories no celular
 
@@ -164,8 +212,8 @@ Abra `http://localhost:3333`. Para desenvolvimento com reinício automático:
 npm.cmd run dev
 ```
 
-Use `.env.example` como referência para a porta e os diretórios de origem. As
-variáveis também podem ser definidas no ambiente do processo.
+Consulte `src/config.mjs` para a porta e os diretórios de origem. Defina as
+variáveis no ambiente do processo ou no painel de variáveis da hospedagem.
 
 ## Verificar
 
@@ -174,7 +222,8 @@ npm.cmd run verify
 ```
 
 Esse comando valida a sintaxe dos módulos, testa a persistência do tour,
-o ajuste automático, a máscara dos preços, o fluxo mobile, as animações e a exportação MP4,
+o ajuste automático, a máscara dos preços, o fluxo mobile, a seleção e o carrossel
+Indoor, as animações e a exportação MP4,
 e executa um teste de fumaça das rotas de páginas, API e arquivos estáticos.
 Os testes do MP4 usam o muxer real e simulam o codificador do navegador para
 verificar duração, resolução, cancelamento e liberação de recursos. A reprodução
@@ -204,7 +253,9 @@ public/
   index.html             central de criação
   catalogo.html          catálogo
   stories.html           editor de Stories
+  indoor-h.html          seleção e vídeo para TV Indoor
   js/features/stories/   estado, DOM e comportamento do editor
+  js/features/indoor/    seleção, prévia e carrossel horizontal
   js/features/tour/      tour contextual e progresso no navegador
 
 docs/                    decisões e convenções de arquitetura

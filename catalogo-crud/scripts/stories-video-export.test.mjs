@@ -229,6 +229,38 @@ test('exports Feed MP4 at 1080 × 1350 with 450 frames and 15 seconds', async (t
   assertReleased(recordings);
 });
 
+test('exports Indoor TV MP4 at 1920 × 1080 with 450 timed frames and 15 seconds', async (t) => {
+  const recordings = installEncoder(t);
+  const canvas = { width: 1920, height: 1080 };
+  const rendered = [];
+  const blob = await exportStoryVideo(options({ canvas, renderFrame: (seconds) => rendered.push(seconds) }));
+  assert.equal(blob.type, 'video/mp4');
+  assert.equal(recordings.frames.length, 450);
+  assert.equal(rendered.length, 450);
+  assert.equal(rendered[0], 0);
+  assert.equal(rendered.at(-1), 449 / 30);
+  assert.equal(recordings.supportChecks[0].width, 1920);
+  assert.equal(recordings.supportChecks[0].height, 1080);
+  assert.equal(recordings.encoders[0].config.width, 1920);
+  assert.equal(recordings.encoders[0].config.height, 1080);
+  let totalDuration = 0;
+  for (const frame of recordings.frames) {
+    assert.equal(frame.canvas, canvas);
+    assert.equal(frame.timestamp, totalDuration, 'Landscape timestamps have no gaps or overlap');
+    totalDuration += frame.duration;
+  }
+  assert.equal(totalDuration, 15_000_000);
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const boxes = readBoxes(buffer);
+  assert.equal(boxDuration(buffer, findBox(boxes, 'mvhd')), 15);
+  assert.equal(boxDuration(buffer, findBox(boxes, 'mdhd')), 15);
+  const header = findBox(boxes, 'tkhd');
+  assert.equal(buffer.readUInt32BE(header.end - 8) / 65536, 1920);
+  assert.equal(buffer.readUInt32BE(header.end - 4) / 65536, 1080);
+  assert.equal(buffer.readUInt32BE(findBox(boxes, 'stsz').start + 16), 450);
+  assertReleased(recordings);
+});
+
 test('tries alternate compatible H.264 configurations before rendering', async (t) => {
   const recordings = installEncoder(t, { supported: (config) => config.codec === 'avc1.42e028' });
   const config = await getStoryVideoConfig();
@@ -258,8 +290,17 @@ test('explains missing WebCodecs and insecure HTTP support', async (t) => {
 
 test('rejects incorrect canvas dimensions before starting the encoder', async (t) => {
   const recordings = installEncoder(t);
-  await assert.rejects(exportStoryVideo(options({ canvas: { width: 720, height: 1280 } })), /1080/);
+  for (const canvas of [
+    { width: 720, height: 1280 },
+    { width: 1920, height: 1350 },
+    { width: 1920, height: 1920 },
+    { width: 1080, height: 1080 },
+  ]) {
+    await assert.rejects(exportStoryVideo(options({ canvas })), /1080/);
+    await assert.rejects(getStoryVideoConfig(canvas), /1080/);
+  }
   assert.equal(recordings.supportChecks.length, 0);
+  assert.equal(recordings.encoders.length, 0);
 });
 
 test('honors cancellation before export starts', async (t) => {

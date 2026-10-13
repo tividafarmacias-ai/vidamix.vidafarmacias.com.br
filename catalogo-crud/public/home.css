@@ -73,7 +73,8 @@ a:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
 .section-heading > p { max-width: 430px; margin: 0; color: var(--color-muted); font-size: .88rem; line-height: 1.52; }
 .section-heading.compact { margin-bottom: 15px; }
 
-.format-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 15px; }
+.format-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+.format-grid-available { grid-template-columns: repeat(3, minmax(0,1fr)); }
 .format-card { display: flex; min-height: 238px; padding: 20px; flex-direction: column; border: 1px solid var(--glass-line); border-radius: var(--radius-lg); background: var(--glass-surface); box-shadow: var(--glass-highlight), var(--glass-shadow); }
 .format-card-story { border-color: var(--glass-selected-line); background: var(--glass-selected); }
 .format-card-topline { display: flex; align-items: center; justify-content: space-between; }
@@ -89,6 +90,26 @@ a:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
 .format-card-footer b { font-size: 1rem; }
 .format-muted { color: var(--color-muted); }
 .format-card.is-planned { background: var(--glass-surface); }
+
+.format-card.is-ready { min-width: 0; padding: 26px; border: 1px solid var(--glass-selected-line);  background: var(--glass-selected); }
+.is-ready .format-icon { width: 44px; height: 44px; background: #fff; }
+.is-ready .format-status { display: inline-flex; gap: 5px; align-items: center; color: #176044; background: #e3f3e9; }
+.is-ready .format-status::before { content: '✓'; font-size: .8rem; }
+.is-ready h3 { font-size: 1.35rem; }
+.is-ready p { min-height: 0; font-size: .86rem; }
+.format-features { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 24px; padding: 0; list-style: none; }
+.format-features li { padding: 6px 9px; color: var(--brand-blue-dark); font-size: .72rem; line-height: 1.4; border: 1px solid var(--glass-line); border-radius: 7px; background: var(--glass-surface-strong); }
+.is-ready .format-card-footer { flex-wrap: wrap; }
+.is-ready .format-card-footer a { display: inline-flex; min-height: 44px; padding: 0 16px; gap: 14px; align-items: center; color: #fff; border-radius: 9px; background: var(--azul); }
+.is-ready .format-card-footer a:hover { color: #fff; background: var(--brand-blue-dark); }
+.development-section { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--glass-line); }
+.development-section .studio-kicker { color: var(--color-muted); }
+.development-section h2 { color: var(--color-ink); font-size: 1.25rem; }
+.format-grid-planned .format-card { min-height: 190px; border-style: dashed; box-shadow: none; }
+.format-grid-planned .format-card h3 { margin-top: 18px; color: var(--color-ink); }
+.format-grid-planned .format-icon { color: var(--color-muted); background: var(--color-surface); }
+.format-card-topline { gap: 10px; flex-wrap: wrap; }
+.format-grid-planned .format-card-footer { flex-wrap: wrap; }
 
 .studio-bottom-grid { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(280px,.85fr); gap: 16px; padding-top: 44px; }
 .studio-workflow-card,.studio-library-card { padding: 24px; border: 1px solid var(--glass-line); border-radius: var(--radius-lg); background: var(--glass-surface); box-shadow: var(--glass-highlight), var(--glass-shadow); }
@@ -124,6 +145,7 @@ a:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
   .section-heading > p { margin-top: 9px; }
   .format-section { padding-top: 37px; }
   .format-grid { gap: 10px; }
+  .format-grid-available { grid-template-columns: 1fr; }
   .format-card { min-height: 205px; padding: 16px; border-radius: var(--radius-md); }
   .format-card h3 { margin-top: 20px; }
   .studio-bottom-grid { grid-template-columns: 1fr; padding-top: 28px; }

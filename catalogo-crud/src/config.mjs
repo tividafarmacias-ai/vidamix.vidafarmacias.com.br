@@ -75,6 +75,10 @@ export function loadConfig(env = process.env) {
       env.FEED_BACKGROUNDS_ROOT,
       path.join(projectDirectory, 'camas-feed'),
     ),
+    indoorBackgroundsDirectory: resolveConfiguredPath(
+      env.INDOOR_BACKGROUNDS_ROOT,
+      path.join(projectDirectory, 'camas-indoor-h'),
+    ),
     sourceCatalogPath: resolveConfiguredPath(
       env.CATALOG_SOURCE,
       path.join(projectDirectory, '..', 'produtos.json'),
