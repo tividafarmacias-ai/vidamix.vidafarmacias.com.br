@@ -48,6 +48,10 @@ try {
   const baseUrl = `http://127.0.0.1:${port}`;
   const checks = [
     ['/', 200, 'text/html'],
+    ['/js/features/barcode/camera.js', 200, 'text/javascript'],
+    ['/js/features/barcode/decoder.js', 200, 'text/javascript'],
+    ['/js/features/barcode/code.js', 200, 'text/javascript'],
+    ['/js/vendor/zxing-library-0.23.0.js', 200, 'text/javascript'],
     ['/catalogo', 200, 'text/html'],
     ['/catalogue.css', 200, 'text/css'],
     ['/tour.css', 200, 'text/css'],
@@ -97,6 +101,11 @@ try {
 
   for (const [pathname, expectedStatus, expectedContentType] of checks) {
     const response = await fetch(baseUrl + pathname);
+    if (pathname === '/') {
+      assert.match(response.headers.get('permissions-policy'), /camera=\(self\)/);
+      assert.match(response.headers.get('permissions-policy'), /microphone=\(\)/);
+      assert.match(response.headers.get('content-security-policy'), /media-src 'self' blob:/);
+    }
     assert.equal(response.status, expectedStatus, `${pathname} retornou ${response.status}`);
     assert.match(
       response.headers.get('content-type') || '',

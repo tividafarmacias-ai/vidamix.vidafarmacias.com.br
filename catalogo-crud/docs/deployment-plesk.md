@@ -4,6 +4,25 @@ Esta aplicação Node.js usa SQLite e foi preparada para ser publicada mantendo 
 mesma estrutura de arquivos existente hoje. A pasta `catalogo-crud` é a
 aplicação; `produtos.json` e `imagens-produtos` permanecem como pastas irmãs.
 
+## Permissão da câmera
+
+O leitor de códigos da central usa `getUserMedia` com câmera traseira e sem áudio.
+O domínio precisa de HTTPS válido e o usuário autoriza o acesso no navegador.
+O Node envia `Permissions-Policy: camera=(self), geolocation=(), microphone=(),
+payment=(), usb=()` e inclui `media-src 'self' blob:` na CSP.
+
+Se o Apache/nginx/Plesk também definir esses cabeçalhos, não mantenha
+`camera=()` no proxy: uma política mais restritiva impede o uso da câmera mesmo
+com o cabeçalho correto no Node. Preserve a política de câmera para a própria
+origem e mantenha o microfone desabilitado. Não é necessário liberar CDN ou
+`unsafe-eval` na CSP.
+
+Publique `public/js/features/barcode/`, `public/js/vendor/zxing-library-0.23.0.js`
+e sua licença, junto com os arquivos atualizados da central. Reinicie o processo
+Node para aplicar a alteração dos cabeçalhos. Após publicar, teste no Safari e
+no PWA instalado: autorizar, ler um produto, fechar, negar permissão e continuar
+pela digitação manual. A decodificação não envia imagens ao servidor.
+
 ## Estrutura a manter no servidor
 
 Envie a pasta `vidamix` inteira, preservando esta relação:

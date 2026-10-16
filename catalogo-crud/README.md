@@ -92,6 +92,34 @@ e `npm run test:indoor` verificam esses fluxos e integram `npm run verify`.
 Ao validar no aparelho, confira instalação em standalone, rotação, teclado,
 edição de produto e as etapas de criação de cada formato.
 
+## Leitor pela câmera
+
+Na central, abra **Código de barras**, escolha Stories ou Feed e toque em
+**Usar câmera**. Autorize a câmera e enquadre o código inteiro, com boa iluminação.
+O leitor prefere a câmera traseira, confirma duas leituras do mesmo código e
+abre o produto no formato escolhido. Para usar o teclado, toque em
+**Desligar câmera e digitar código**. A entrada manual e o leitor USB/Bluetooth
+continuam disponíveis.
+
+A câmera exige HTTPS em produção (ou `localhost` para desenvolvimento) e
+permissão do navegador. O acesso ocorre apenas depois do toque do usuário, sem
+microfone. Fechar o leitor, trocar para digitação, encontrar um código ou colocar
+o app em segundo plano encerra a captura. Voltar ao app não religa a câmera
+automaticamente. As imagens são processadas no dispositivo; somente o código
+identificado é enviado à API existente de produtos.
+
+O decodificador ZXing 0.23.0 é servido localmente e carregado sob demanda, sem
+depender de `BarcodeDetector`, permitindo o uso em Safari/iOS. São aceitos
+EAN-13, EAN-8, UPC-A e códigos numéricos GTIN em ITF/Code 128, sempre com tamanho
+e dígito verificador válidos. Não é um leitor de QR codes.
+
+Os módulos estão em `public/js/features/barcode/`; a biblioteca e licença estão
+em `public/js/vendor/`. Não há dependência npm ou build adicional em produção.
+Publique também os arquivos novos e mantenha `Permissions-Policy: camera=(self)`
+no proxy, conforme o [guia de publicação](docs/deployment-plesk.md).
+`npm run test:app-mobile` inclui decodificação de pixels reais de códigos gerados,
+permissões negadas, cancelamento de pedidos pendentes e desligamento das câmeras.
+
 ## Rotas
 
 | Endereço | Uso |

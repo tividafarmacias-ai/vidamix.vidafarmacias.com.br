@@ -221,6 +221,17 @@ dialog.ean-scanner-overlay::backdrop { background: rgba(24, 44, 70, .45); backdr
 .ean-submit-button { width: 100%; margin-top: 12px; cursor: pointer; }
 .ean-submit-button:disabled { opacity: .6; cursor: wait; }
 .ean-scanner-close { width: 44px; height: 44px; }
+.ean-scanner-dialog { max-height: 100%; overflow-y: auto; }
+.ean-camera-button { display: flex; width: 100%; min-height: 48px; margin-top: 14px; padding: 12px; gap: 10px; align-items: center; justify-content: center; color: var(--azul); font: inherit; font-size: 14px; font-weight: 600; border: 1px solid #cbdcef; border-radius: 12px; background: #edf4fd; cursor: pointer; }
+.ean-camera-button:disabled { opacity: .55; cursor: wait; }
+.ean-camera-button[hidden], .ean-camera-panel[hidden], #ean-manual-fields[hidden] { display: none; }
+.ean-camera-preview { position: relative; margin-top: 16px; overflow: hidden; aspect-ratio: 4 / 3; border-radius: 14px; background: #122335; }
+.ean-camera-preview video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ean-camera-guide { position: absolute; inset: 27% 8%; border: 2px solid rgba(255,255,255,.85); border-radius: 9px; pointer-events: none; }
+.ean-camera-privacy { margin: 9px 0 0; color: var(--color-muted); font-size: 11px; line-height: 1.5; }
+.camera-active .ean-scanner-mark, .camera-active .ean-scanner-dialog > p:not(.ean-scanner-status) { display: none; }
+.camera-active .ean-scanner-dialog h2 { padding-right: 35px; font-size: 21px; }
+.camera-active .ean-scanner-status { font-weight: 600; }
 
 @media (max-width: 900px) {
   body.home-page { background: #f4f7fc; }

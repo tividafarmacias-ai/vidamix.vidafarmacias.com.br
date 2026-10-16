@@ -1,3 +1,6 @@
+import { normalizeEan, isValidEan } from './js/features/barcode/code.js';
+import { createCameraScanner } from './js/features/barcode/camera.js';
+
 const eanOverlay = document.querySelector('#ean-scanner-overlay');
 const eanOpenButton = document.querySelector('#ean-overlay-open');
 const eanCloseButton = document.querySelector('#ean-overlay-close');
@@ -6,27 +9,34 @@ const eanInput = document.querySelector('#ean-input');
 const eanStatus = document.querySelector('#ean-status');
 const eanFormat = document.querySelector('#ean-format');
 const eanSubmit = document.querySelector('#ean-submit');
+const cameraStart = document.querySelector('#ean-camera-start');
+const cameraStop = document.querySelector('#ean-camera-stop');
+const cameraPanel = document.querySelector('#ean-camera-panel');
+const manualFields = document.querySelector('#ean-manual-fields');
 
 let scanTimer;
 let lastSubmittedEan = '';
 let lookupInProgress = false;
 let lookupController;
-
-function normalizeEan(value) {
-  return String(value || '').replace(/\D/g, '').slice(0, 14);
-}
-
-function isValidEan(ean) {
-  if (![8, 12, 13, 14].includes(ean.length)) return false;
-
-  const digits = [...ean].map(Number);
-  const expectedCheckDigit = digits.pop();
-  const sum = digits.reduce((total, digit, index) => {
-    const multiplier = (digits.length - 1 - index) % 2 === 0 ? 3 : 1;
-    return total + (digit * multiplier);
-  }, 0);
-  return (10 - (sum % 10)) % 10 === expectedCheckDigit;
-}
+const camera = createCameraScanner({
+  video: document.querySelector('#ean-camera-video'),
+  onCode(code) {
+    if (!eanOverlay.open || document.hidden) return;
+    eanInput.value = code;
+    openArtworkForEan(code);
+  },
+  onState(state) {
+    const active = state !== 'idle';
+    cameraPanel.hidden = !active;
+    cameraStart.hidden = active;
+    manualFields.hidden = active;
+    eanOverlay.classList.toggle('camera-active', active);
+    cameraStart.setAttribute('aria-expanded', String(active));
+    if (state === 'starting') setEanStatus('Preparando câmera… Autorize o acesso quando solicitado.');
+    if (state === 'scanning') setEanStatus('Enquadre o código inteiro e mantenha o aparelho parado.');
+  },
+  onError(message) { setEanStatus(message, true); },
+});
 
 function setEanStatus(message = '', isError = false) {
   if (!eanStatus) return;
@@ -35,6 +45,7 @@ function setEanStatus(message = '', isError = false) {
 }
 
 function closeScanner() {
+  camera.stop();
   clearTimeout(scanTimer);
   lookupController?.abort();
   lookupController = null;
@@ -50,7 +61,8 @@ function openScanner() {
   lookupInProgress = false;
   eanInput.value = '';
   if (eanSubmit) eanSubmit.disabled = false;
-  setEanStatus('Digite o código ou use o leitor.');
+  cameraStart.disabled = false;
+  setEanStatus('Use a câmera, digite o código ou use um leitor conectado.');
   eanOverlay.hidden = false;
   eanOverlay.showModal();
   document.body.classList.add('scanner-open');
@@ -62,11 +74,13 @@ function openScanner() {
 
 async function openArtworkForEan(ean) {
   if (lookupInProgress || ean === lastSubmittedEan) return;
+  camera.stop();
   lookupInProgress = true;
   lastSubmittedEan = ean;
   const controller = new AbortController();
   lookupController = controller;
   if (eanSubmit) eanSubmit.disabled = true;
+  cameraStart.disabled = true;
   const format = eanFormat?.value === 'feed' ? 'feed' : 'stories';
   setEanStatus('Localizando produto…');
 
@@ -89,6 +103,7 @@ async function openArtworkForEan(ean) {
     if (lookupController === controller) {
       lookupInProgress = false;
       if (eanSubmit) eanSubmit.disabled = false;
+      cameraStart.disabled = false;
     }
   }
 }
@@ -104,7 +119,28 @@ function submitEan({ showValidation = true } = {}) {
 }
 
 if (eanOverlay && eanOpenButton && eanCloseButton && eanForm && eanInput) {
-  eanFormat?.addEventListener('change', () => eanInput.focus());
+  eanFormat?.addEventListener('change', () => {
+    if (camera.state === 'idle') eanInput.focus();
+  });
+  cameraStart.addEventListener('click', () => {
+    clearTimeout(scanTimer);
+    lastSubmittedEan = '';
+    document.activeElement?.blur();
+    camera.start();
+    if (camera.state !== 'idle') cameraStop.focus({ preventScroll: true });
+  });
+  cameraStop.addEventListener('click', () => {
+    camera.stop();
+    setEanStatus('Digite o código ou use o leitor.');
+    eanInput.focus();
+  });
+  const pauseCamera = () => {
+    if (camera.state === 'idle') return;
+    camera.stop();
+    setEanStatus('Câmera pausada. Toque em Usar câmera para continuar.');
+  };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseCamera(); });
+  window.addEventListener('pagehide', pauseCamera);
   eanOpenButton.addEventListener('click', openScanner);
   eanCloseButton.addEventListener('click', closeScanner);
   eanOverlay.addEventListener('click', (event) => {
@@ -124,6 +160,7 @@ if (eanOverlay && eanOpenButton && eanCloseButton && eanForm && eanInput) {
     lookupController = null;
     lookupInProgress = false;
     if (eanSubmit) eanSubmit.disabled = false;
+    cameraStart.disabled = false;
     eanInput.value = normalizeEan(eanInput.value);
     lastSubmittedEan = '';
     setEanStatus('Digite o código ou use o leitor.');

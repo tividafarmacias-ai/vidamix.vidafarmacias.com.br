@@ -6,7 +6,7 @@ export const defaultSecurityHeaders = Object.freeze({
   'X-Frame-Options': 'SAMEORIGIN',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin',
-  'Permissions-Policy': 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
+  'Permissions-Policy': 'camera=(self), geolocation=(), microphone=(), payment=(), usb=()',
   'Content-Security-Policy': [
     "default-src 'self'",
     "base-uri 'self'",
@@ -15,6 +15,7 @@ export const defaultSecurityHeaders = Object.freeze({
     "form-action 'self'",
     "frame-ancestors 'self'",
     "img-src 'self' blob: data:",
+    "media-src 'self' blob:",
     "object-src 'none'",
     "script-src 'self'",
     "style-src 'self' https://cdnjs.cloudflare.com",

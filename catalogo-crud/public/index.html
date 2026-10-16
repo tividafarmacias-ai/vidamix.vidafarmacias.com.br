@@ -134,16 +134,30 @@
         <button class="ean-scanner-close" id="ean-overlay-close" type="button" aria-label="Fechar leitor de código de barras">×</button>
         <span class="ean-scanner-mark" aria-hidden="true"></span>
         <h2 id="ean-scanner-title">Busque pelo código</h2>
-        <p>Digite o código de barras do produto ou use um leitor conectado.</p>
+        <p>Leia o código de barras com a câmera ou digite os números do produto.</p>
         <form id="ean-launcher" novalidate>
           <label class="ean-format-label" for="ean-format">Formato da arte</label>
           <select id="ean-format" name="format">
             <option value="stories">Stories · 1080 × 1920</option>
             <option value="feed">Feed · 1080 × 1350</option>
           </select>
-          <label class="ean-input-label" for="ean-input">Código de barras</label>
-          <input id="ean-input" name="ean" type="text" inputmode="numeric" enterkeyhint="search" autocomplete="off" pattern="[0-9]*" maxlength="14" placeholder="Digite ou cole o código" />
-          <button class="studio-primary-action ean-submit-button" id="ean-submit" type="submit">Encontrar produto</button>
+          <button class="ean-camera-button" id="ean-camera-start" type="button" aria-controls="ean-camera-panel" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 4h8l2 3h3v13H3V7h3z" stroke-linejoin="round"/><circle cx="12" cy="13" r="4"/></svg>
+            Usar câmera
+          </button>
+          <div id="ean-camera-panel" class="ean-camera-panel" hidden>
+            <div class="ean-camera-preview">
+              <video id="ean-camera-video" autoplay muted playsinline aria-label="Prévia da câmera para leitura do código de barras"></video>
+              <span class="ean-camera-guide" aria-hidden="true"></span>
+            </div>
+            <p class="ean-camera-privacy">A imagem é processada no aparelho e não é enviada ao servidor.</p>
+            <button class="ean-camera-button" id="ean-camera-stop" type="button">Desligar câmera e digitar código</button>
+          </div>
+          <div id="ean-manual-fields">
+            <label class="ean-input-label" for="ean-input">Código de barras</label>
+            <input id="ean-input" name="ean" type="text" inputmode="numeric" enterkeyhint="search" autocomplete="off" pattern="[0-9]*" maxlength="14" placeholder="Digite ou cole o código" />
+            <button class="studio-primary-action ean-submit-button" id="ean-submit" type="submit">Encontrar produto</button>
+          </div>
         </form>
         <p id="ean-status" class="ean-scanner-status" role="status" aria-live="polite">Aguardando leitura…</p>
       </section>

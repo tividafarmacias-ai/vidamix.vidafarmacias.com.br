@@ -14,3 +14,18 @@ A versão fica fixa e é servida localmente, sem CDN durante a exportação.
 O projeto upstream foi descontinuado em favor do Mediabunny. Este módulo pequeno
 é usado apenas para empacotar os quadros H.264 codificados pelo WebCodecs em MP4,
 sem dependência de instalação ou etapa de build.
+
+## Leitura de código de barras
+
+`zxing-library-0.23.0.js` é a distribuição UMD minificada, sem alterações, de
+[`@zxing/library` 0.23.0](https://www.npmjs.com/package/@zxing/library/v/0.23.0).
+O arquivo `umd/index.min.js` foi extraído do pacote oficial do npm e renomeado.
+A licença Apache-2.0 e os avisos do pacote estão em `zxing-library-LICENSE.txt`.
+
+- Origem: https://registry.npmjs.org/@zxing/library/-/library-0.23.0.tgz
+- Repositório: https://github.com/zxing-js/library
+- SHA-256 do módulo: `3ede94153fb0c5b67a12d7adff6decd827c2b22714fdc6faecf27a8f20937ea6`
+
+O carregamento é feito sob demanda ao tocar em **Usar câmera**. A decodificação
+usa o núcleo do ZXing e canvas locais; não depende da API experimental
+`BarcodeDetector`, de CDN, de WASM ou do envio de imagens a um serviço externo.

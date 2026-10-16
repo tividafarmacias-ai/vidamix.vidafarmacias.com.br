@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import { normalizeEan, isValidEan } from '../public/js/features/barcode/code.js';
 
 const [markup, script] = await Promise.all([
   readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
@@ -37,6 +38,8 @@ class Element {
   }
   click() { if (!this.disabled) this.dispatch('click'); }
   focus() { this.ownerDocument.activeElement = this; }
+  blur() { if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = null; }
+  setAttribute(name, value) { this[name] = value; }
   showModal() { assert.equal(this.hidden, false); this.open = true; }
   close() { this.open = false; }
 }
@@ -56,8 +59,11 @@ function deferred() {
 }
 
 function openHome({ touch = true, lookup = async () => response() } = {}) {
-  const document = {};
+  const document = { hidden: false };
   document.body = new Element(document);
+  const events = new Element(document);
+  document.addEventListener = events.addEventListener.bind(events);
+  document.dispatch = events.dispatch.bind(events);
   const elements = new Map([...markup.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)].map(([tag, id]) => {
     const node = new Element(document);
     node.hidden = /\bhidden(?:\s|[=>])/.test(tag);
@@ -70,15 +76,25 @@ function openHome({ touch = true, lookup = async () => response() } = {}) {
   const timers = new Map();
   const frames = [];
   let timerId = 0;
+  let cameraCallbacks;
+  const camera = { state: 'idle', starts: 0, stops: 0,
+    start() { this.starts++; this.state = 'starting'; cameraCallbacks.onState(this.state); },
+    stop() { this.stops++; this.state = 'idle'; cameraCallbacks.onState(this.state); },
+    detect(code) { this.stop(); cameraCallbacks.onCode(code); },
+    fail(message) { this.stop(); cameraCallbacks.onError(message); },
+  };
+  const windowEvents = new Element(document);
   const sandbox = vm.createContext({
     document, AbortController,
-    window: { matchMedia: () => ({ matches: touch }), location: { assign: (url) => destinations.push(url) } },
+    normalizeEan, isValidEan,
+    createCameraScanner: (callbacks) => { cameraCallbacks = callbacks; return camera; },
+    window: { matchMedia: () => ({ matches: touch }), location: { assign: (url) => destinations.push(url) }, addEventListener: windowEvents.addEventListener.bind(windowEvents) },
     requestAnimationFrame: (callback) => frames.push(callback),
     setTimeout: (callback, duration) => { timers.set(++timerId, { callback, duration }); return timerId; },
     clearTimeout: (id) => timers.delete(id),
     fetch: (url, options) => { requests.push({ url, ...options }); return lookup(url, options); },
   });
-  vm.runInContext(script, sandbox, { filename: 'home.js' });
+  vm.runInContext(script.replace(/^import .+;\r?\n/gm, ''), sandbox, { filename: 'home.js' });
   const get = (id) => elements.get(`ean-${id}`);
   const show = () => { get('overlay-open').click(); frames.splice(0).forEach((callback) => callback()); };
   const input = (value) => { get('input').value = value; get('input').dispatch('input'); };
@@ -88,7 +104,7 @@ function openHome({ touch = true, lookup = async () => response() } = {}) {
     timers.clear();
     pending.forEach(({ callback }) => callback());
   };
-  return { get, show, input, submit, runTimers, document, requests, destinations, timers };
+  return { get, show, input, submit, runTimers, document, requests, destinations, timers, camera, windowEvents };
 }
 
 test('touch scanner opens as a dialog without raising the keyboard and waits for explicit submit', async () => {
@@ -230,5 +246,67 @@ test('lookup errors preserve the code, restore submit and allow retrying the sam
   f.submit();
   await flush();
   assert.equal(f.requests.length, 2);
+  assert.deepEqual(f.destinations, ['/artes/stories?productId=42']);
+});
+
+test('camera starts only on request and a detected code opens the chosen artwork once', async () => {
+  for (const format of ['stories', 'feed']) {
+    const f = openHome();
+    f.show();
+    assert.equal(f.camera.starts, 0);
+    f.get('format').value = format;
+    f.get('camera-start').click();
+    assert.equal(f.camera.starts, 1);
+    assert.equal(f.get('camera-panel').hidden, false);
+    assert.equal(f.get('manual-fields').hidden, true);
+    assert.equal(f.document.activeElement, f.get('camera-stop'));
+    f.camera.detect(validEan);
+    f.camera.detect(validEan);
+    await flush();
+    assert.equal(f.get('input').value, validEan);
+    assert.equal(f.requests.length, 1);
+    assert.deepEqual(f.destinations, [`/artes/${format}?productId=42`]);
+    assert.equal(f.camera.state, 'idle');
+  }
+});
+
+test('manual mode, close, page exit and app background all stop the camera', () => {
+  const f = openHome();
+  f.show();
+  f.get('camera-start').click();
+  f.get('camera-stop').click();
+  assert.equal(f.camera.state, 'idle');
+  assert.equal(f.get('manual-fields').hidden, false);
+  assert.equal(f.document.activeElement, f.get('input'));
+  f.get('camera-start').click();
+  f.document.hidden = true;
+  f.document.dispatch('visibilitychange');
+  assert.equal(f.camera.state, 'idle');
+  f.document.hidden = false;
+  f.document.dispatch('visibilitychange');
+  assert.equal(f.camera.starts, 2, 'Returning to the app must not reopen the camera');
+  f.get('camera-start').click();
+  f.windowEvents.dispatch('pagehide');
+  assert.equal(f.camera.state, 'idle');
+  f.get('camera-start').click();
+  f.get('overlay-close').click();
+  assert.equal(f.camera.state, 'idle');
+  f.camera.detect(validEan);
+  assert.equal(f.requests.length, 0);
+});
+
+test('a camera failure restores manual entry and announces the error', async () => {
+  const f = openHome();
+  f.show();
+  f.get('camera-start').click();
+  f.camera.fail('A câmera não foi autorizada.');
+  assert.equal(f.get('camera-panel').hidden, true);
+  assert.equal(f.get('manual-fields').hidden, false);
+  assert.equal(f.get('camera-start').hidden, false);
+  assert.equal(f.get('status').classList.contains('is-error'), true);
+  assert.match(f.get('status').textContent, /não foi autorizada/);
+  f.input(validEan);
+  f.submit();
+  await flush();
   assert.deepEqual(f.destinations, ['/artes/stories?productId=42']);
 });
