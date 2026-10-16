@@ -99,6 +99,22 @@ A resposta esperada é:
 Depois valide `/`, `/catalogo`, `/artes/stories`, `/artes/feed` e `/artes/indoor-h`.
 Confira também `/api/indoor-backgrounds` para verificar a lista de fundos da TV.
 
+### Instalação PWA
+
+Mantenha o site na raiz do domínio/subdomínio, como nas rotas acima, e force HTTPS.
+Envie também `public/manifest.webmanifest`, `public/sw.js`, `public/offline.html`,
+`public/pwa.css`, `public/js/pwa.js`, `public/branding/` e `public/icons/`.
+O Node serve o manifesto como `application/manifest+json` e o worker como
+`text/javascript`, sem cache HTTP. Se nginx/Apache servir esses arquivos
+diretamente, preserve esses tipos MIME e não aplique cache longo a `/sw.js`.
+
+Após autenticar, confira o manifesto e o service worker nas ferramentas do
+navegador e use **Instalar aplicativo** na central. Abra o ícone instalado e
+confirme que o VidaMix inicia na central em uma janela standalone. Em iOS,
+use o Safari e **Compartilhar > Adicionar à Tela de Início**.
+Depois da primeira abertura online, desconecte e navegue: a tela de reconexão
+deve aparecer. Os dados e editores continuam exigindo conexão com o servidor.
+
 ## Atualizações, versionamento e backup
 
 - Versione código, documentação e `package-lock.json`; nunca versione `.env`,

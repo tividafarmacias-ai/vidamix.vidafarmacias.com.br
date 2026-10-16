@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f8fc" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="VidaMix" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <script src="/js/pwa.js" defer></script>
     <meta
       name="description"
       content="Catálogo de produtos com busca, visualização e edição local."
@@ -19,8 +28,7 @@
     <header class="site-header">
       <div class="site-header-inner">
         <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
-          <span class="site-brand-mark" aria-hidden="true">V</span>
-          <span><strong>VidaMix Studio</strong><small>Catálogo de produtos</small></span>
+          <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
         </a>
         <nav class="site-nav" aria-label="Navegação principal">
           <a href="/">Central</a>

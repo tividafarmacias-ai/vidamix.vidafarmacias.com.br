@@ -10,6 +10,7 @@ const roots = [
   'public/app.js',
   'public/home.js',
   'public/stories.js',
+  'public/sw.js',
   'public/js',
   'scripts',
 ];

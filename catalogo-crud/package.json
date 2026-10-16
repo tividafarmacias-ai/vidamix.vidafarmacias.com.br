@@ -18,7 +18,8 @@
     "test:stories-video": "node --test scripts/stories-video-*.test.mjs",
     "test:stories-mobile": "node --test scripts/stories-mobile.test.mjs",
     "test:indoor": "node --test scripts/indoor-*.test.mjs",
-    "verify": "npm run check && npm run test:catalogue && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:indoor && npm run test:smoke"
+    "test:pwa": "node --test scripts/pwa.test.mjs",
+    "verify": "npm run check && npm run test:catalogue && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:indoor && npm run test:pwa && npm run test:smoke"
   },
   "engines": {
     "node": ">=22.13.0 <25",

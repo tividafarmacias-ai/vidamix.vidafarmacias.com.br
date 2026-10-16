@@ -19,6 +19,38 @@ usa os mesmos tokens. A fonte é servida localmente por `public/fonts/`, com sua
 licença SIL, sem depender do Google Fonts em tempo de execução.
 O tema da interface é independente da composição e das fontes das artes exportadas.
 
+## Instalar como aplicativo (PWA)
+
+O VidaMix Studio pode ser instalado em modo **standalone**, com janela própria,
+nome e ícone. Acesse por **HTTPS** em produção (ou `localhost` em desenvolvimento).
+Na central, clique em **Instalar aplicativo** quando o navegador disponibilizar
+a instalação, ou use a opção de instalar no menu do navegador. No iPhone/iPad,
+abra no Safari e use **Compartilhar > Adicionar à Tela de Início**.
+O botão deixa de aparecer dentro do aplicativo instalado.
+
+O logotipo horizontal fornecido na raiz aparece nos cabeçalhos de todas as telas.
+Os ícones de 192 e 512 pixels, o ícone adaptável (maskable) e o ícone Apple de
+180 pixels derivam de `logo pwa icon.png`, com proporção preservada e fundo branco.
+Os arquivos prontos ficam em `public/branding/` e `public/icons/`; não há etapa
+de geração obrigatória no servidor. Para regenerá-los no Windows, execute
+`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1`.
+
+`public/manifest.webmanifest` define o modo standalone e a abertura na central.
+Todas as telas e seus aliases carregam o manifesto e `public/js/pwa.js`.
+O manifesto é solicitado com credenciais para compatibilidade com a autenticação
+HTTP Basic já usada pela aplicação.
+
+O service worker em `public/sw.js` mantém apenas uma tela de falta de conexão
+e seus recursos visuais. **Catálogo, edição e consulta de produtos precisam de
+conexão com o servidor**; dados da API, páginas da aplicação e imagens de produtos
+não são armazenados pelo service worker. Ao perder a conexão e navegar, o usuário
+pode tentar novamente na mesma URL. Atualizações do worker aguardam o fechamento
+das janelas da aplicação, sem recarregar artes em edição. Incremente `CACHE_NAME`
+em `sw.js` ao modificar a tela offline ou seus recursos.
+
+Execute `npm run test:pwa` (também incluído em `npm run verify`) para verificar
+manifesto, ícones, rotas, autenticação, fallback offline e fluxo de instalação.
+
 ## Rotas
 
 | Endereço | Uso |

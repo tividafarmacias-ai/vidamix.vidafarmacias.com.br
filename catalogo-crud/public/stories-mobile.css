@@ -41,15 +41,17 @@
   }
 
   .is-mobile-editor .stories-back-link {
-    display: grid;
-    width: 44px;
+    display: flex;
+    width: fit-content;
     height: 44px;
-    gap: 0;
+    gap: 8px;
     font-size: 0;
     color: #285780;
     place-items: center;
     border-radius: 12px;
   }
+
+  .is-mobile-editor .stories-back-link .site-brand-logo { width: 160px; }
 
   .is-mobile-editor .stories-back-link span {
     display: grid;

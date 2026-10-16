@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f8fc" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="VidaMix" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <script src="/js/pwa.js" defer></script>
     <meta name="description" content="VidaMix Studio: central para criar artes comerciais a partir do catálogo de produtos." />
     <title>VidaMix Studio | Central de criação</title>
     <link rel="stylesheet" href="/brand.css" />
@@ -16,8 +25,7 @@
     <header class="site-header">
       <div class="site-header-inner">
         <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
-          <span class="site-brand-mark" aria-hidden="true">V</span>
-          <span><strong>VidaMix Studio</strong><small>Central de criação</small></span>
+          <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
         </a>
         <nav class="site-nav" aria-label="Navegação principal">
           <a href="/" aria-current="page">Central</a>
@@ -48,12 +56,14 @@
               </button>
             </div>
             <div class="studio-hero-help">
+              <button class="pwa-install-button" type="button" data-pwa-install aria-describedby="pwa-install-help" hidden>Instalar aplicativo</button>
               <a class="studio-secondary-action" href="/catalogo">Explorar catálogo <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></a>
               <button class="tour-launcher" type="button" data-tour-start aria-label="Abrir tour guiado">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round" /></svg>
                 Tour guiado
               </button>
             </div>
+            <p class="pwa-install-help" id="pwa-install-help" data-pwa-help role="status" hidden></p>
           </div>
           <div class="hero-preview" aria-hidden="true">
             <span class="hero-preview-caption">DO CATÁLOGO PARA O STORY</span>

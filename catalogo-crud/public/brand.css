@@ -114,21 +114,16 @@ button:disabled { cursor: not-allowed; }
   color: var(--azul);
   text-decoration: none;
 }
-.site-brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  flex: none;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: var(--vermelho);
-  color: #fff;
-  font-size: 21px;
-  font-weight: 800;
+.site-brand-logo {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 .site-brand strong { display: block; font-size: 17px; line-height: 1.2; }
 .site-brand small { display: block; margin-top: 3px; color: var(--color-muted); font-size: 11px; }
-.site-nav { display: flex; gap: 5px; align-items: center; }
+.site-nav { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
 .site-nav a {
   display: inline-flex;
   min-height: 38px;
