@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { badRequest } from '../../http/errors.mjs';
+import { productImageUrl, resolveProductImage } from './product-images.mjs';
 
 const productColumns = [
   'nome',
@@ -74,19 +75,15 @@ function booleanInteger(value) {
   throw badRequest('Campos booleanos devem receber true ou false.');
 }
 
-function makeImageUrl(imagemArquivo) {
-  if (!imagemArquivo) return null;
-  return `/assets/${imagemArquivo.split('/').map(encodeURIComponent).join('/')}`;
-}
-
-function serializeProduct(row) {
+function serializeProduct(row, imagesDirectory) {
   if (!row) return null;
+  const imageFile = resolveProductImage(imagesDirectory, row.imagem_arquivo);
 
   return {
     ...row,
     generico: Boolean(row.generico),
     produto_destaque: Boolean(row.produto_destaque),
-    imagem_local_url: row.imagem_arquivo ? makeImageUrl(row.imagem_arquivo) : null,
+    imagem_local_url: imageFile ? productImageUrl(imageFile) : null,
     possui_imagem_local: ['baixado', 'existente', 'manual'].includes(row.imagem_status),
   };
 }
@@ -131,6 +128,8 @@ function productId(value) {
 }
 
 export function createProductService({ database, imagesDirectory }) {
+  const serialize = (row) => serializeProduct(row, imagesDirectory);
+
   function safeLocalImagePath(value) {
     if (value === undefined) return undefined;
     if (value === null || value === '') return null;
@@ -140,7 +139,9 @@ export function createProductService({ database, imagesDirectory }) {
       throw badRequest('imagem_arquivo precisa apontar para um arquivo dentro de imagens/.');
     }
 
-    const absolutePath = path.resolve(imagesDirectory, normalized);
+    const resolved = resolveProductImage(imagesDirectory, normalized);
+    if (!resolved) throw badRequest('Caminho de imagem local não permitido.');
+    const absolutePath = path.resolve(imagesDirectory, resolved);
     const relativePath = path.relative(imagesDirectory, absolutePath);
     if (
       !relativePath
@@ -184,14 +185,14 @@ export function createProductService({ database, imagesDirectory }) {
   }
 
   function getProduct(id) {
-    return serializeProduct(database.prepare('SELECT * FROM products WHERE id = ?').get(id));
+    return serialize(database.prepare('SELECT * FROM products WHERE id = ?').get(id));
   }
 
   function getProductByEan(value) {
     const ean = String(value || '').trim();
     if (!/^\d{8,14}$/.test(ean)) return null;
 
-    return serializeProduct(database.prepare(`
+    return serialize(database.prepare(`
       SELECT * FROM products
       WHERE ean = ?
       ORDER BY CASE WHEN status = 'ativo' THEN 0 ELSE 1 END, id ASC
@@ -214,7 +215,7 @@ export function createProductService({ database, imagesDirectory }) {
     `).all(...filters.values, pageSize, (page - 1) * pageSize);
 
     return {
-      items: rows.map(serializeProduct),
+      items: rows.map(serialize),
       pagination: {
         page,
         pageSize,
@@ -294,7 +295,7 @@ export function createProductService({ database, imagesDirectory }) {
     if (!existing) return null;
 
     const changes = sanitizePayload(payload);
-    if (Object.keys(changes).length === 0) return serializeProduct(existing);
+    if (Object.keys(changes).length === 0) return serialize(existing);
 
     const updated = { ...existing, ...changes, updated_at: nowSqlTimestamp() };
     if (Object.hasOwn(changes, 'imagem_arquivo')) {

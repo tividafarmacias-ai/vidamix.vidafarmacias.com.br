@@ -68,6 +68,28 @@ a preparação dos fundos; a API continuará respondendo com uma lista vazia.
 Para exportar um vídeo Indoor, copie os fundos para essa pasta e selecione um
 fundo no editor, além dos cinco produtos.
 
+## Troca das imagens de produtos para WebP
+
+Publique também `src/modules/products/product-images.mjs`, as alterações em
+`product-service.mjs` e `src/app.mjs`, e reinicie o Node em **Restart App**.
+Envie os arquivos convertidos para a mesma pasta `imagens-produtos/imagens/`.
+Para cada referência `nome.png`, o servidor prioriza `nome.webp`, depois
+`nome_resultado.webp`, e mantém o PNG quando nenhum WebP estiver disponível.
+O nome deve preservar inclusive o hash original.
+
+Não é necessário migrar manualmente `imagem_arquivo`, reimportar o manifesto
+ou substituir o banco de produção. A resolução automática vale para os dados
+existentes e para novas importações; o banco e o manifesto não são reescritos.
+Novos lotes são reconhecidos sem reiniciar o Node novamente.
+
+Após publicar, consulte um produto em `/api/products/ID`: `imagem_local_url`
+deve terminar em `.webp` quando o arquivo convertido estiver disponível. A URL
+final deve responder 200 com `Content-Type: image/webp`; a antiga URL PNG deve
+redirecionar para ela. Confira o catálogo e a exportação da arte antes de remover
+os PNG. Se houver uma regra própria de Apache/nginx para `/assets/`, preserve o
+encaminhamento dessa rota ao Node para que a compatibilidade seja aplicada.
+Os ícones PNG do PWA permanecem como estão.
+
 ## Antes de enviar
 
 Na pasta `catalogo-crud`, execute:

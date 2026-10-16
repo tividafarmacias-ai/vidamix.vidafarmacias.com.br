@@ -1,8 +1,9 @@
 import { HttpError } from './http/errors.mjs';
 import { isRequestAuthorized, sendUnauthorized } from './http/auth.mjs';
-import { sendError } from './http/response.mjs';
+import { defaultSecurityHeaders, sendError } from './http/response.mjs';
 import { serveFile } from './http/static-files.mjs';
 import { createProductService } from './modules/products/product-service.mjs';
+import { productImageUrl, resolveProductImage } from './modules/products/product-images.mjs';
 import {
   createStoryBackgroundService,
   isSupportedStoryBackground,
@@ -91,6 +92,25 @@ export function createApplication({ config, database, logger = console }) {
         const assetPath = url.pathname.slice('/assets/'.length);
         if (!assetPath.startsWith('imagens/')) {
           sendError(response, 403, 'Caminho de imagem não permitido.');
+          return;
+        }
+        let decodedPath;
+        try { decodedPath = decodeURIComponent(assetPath); } catch { decodedPath = null; }
+        const imageFile = resolveProductImage(config.imagesDirectory, decodedPath);
+        if (!imageFile) {
+          sendError(response, 403, 'Caminho de imagem não permitido.');
+          return;
+        }
+        if (imageFile !== decodedPath) {
+          // Existing tabs and saved PNG URLs continue working after conversion.
+          // Do not cache the alias: files may still be uploaded or rolled back.
+          response.writeHead(302, {
+            ...defaultSecurityHeaders,
+            Location: productImageUrl(imageFile) + url.search,
+            'Cache-Control': 'no-store',
+            'Content-Length': 0,
+          });
+          response.end();
           return;
         }
         await serveFile({

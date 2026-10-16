@@ -131,6 +131,33 @@ no proxy, conforme o [guia de publicação](docs/deployment-plesk.md).
 `npm run test:app-mobile` inclui decodificação de pixels reais de códigos gerados,
 permissões negadas, cancelamento de pedidos pendentes e desligamento das câmeras.
 
+## Imagens de produtos em WebP
+
+As referências PNG já gravadas no SQLite e no manifesto continuam válidas.
+Para `imagens/produto.png`, o servidor procura, nesta ordem, `produto.webp`,
+`produto_resultado.webp` e o PNG original na mesma pasta. O sufixo `_resultado`
+é aceito para arquivos gerados pelo conversor em lote. Preserve o nome completo,
+incluindo o hash que já faz parte do nome; arquivos WebP vazios ou diretórios
+não são tratados como conversões prontas.
+
+A API entrega a URL WebP em `imagem_local_url` para catálogo, leitura por EAN
+e editores. URLs PNG antigas redirecionam temporariamente para o WebP disponível,
+com suporte a GET/HEAD e `Content-Type: image/webp` no arquivo final. Produtos
+ainda não convertidos continuam usando PNG. Novos arquivos são detectados nas
+próximas requisições, sem reiniciar o processo a cada lote.
+
+Esta resolução ocorre na leitura: não reescreve o banco, o manifesto nem as
+URLs externas de origem. Também permite salvar um cadastro cujo caminho antigo
+PNG agora corresponde a um WebP. Não é necessário apagar o SQLite ou reimportar
+o catálogo. As regras de autenticação e acesso à pasta de imagens permanecem.
+Ícones do PWA, logotipos e fundos não participam desta conversão automática.
+
+Publique o código atualizado, reinicie o Node uma vez e envie os WebP completos
+para `imagens-produtos/imagens/` (ou `IMAGES_ROOT/imagens/`). Recarregue a tela
+para obter as novas URLs; mantenha os PNG até validar os arquivos convertidos.
+`npm run test:catalogue` inclui os testes de compatibilidade em
+`scripts/product-images.test.mjs`.
+
 ## Rotas
 
 | Endereço | Uso |
