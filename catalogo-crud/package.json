@@ -10,8 +10,10 @@
     "dev": "node --watch server.mjs",
     "check": "node scripts/check.mjs",
     "check:production": "node scripts/production-check.mjs",
+    "check:pwa": "node scripts/pwa-deployment-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
-    "test:catalogue": "node --test scripts/catalogue-loading.test.mjs",
+    "test:catalogue": "node --test scripts/catalogue-loading.test.mjs scripts/catalogue-mobile.test.mjs",
+    "test:app-mobile": "node --test scripts/app-shell.test.mjs scripts/home-mobile.test.mjs",
     "test:tour": "node --test scripts/tour-storage.test.mjs",
     "test:stories-layout": "node --test scripts/stories-auto-layout.test.mjs",
     "test:stories-prices": "node --test scripts/stories-price-input.test.mjs",
@@ -19,7 +21,7 @@
     "test:stories-mobile": "node --test scripts/stories-mobile.test.mjs",
     "test:indoor": "node --test scripts/indoor-*.test.mjs",
     "test:pwa": "node --test scripts/pwa.test.mjs",
-    "verify": "npm run check && npm run test:catalogue && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:indoor && npm run test:pwa && npm run test:smoke"
+    "verify": "npm run check && npm run test:catalogue && npm run test:app-mobile && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:indoor && npm run test:pwa && npm run test:smoke"
   },
   "engines": {
     "node": ">=22.13.0 <25",

@@ -2,15 +2,15 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#f5f8fc" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="VidaMix" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <link rel="stylesheet" href="/pwa.css" />
     <script src="/js/pwa.js" defer></script>
     <meta name="description" content="VidaMix Studio: central para criar artes comerciais a partir do catálogo de produtos." />
@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="/brand.css" />
     <link rel="stylesheet" href="/home.css" />
     <link rel="stylesheet" href="/tour.css" />
+    <link rel="stylesheet" href="/app-shell.css" />
+    <script type="module" src="/js/app-shell.js"></script>
   </head>
   <body class="home-page" data-tour-page="home">
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -44,8 +46,8 @@
         <section class="studio-hero" aria-labelledby="hero-title">
           <div class="studio-hero-copy">
             <span class="hero-chip">STORIES, FEED E TV INDOOR DISPONÍVEIS</span>
-            <h1 id="hero-title">Transforme o seu catálogo em campanhas visuais.</h1>
-            <p>Leve seus produtos às redes sociais e à TV da loja. Crie artes para Stories e Feed ou um carrossel animado com 5 ofertas para TV Indoor.</p>
+            <h1 id="hero-title"><span class="home-desktop-copy">Transforme o seu catálogo em campanhas visuais.</span><span class="home-mobile-copy">O que vamos criar hoje?</span></h1>
+            <p><span class="home-desktop-copy">Leve seus produtos às redes sociais e à TV da loja. Crie artes para Stories e Feed ou um carrossel animado com 5 ofertas para TV Indoor.</span><span class="home-mobile-copy">Escolha um formato e transforme seus produtos em ofertas.</span></p>
             <div class="studio-hero-actions" data-tour="home-create">
               <a class="studio-primary-action" href="/artes/stories"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 6h6m-3 4v6m-3-3h6M11 19h2"/></svg> Criar Story</a>
               <a class="studio-primary-action" href="/artes/feed"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 12h8m-4-4v8"/></svg> Criar Feed</a>
@@ -75,7 +77,7 @@
 
         <section class="format-section" id="formatos" aria-labelledby="formatos-title">
           <div class="section-heading">
-            <div><p class="studio-kicker">Disponível agora</p><h2 id="formatos-title">Tudo pronto para sua próxima campanha</h2></div>
+            <div><p class="studio-kicker">Disponível agora</p><h2 id="formatos-title"><span class="home-desktop-copy">Tudo pronto para sua próxima campanha</span><span class="home-mobile-copy">Explore os formatos</span></h2></div>
             <p>Escolha o formato da sua campanha: redes sociais ou a televisão da loja.</p>
           </div>
 
@@ -127,24 +129,25 @@
       </main>
     </div>
 
-    <div class="ean-scanner-overlay" id="ean-scanner-overlay" hidden>
-      <section class="ean-scanner-dialog" role="dialog" aria-modal="true" aria-labelledby="ean-scanner-title">
+    <dialog class="ean-scanner-overlay" id="ean-scanner-overlay" aria-labelledby="ean-scanner-title" hidden>
+      <section class="ean-scanner-dialog">
         <button class="ean-scanner-close" id="ean-overlay-close" type="button" aria-label="Fechar leitor de código de barras">×</button>
         <span class="ean-scanner-mark" aria-hidden="true"></span>
-        <h2 id="ean-scanner-title">Escaneie o código de barras</h2>
-        <p>Aproxime o leitor. O produto será aberto automaticamente assim que o código for identificado.</p>
+        <h2 id="ean-scanner-title">Busque pelo código</h2>
+        <p>Digite o código de barras do produto ou use um leitor conectado.</p>
         <form id="ean-launcher" novalidate>
           <label class="ean-format-label" for="ean-format">Formato da arte</label>
           <select id="ean-format" name="format">
             <option value="stories">Stories · 1080 × 1920</option>
             <option value="feed">Feed · 1080 × 1350</option>
           </select>
-          <label class="screen-reader-only" for="ean-input">Código de barras</label>
-          <input id="ean-input" name="ean" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]*" maxlength="14" />
+          <label class="ean-input-label" for="ean-input">Código de barras</label>
+          <input id="ean-input" name="ean" type="text" inputmode="numeric" enterkeyhint="search" autocomplete="off" pattern="[0-9]*" maxlength="14" placeholder="Digite ou cole o código" />
+          <button class="studio-primary-action ean-submit-button" id="ean-submit" type="submit">Encontrar produto</button>
         </form>
         <p id="ean-status" class="ean-scanner-status" role="status" aria-live="polite">Aguardando leitura…</p>
       </section>
-    </div>
+    </dialog>
     <script type="module" src="/home.js"></script>
     <script type="module" src="/js/features/tour/index.js"></script>
   </body>

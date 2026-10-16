@@ -2,8 +2,8 @@ const STEPS = Object.freeze([
   { id: 'background', title: 'Escolha o fundo', next: 'Escolher produtos' },
   { id: 'products', title: 'Monte sua composição', next: 'Definir oferta' },
   { id: 'offer', title: 'Prepare a oferta', next: 'Ajustar arte' },
-  { id: 'adjust', title: 'Ajuste a arte', next: 'Exportar story' },
-  { id: 'export', title: 'Exporte seu story', next: '' },
+  { id: 'adjust', title: 'Ajuste a arte', next: 'Finalizar arte' },
+  { id: 'export', title: 'Salve sua arte', next: '' },
 ]);
 
 function isTextEntry(element) {
@@ -109,7 +109,8 @@ export function initStoriesMobileEditor({
     if (count) count.textContent = `Etapa ${index + 1} de ${STEPS.length}`;
     if (next) {
       next.hidden = step === 'export';
-      next.textContent = current.next;
+      next.textContent = step === 'adjust' ? 'Finalizar' : 'Continuar';
+      next.setAttribute('aria-label', current.next || 'Última etapa');
     }
     if (back) back.disabled = index === 0;
     for (const item of STEPS) {
@@ -132,7 +133,10 @@ export function initStoriesMobileEditor({
       if (status.textContent !== sourceStatus.textContent) status.textContent = sourceStatus.textContent;
       status.classList.toggle('is-error', sourceStatus.classList.contains('is-error'));
     }
-    if (mobile) body.dataset.mobileStep = step;
+    if (mobile) {
+      body.dataset.mobileStep = step;
+      body.style.setProperty('--story-step-progress', `${((index + 1) / STEPS.length) * 100}%`);
+    }
   }
 
   function showStep(value, { focus = false, openControls = true } = {}) {
@@ -203,6 +207,7 @@ export function initStoriesMobileEditor({
       body.classList.remove('story-mobile-keyboard-open');
       body.style.removeProperty('--story-viewport-height');
       body.style.removeProperty('--story-viewport-top');
+      body.style.removeProperty('--story-step-progress');
       if (done) done.hidden = true;
       sync();
       onStepChange(step);

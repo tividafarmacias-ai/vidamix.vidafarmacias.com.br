@@ -3,7 +3,8 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $sourceRoot = Split-Path -Parent $projectRoot
-$iconDirectory = Join-Path $projectRoot 'public/icons'
+# /icons/ is an Apache/Plesk alias on some hosts, so use an application path.
+$iconDirectory = Join-Path $projectRoot 'public/pwa-icons'
 $brandingDirectory = Join-Path $projectRoot 'public/branding'
 New-Item -ItemType Directory -Force -Path $iconDirectory, $brandingDirectory | Out-Null
 Copy-Item -LiteralPath (Join-Path $sourceRoot 'logotipo vida horizontal.png') -Destination (Join-Path $brandingDirectory 'vida-horizontal.png')
@@ -37,5 +38,8 @@ try {
     }
 } finally {
     $sourceIcon.Dispose()
+}
+foreach ($appleIconName in @('apple-touch-icon.png', 'apple-touch-icon-precomposed.png')) {
+    Copy-Item -LiteralPath (Join-Path $iconDirectory 'apple-touch-icon.png') -Destination (Join-Path $projectRoot "public/$appleIconName")
 }
 Write-Output 'Logotipo horizontal e icones PWA atualizados em public/.'

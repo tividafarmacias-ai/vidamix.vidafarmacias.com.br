@@ -322,7 +322,12 @@ function openDialog(product = null) {
 
   renderDialogImage(product);
   elements.dialog.showModal();
-  elements.form.elements.namedItem('nome').focus();
+  // Opening product details should not immediately cover the mobile screen with a keyboard.
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    document.querySelector('#close-dialog-button').focus({ preventScroll: true });
+  } else {
+    elements.form.elements.namedItem('nome').focus();
+  }
 }
 
 function closeDialog() {

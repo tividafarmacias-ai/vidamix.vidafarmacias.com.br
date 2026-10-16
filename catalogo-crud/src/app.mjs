@@ -10,6 +10,19 @@ import {
 import { createApiRouter } from './routes/api-routes.mjs';
 import { resolvePageRoute } from './routes/page-routes.mjs';
 
+// Installation metadata contains no application data. Home Screen icon fetches
+// must work without the browser's HTTP Basic session, including HEAD requests.
+const publicPwaFiles = new Set([
+  '/manifest.json',
+  '/manifest.webmanifest',
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/pwa-icons/apple-touch-icon.png',
+  '/pwa-icons/icon-192.png',
+  '/pwa-icons/icon-512.png',
+  '/pwa-icons/icon-maskable-512.png',
+]);
+
 function isSafeStaticMethod(method) {
   return method === 'GET' || method === 'HEAD';
 }
@@ -47,6 +60,17 @@ export function createApplication({ config, database, logger = console }) {
   return async function requestHandler(request, response) {
     try {
       const url = requestUrl(request);
+      if (publicPwaFiles.has(url.pathname) && isSafeStaticMethod(request.method)) {
+        await serveFile({
+          request,
+          response,
+          rootDirectory: config.publicDirectory,
+          urlPath: url.pathname.slice(1),
+          cacheControl: 'public, max-age=0, must-revalidate',
+        });
+        return;
+      }
+
       if (!isRequestAuthorized(request, config.auth)) {
         sendUnauthorized(response, config.auth);
         return;

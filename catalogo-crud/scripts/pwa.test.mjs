@@ -5,6 +5,7 @@ import { before, after, test } from 'node:test';
 import vm from 'node:vm';
 import { createApplication } from '../src/app.mjs';
 import { loadConfig } from '../src/config.mjs';
+import { checkPwaDeployment } from './pwa-deployment-check.mjs';
 
 const config = loadConfig({ APP_AUTH_ENABLED: 'false' });
 const workerSource = await readFile(new URL('../public/sw.js', import.meta.url), 'utf8');
@@ -12,8 +13,22 @@ const clientSource = await readFile(new URL('../public/js/pwa.js', import.meta.u
 const servers = [];
 let origin;
 
-async function startServer(appConfig) {
-  const server = createServer(createApplication({ config: appConfig, database: {} }));
+async function startServer(appConfig, simulateApache = false) {
+  const app = createApplication({ config: appConfig, database: {} });
+  const server = createServer((request, response) => {
+    // Plesk/Apache can own /icons/ and serve unknown extensions without a MIME type.
+    if (simulateApache && request.url.startsWith('/icons/')) {
+      response.writeHead(404, { 'Content-Type': 'text/html' });
+      response.end('<h1>Not Found</h1>');
+      return;
+    }
+    if (simulateApache && request.url.startsWith('/manifest.webmanifest')) {
+      response.writeHead(200);
+      response.end('{"display":"standalone"}');
+      return;
+    }
+    app(request, response);
+  });
   servers.push(server);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return `http://127.0.0.1:${server.address().port}`;
@@ -32,19 +47,25 @@ test('todas as entradas oferecem o manifesto e a marca; ícones têm dimensões 
     const response = await fetch(origin + route);
     assert.equal(response.status, 200, route);
     const html = await response.text();
-    assert.match(html, /rel="manifest" href="\/manifest.webmanifest" crossorigin="use-credentials"/);
+    assert.match(html, /rel="manifest" href="\/manifest.json\?v=2"/);
     assert.match(html, /src="\/js\/pwa.js" defer/);
     assert.match(html, /<header[\s\S]*src="\/branding\/vida-horizontal.png"[\s\S]*?<\/header>/);
-    assert.match(html, /rel="apple-touch-icon"/);
+    assert.match(html, /rel="apple-touch-icon" sizes="180x180" href="\/apple-touch-icon.png\?v=2"/);
+    assert.doesNotMatch(html, /(?:href|src)="\/icons\//);
   }
-  const response = await fetch(origin + '/manifest.webmanifest');
-  assert.match(response.headers.get('content-type'), /^application\/manifest\+json/);
+  const response = await fetch(origin + '/manifest.json?v=2');
+  assert.match(response.headers.get('content-type'), /^application\/json/);
   const manifest = await response.json();
+  assert.deepEqual(await (await fetch(origin + '/manifest.webmanifest')).json(), manifest, 'Manifesto antigo mantém os ícones atuais');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, '/');
   assert.equal(manifest.scope, '/');
   assert.equal(manifest.id, '/');
-  for (const icon of [...manifest.icons, { src: '/icons/apple-touch-icon.png', sizes: '180x180' }]) {
+  for (const icon of [...manifest.icons,
+    { src: '/apple-touch-icon.png?v=2', sizes: '180x180' },
+    { src: '/apple-touch-icon-precomposed.png', sizes: '180x180' },
+  ]) {
+    assert.ok(!icon.src.startsWith('/icons/'));
     const iconResponse = await fetch(origin + icon.src);
     assert.equal(iconResponse.status, 200);
     assert.equal(iconResponse.headers.get('content-type'), 'image/png');
@@ -58,15 +79,42 @@ test('todas as entradas oferecem o manifesto e a marca; ícones têm dimensões 
   assert.equal(workerResponse.headers.get('cache-control'), 'no-store');
 });
 
-test('PWA preserva a autenticação do servidor', async () => {
+test('metadados e ícones aceitam GET/HEAD sem senha; páginas e API continuam protegidas', async () => {
   const protectedOrigin = await startServer({ ...config,
     auth: { enabled: true, username: 'pwa-test', password: 'test-only', realm: 'PWA' },
   });
   const headers = { Authorization: `Basic ${Buffer.from('pwa-test:test-only').toString('base64')}` };
-  for (const route of ['/', '/manifest.webmanifest', '/sw.js', '/offline.html', '/icons/icon-192.png']) {
+  for (const route of ['/', '/catalogo', '/artes/stories', '/api/health', '/sw.js', '/offline.html', '/js/pwa.js']) {
     assert.equal((await fetch(protectedOrigin + route)).status, 401, route);
     assert.equal((await fetch(protectedOrigin + route, { headers })).status, 200, route);
   }
+  for (const route of ['/manifest.json?v=2', '/manifest.webmanifest', '/apple-touch-icon.png?v=2',
+    '/apple-touch-icon-precomposed.png', '/pwa-icons/icon-192.png', '/pwa-icons/icon-512.png',
+    '/pwa-icons/icon-maskable-512.png', '/pwa-icons/apple-touch-icon.png']) {
+    for (const method of ['GET', 'HEAD']) {
+      const response = await fetch(protectedOrigin + route, { method });
+      assert.equal(response.status, 200, `${method} ${route}`);
+      assert.equal(response.headers.get('www-authenticate'), null);
+      assert.ok(Number(response.headers.get('content-length')) > 0);
+      if (method === 'HEAD') assert.equal(await response.text(), '');
+    }
+    assert.equal((await fetch(protectedOrigin + route, { method: 'POST' })).status, 401);
+  }
+  for (const route of ['/pwa-icons/private.json', '/pwa-icons/%2e%2e%2findex.html', '/manifest.json/extra']) {
+    assert.equal((await fetch(protectedOrigin + route)).status, 401, route);
+  }
+  const report = await checkPwaDeployment(protectedOrigin);
+  assert.deepEqual(report.issues, []);
+  assert.equal(report.warnings.length, 1);
+});
+
+test('instalação independe do alias /icons/ e do MIME de .webmanifest no proxy', async () => {
+  const proxyOrigin = await startServer(config, true);
+  const report = await checkPwaDeployment(proxyOrigin);
+  assert.deepEqual(report.issues, []);
+  assert.ok(report.checked.includes('/manifest.json?v=2'));
+  assert.ok(report.checked.includes('/apple-touch-icon.png?v=2'));
+  assert.ok(report.checked.every((url) => !url.startsWith('/icons/') && !url.endsWith('.webmanifest')));
 });
 
 function workerHarness() {

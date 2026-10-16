@@ -1,11 +1,13 @@
 // Bump this version when changing the offline page or one of its dependencies.
 const CACHE_PREFIX = 'vidamix-offline-';
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const OFFLINE_URL = '/offline.html';
 const OFFLINE_ASSETS = [
   OFFLINE_URL,
   '/brand.css',
   '/pwa.css',
+  '/app-shell.css',
+  '/js/app-shell.js',
   '/js/pwa.js',
   '/branding/vida-horizontal.png',
   '/fonts/poppins-latin-400-normal.woff2',

@@ -31,14 +31,26 @@ O botão deixa de aparecer dentro do aplicativo instalado.
 O logotipo horizontal fornecido na raiz aparece nos cabeçalhos de todas as telas.
 Os ícones de 192 e 512 pixels, o ícone adaptável (maskable) e o ícone Apple de
 180 pixels derivam de `logo pwa icon.png`, com proporção preservada e fundo branco.
-Os arquivos prontos ficam em `public/branding/` e `public/icons/`; não há etapa
+Os arquivos prontos ficam em `public/branding/` e `public/pwa-icons/`; não há etapa
 de geração obrigatória no servidor. Para regenerá-los no Windows, execute
 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1`.
 
-`public/manifest.webmanifest` define o modo standalone e a abertura na central.
+`public/manifest.json` define o modo standalone e a abertura na central.
 Todas as telas e seus aliases carregam o manifesto e `public/js/pwa.js`.
-O manifesto é solicitado com credenciais para compatibilidade com a autenticação
-HTTP Basic já usada pela aplicação.
+O manifesto e os ícones de instalação aceitam GET/HEAD sem autenticação, para
+que a descoberta do ícone não dependa da sessão HTTP Basic do navegador.
+As páginas, a API e os demais recursos continuam sujeitos à autenticação do Node.
+O manifesto `.webmanifest` permanece disponível para compatibilidade, com o
+mesmo conteúdo do `.json` (verificado pelos testes).
+
+Os ícones usam `/pwa-icons/` porque `/icons/` pode ser um alias do Apache/Plesk.
+O PNG Apple também está na raiz de `public/` como `apple-touch-icon.png` e
+`apple-touch-icon-precomposed.png`. A extensão `.json` evita depender de um
+tipo MIME adicional no proxy. Após publicar, execute
+`npm run check:pwa -- https://vidamix.vidafarmacias.com.br` para conferir os
+arquivos efetivamente entregues pela hospedagem, incluindo MIME, status HTTP
+e dimensões dos ícones. Se houver um atalho antigo sem ícone no iPhone,
+remova-o e adicione novamente pelo Safari depois de atualizar a publicação.
 
 O service worker em `public/sw.js` mantém apenas uma tela de falta de conexão
 e seus recursos visuais. **Catálogo, edição e consulta de produtos precisam de
@@ -50,6 +62,35 @@ em `sw.js` ao modificar a tela offline ou seus recursos.
 
 Execute `npm run test:pwa` (também incluído em `npm run verify`) para verificar
 manifesto, ícones, rotas, autenticação, fallback offline e fluxo de instalação.
+
+## Experiência mobile
+
+Até 900 px, as telas usam cabeçalhos compactos, áreas de toque maiores e os
+espaçamentos seguros do aparelho. A central e o catálogo têm navegação inferior;
+Stories e Feed mantêm suas cinco etapas, e a TV Indoor mostra as ações da etapa
+atual. O modo instalado é identificado tanto por `display-mode: standalone`
+quanto pelo sinal do Safari no iOS.
+
+O catálogo oferece filtros recolhíveis, categorias com rolagem horizontal,
+paginação também no final da lista e edição em tela inteira. Cabeçalho e ações
+do formulário permanecem visíveis enquanto os campos rolam. Na central, o código
+de barras pode ser digitado ou colado e confirmado; no desktop, a leitura
+automática por leitor continua disponível.
+
+Stories e Feed adaptam o espaço da prévia à etapa, permitem ampliá-la e mantêm
+os controles de exportação acessíveis. Na TV Indoor, alterne entre Catálogo e
+Selecionados para revisar ordem e preços antes de escolher o fundo e a prévia.
+
+`public/app-shell.css` e `public/js/app-shell.js` centralizam navegação, modo
+instalado e ajuste ao teclado. Os estilos mobile específicos ficam em
+`home.css`, `catalogue-mobile.css`, `stories-mobile.css` e `indoor-h.css`.
+As alturas acompanham o VisualViewport, inclusive quando o teclado redimensiona
+a tela, sem desativar o zoom do navegador.
+
+`npm run test:app-mobile`, `npm run test:catalogue`, `npm run test:stories-mobile`
+e `npm run test:indoor` verificam esses fluxos e integram `npm run verify`.
+Ao validar no aparelho, confira instalação em standalone, rotação, teclado,
+edição de produto e as etapas de criação de cada formato.
 
 ## Rotas
 

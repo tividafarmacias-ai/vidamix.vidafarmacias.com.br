@@ -7,18 +7,21 @@ const ui = Object.fromEntries([
   'status', 'search', 'results', 'results-summary', 'load-more', 'selected', 'selection-count',
   'continue', 'backgrounds', 'reload-backgrounds', 'open-preview', 'canvas', 'preview-loading',
   'play', 'time', 'time-label', 'scenes', 'download', 'export-status', 'export-progress',
-  'cancel-export', 'download-link', 'retry-preview',
+  'cancel-export', 'download-link', 'retry-preview', 'product-views', 'show-catalog', 'show-selection',
+  'catalog', 'selection-panel', 'mobile-count', 'mobile-dock', 'mobile-hint', 'mobile-back', 'mobile-next',
 ].map((id) => [id, byId(id)]));
 const stepButtons = [...document.querySelectorAll('[data-step]')];
 const backButtons = [...document.querySelectorAll('[data-go]')];
 const context = ui.canvas.getContext('2d');
+const mobileViewport = window.matchMedia('(max-width: 900px)');
 const state = {
   step: 'products', selection: [], products: [], page: 0, total: 0, hasMore: false,
   productRequest: null, productError: false, backgrounds: [], background: null,
   backgroundsLoading: false, backgroundsLoaded: false, snapshot: null, previewVersion: 0,
-  seconds: 0, playing: false, frame: 0, exportController: null, downloadUrl: null,
+  seconds: 0, playing: false, frame: 0, exportController: null, downloadUrl: null, productView: 'catalog',
 };
 const images = new Map();
+const productScroll = { catalog: 0, selection: 0 };
 let searchTimer;
 
 function element(tag, className, text) {
@@ -46,6 +49,57 @@ function button(label, onClick, className = '') {
 function status(message, error = false, node = ui.status) {
   node.textContent = message;
   node.classList.toggle('is-error', error);
+  if (node === ui['export-status'] && state.step === 'preview') {
+    ui['mobile-hint'].textContent = message;
+    ui['mobile-hint'].classList.toggle('is-error', error);
+  }
+}
+
+function syncMobileControls() {
+  const mobile = mobileViewport.matches;
+  const busy = Boolean(state.exportController);
+  const complete = canContinue(state.selection);
+  const count = state.selection.length;
+  ui['product-views'].hidden = !mobile;
+  ui['mobile-dock'].hidden = !mobile;
+  ui.catalog.hidden = mobile && state.productView !== 'catalog';
+  ui['selection-panel'].hidden = mobile && state.productView !== 'selection';
+  ui['show-catalog'].setAttribute('aria-pressed', String(state.productView === 'catalog'));
+  ui['show-selection'].setAttribute('aria-pressed', String(state.productView === 'selection'));
+  ui['mobile-count'].textContent = `${count}/${PRODUCT_LIMIT}`;
+  ui['mobile-back'].hidden = false;
+  ui['mobile-back'].disabled = false;
+  ui['mobile-hint'].classList.remove('is-error');
+  if (state.step === 'products') {
+    const reviewing = state.productView === 'selection';
+    ui['mobile-back'].textContent = reviewing ? '← Catálogo' : 'Buscar';
+    ui['mobile-next'].textContent = reviewing ? 'Escolher fundo →' : 'Revisar seleção →';
+    ui['mobile-next'].disabled = reviewing ? !complete : !count;
+    ui['mobile-hint'].textContent = complete ? '5 de 5 · Confira a ordem e os preços opcionais.'
+      : `${count} de 5 selecionados · Faltam ${PRODUCT_LIMIT - count}.`;
+  } else if (state.step === 'background') {
+    ui['mobile-back'].textContent = '← Produtos';
+    ui['mobile-next'].textContent = 'Conferir vídeo →';
+    ui['mobile-next'].disabled = !complete || !state.background || state.backgroundsLoading;
+    ui['mobile-hint'].textContent = state.background ? `Fundo: ${state.background.nome}` : 'Escolha o fundo da sua campanha.';
+  } else {
+    ui['mobile-back'].textContent = busy ? 'Cancelar' : '← Fundo';
+    ui['mobile-back'].disabled = busy && state.exportController.signal.aborted;
+    ui['mobile-next'].textContent = busy ? 'Exportando…' : 'Baixar MP4';
+    ui['mobile-next'].disabled = busy || !state.snapshot;
+    ui['mobile-hint'].textContent = ui['export-status'].textContent;
+    ui['mobile-hint'].classList.toggle('is-error', ui['export-status'].classList.contains('is-error'));
+  }
+}
+
+function showProductView(view, { focus = true } = {}) {
+  if (state.exportController || !['catalog', 'selection'].includes(view)) return;
+  if (mobileViewport.matches) productScroll[state.productView] = window.scrollY;
+  state.productView = view;
+  syncMobileControls();
+  if (!mobileViewport.matches) return;
+  if (focus) byId(view === 'catalog' ? 'products-heading' : 'selected-heading').focus({ preventScroll: true });
+  window.scrollTo({ top: productScroll[view], behavior: 'instant' });
 }
 
 function selectionStatus() {
@@ -72,6 +126,7 @@ function syncControls() {
   ui.play.disabled = ui.time.disabled = ui.download.disabled = busy || !state.snapshot;
   ui['retry-preview'].disabled = busy;
   for (const node of ui.scenes.querySelectorAll('button')) node.disabled = busy || !state.snapshot;
+  syncMobileControls();
 }
 
 function clearDownload() {
@@ -114,14 +169,23 @@ function renderSelected() {
       const actions = element('div', 'indoor-item-actions');
       const reorder = (direction) => {
         updateSelection(moveProduct(state.selection, product.id, direction));
-        ui.selected.querySelector(`[data-product-id="${product.id}"] input`)?.focus();
+        const row = ui.selected.querySelector(`[data-product-id="${product.id}"]`);
+        const action = row?.querySelector(`[data-move="${direction}"]:not(:disabled)`)
+          || row?.querySelector('.indoor-item-actions button:not(:disabled)');
+        action?.focus({ preventScroll: true });
       };
       const up = button('↑', () => reorder(-1));
       const down = button('↓', () => reorder(1));
       const remove = button('Remover', () => {
         updateSelection(removeProduct(state.selection, product.id));
-        ui.search.focus();
+        if (mobileViewport.matches) {
+          const nextRow = ui.selected.children[Math.min(index, state.selection.length - 1)];
+          const nextAction = nextRow?.querySelector('.indoor-item-actions button:not(:disabled)');
+          (nextAction || byId('selected-heading')).focus({ preventScroll: true });
+        } else ui.search.focus();
       });
+      up.dataset.move = '-1';
+      down.dataset.move = '1';
       up.setAttribute('aria-label', `Antecipar ${product.nome}`);
       down.setAttribute('aria-label', `Adiar ${product.nome}`);
       remove.setAttribute('aria-label', `Remover ${product.nome}`);
@@ -157,7 +221,7 @@ function renderResults() {
     const selected = state.selection.some((entry) => entry.product.id === product.id);
     const card = button('', () => {
       updateSelection(selected ? removeProduct(state.selection, product.id) : addProduct(state.selection, product));
-      ui.results.querySelector(`[data-product-id="${product.id}"]`)?.focus();
+      ui.results.querySelector(`[data-product-id="${product.id}"]`)?.focus({ preventScroll: true });
     }, 'indoor-product');
     card.dataset.productId = String(product.id);
     card.disabled = !product.imagem_local_url || (!selected && state.selection.length >= PRODUCT_LIMIT);
@@ -362,8 +426,11 @@ function goTo(step) {
   state.previewVersion += 1;
   state.step = step;
   for (const name of ['products', 'background', 'preview']) byId(`${name}-panel`).hidden = name !== step;
-  byId(`${step}-heading`).focus();
   syncControls();
+  const heading = byId(step === 'products' && mobileViewport.matches && state.productView === 'selection'
+    ? 'selected-heading' : `${step}-heading`);
+  heading.focus({ preventScroll: mobileViewport.matches });
+  if (mobileViewport.matches) window.scrollTo({ top: 0, behavior: 'instant' });
   if (step === 'products') selectionStatus();
   else if (step === 'background') {
     status(state.backgroundsLoaded && !state.backgrounds.length
@@ -422,6 +489,34 @@ async function download() {
 
 for (const node of stepButtons) node.addEventListener('click', () => goTo(node.dataset.step));
 for (const node of backButtons) node.addEventListener('click', () => goTo(node.dataset.go));
+ui['show-catalog'].addEventListener('click', () => showProductView('catalog'));
+ui['show-selection'].addEventListener('click', () => showProductView('selection'));
+ui['mobile-back'].addEventListener('click', () => {
+  if (state.exportController) {
+    state.exportController.abort();
+    ui['cancel-export'].disabled = true;
+    syncMobileControls();
+  } else if (state.step === 'products') {
+    if (state.productView === 'selection') showProductView('catalog');
+    else ui.search.focus();
+  } else goTo(state.step === 'preview' ? 'background' : 'products');
+});
+ui['mobile-next'].addEventListener('click', () => {
+  if (state.step === 'products') {
+    if (state.productView === 'catalog') showProductView('selection');
+    else goTo('background');
+  } else if (state.step === 'background') goTo('preview');
+  else void download();
+});
+mobileViewport.addEventListener('change', () => {
+  const focused = document.activeElement;
+  if (ui['selection-panel'].contains(focused)) state.productView = 'selection';
+  else if (ui.catalog.contains(focused)) state.productView = 'catalog';
+  syncMobileControls();
+  if (!mobileViewport.matches && (ui['mobile-dock'].contains(focused) || ui['product-views'].contains(focused))) {
+    byId(`${state.step}-heading`).focus({ preventScroll: true });
+  }
+});
 ui.continue.addEventListener('click', () => goTo('background'));
 ui['open-preview'].addEventListener('click', () => goTo('preview'));
 ui['reload-backgrounds'].addEventListener('click', () => void loadBackgrounds());

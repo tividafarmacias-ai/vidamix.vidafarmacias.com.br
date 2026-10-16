@@ -102,16 +102,43 @@ Confira também `/api/indoor-backgrounds` para verificar a lista de fundos da TV
 ### Instalação PWA
 
 Mantenha o site na raiz do domínio/subdomínio, como nas rotas acima, e force HTTPS.
-Envie também `public/manifest.webmanifest`, `public/sw.js`, `public/offline.html`,
-`public/pwa.css`, `public/js/pwa.js`, `public/branding/` e `public/icons/`.
-O Node serve o manifesto como `application/manifest+json` e o worker como
-`text/javascript`, sem cache HTTP. Se nginx/Apache servir esses arquivos
-diretamente, preserve esses tipos MIME e não aplique cache longo a `/sw.js`.
+Envie também `public/manifest.json`, `public/manifest.webmanifest`, `public/sw.js`,
+`public/offline.html`, `public/pwa.css`, `public/js/pwa.js`, `public/branding/`,
+`public/pwa-icons/`, `public/apple-touch-icon.png` e
+`public/apple-touch-icon-precomposed.png`, além das cinco páginas HTML atualizadas.
+Reinicie a aplicação após atualizar o código em `src/`.
+
+As páginas usam `/manifest.json?v=2`, servido como `application/json` também
+pelo proxy. O `.webmanifest` é mantido apenas para links antigos. Os ícones
+ficam em `/pwa-icons/`: **não use `/icons/`**, pois o Apache/Plesk pode resolver
+esse caminho para seus próprios ícones em vez dos arquivos da aplicação.
+O ícone Apple tem ainda os caminhos convencionais na raiz do site.
+
+O Node permite GET/HEAD sem senha somente para esses manifestos e arquivos de
+ícone enumerados, sem liberar páginas ou API. Se houver proteção de diretório
+no próprio Plesk/nginx/Apache, esses metadados também precisam ser acessíveis
+sem o desafio HTTP Basic. Não aplique cache longo a `/sw.js` e preserve seu
+Content-Type JavaScript ao servi-lo diretamente pelo proxy.
+
+Verifique a publicação, sem enviar credenciais:
+
+```bash
+npm run check:pwa -- https://vidamix.vidafarmacias.com.br
+```
+
+O comando verifica o HTML quando ele está acessível, o manifesto standalone,
+o tipo MIME, os ícones PNG e suas dimensões. Ele falha se detectar referências
+antigas a `/icons/`, erro HTTP (como 404/401) ou manifesto sem Content-Type JSON.
+Com HTML protegido, informa que as tags da página não foram verificadas e
+confere os arquivos públicos de instalação diretamente.
 
 Após autenticar, confira o manifesto e o service worker nas ferramentas do
 navegador e use **Instalar aplicativo** na central. Abra o ícone instalado e
 confirme que o VidaMix inicia na central em uma janela standalone. Em iOS,
-use o Safari e **Compartilhar > Adicionar à Tela de Início**.
+use o Safari e **Compartilhar > Adicionar à Tela de Início**, mantendo
+**Abrir como App** ativado se essa opção aparecer. Se já existir um atalho
+sem ícone criado antes desta correção, remova-o e adicione novamente após
+recarregar o site. Confira o logotipo na prévia antes de tocar em Adicionar.
 Depois da primeira abertura online, desconecte e navegue: a tela de reconexão
 deve aparecer. Os dados e editores continuam exigindo conexão com o servidor.
 

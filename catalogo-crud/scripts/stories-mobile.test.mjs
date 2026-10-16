@@ -264,6 +264,8 @@ test('tabs support arrow keys, Home and End with a single selected tab and focus
   const editor = f.initialize();
   assert.equal(f.nav.getAttribute('role'), 'tablist');
   assert.equal(f.nodes['step-count'].textContent, 'Etapa 1 de 5');
+  assert.equal(f.nodes.next.textContent, 'Continuar');
+  assert.equal(f.nodes.next.getAttribute('aria-label'), 'Escolher produtos');
   assert.equal(f.nodes.back.disabled, true);
   const event = f.tabs.background.dispatch('keydown', { key: 'ArrowRight' });
   assert.equal(event.defaultPrevented, true);
@@ -274,6 +276,7 @@ test('tabs support arrow keys, Home and End with a single selected tab and focus
   assert.equal(f.panels.products.hidden, false);
   f.nodes.next.click();
   assert.equal(f.doc.activeElement, f.panels.offer);
+  assert.equal(f.nodes.next.getAttribute('aria-label'), 'Ajustar arte');
   f.tabs.offer.dispatch('keydown', { key: 'End' });
   assert.equal(f.doc.activeElement, f.tabs.export);
   assert.equal(f.nodes.next.hidden, true);

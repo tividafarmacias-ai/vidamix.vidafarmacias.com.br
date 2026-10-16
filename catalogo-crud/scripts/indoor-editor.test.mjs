@@ -30,6 +30,7 @@ class Element {
     this.classList = {
       toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); },
       contains: (name) => classes.has(name),
+      remove: (...names) => names.forEach((name) => classes.delete(name)),
     };
   }
   append(...children) { this.children.push(...children); }
@@ -46,14 +47,21 @@ class Element {
     for (const callback of this.listeners.get(type) || []) callback(event);
   }
   click() { if (!this.disabled) { this.clickCount += 1; this.dispatch('click'); } }
-  focus() { this.focused = true; }
+  focus() { this.focused = true; if (this.ownerDocument) this.ownerDocument.activeElement = this; }
+  contains(node) { return node === this || this.descendants().includes(node); }
   setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; }
   getContext() { return { canvas: this }; }
   querySelectorAll(selector) {
     const matches = (node) => {
+      if (selector.endsWith(':not(:disabled)') && node.disabled) return false;
+      const simple = selector.replace(':not(:disabled)', '');
+      if (simple === 'button') return node.tagName === 'button';
       if (selector === 'button' || selector === 'input') return node.tagName === selector;
       const data = selector.match(/^\[data-product-id="([^"]+)"\]$/);
       if (data) return node.dataset.productId === data[1];
+      const move = simple.match(/^\[data-move="([^"]+)"\]$/);
+      if (move) return node.dataset.move === move[1];
+      if (simple.startsWith('.')) return (node.className || '').split(' ').includes(simple.slice(1));
       const attribute = selector.match(/^\[([^=]+)="([^"]+)"\]$/);
       return attribute ? node.getAttribute(attribute[1]) === attribute[2] : false;
     };
@@ -62,6 +70,8 @@ class Element {
   }
   descendants() { return this.children.flatMap((child) => [child, ...child.descendants()]); }
   querySelector(selector) {
+    const classDescendant = selector.match(/^(\.[\w-]+) (.+)$/);
+    if (classDescendant) return this.querySelector(classDescendant[1])?.querySelector(classDescendant[2]) ?? null;
     const descendantInput = selector.match(/^(\[data-product-id="[^"]+"\]) input$/);
     if (descendantInput) return this.querySelector(descendantInput[1])?.querySelector('input') ?? null;
     return this.querySelectorAll(selector)[0] ?? null;
@@ -109,8 +119,18 @@ async function openEditor(t, options = {}) {
   const document = new Element('document');
   document.getElementById = (id) => elements.get(id) ?? null;
   document.querySelectorAll = (selector) => selector === '[data-step]' ? steps : selector === '[data-go]' ? backs : [];
-  document.createElement = (tag) => new Element(tag);
+  document.createElement = (tag) => { const node = new Element(tag); node.ownerDocument = document; return node; };
+  for (const node of elements.values()) node.ownerDocument = document;
+  for (const [parent, children] of Object.entries({
+    catalog: ['search', 'results'], 'selection-panel': ['selected', 'selected-heading'],
+    'product-views': ['show-catalog', 'show-selection'], 'mobile-dock': ['mobile-back', 'mobile-next'],
+  })) elements.get(`indoor-${parent}`).append(...children.map((id) => elements.get(`indoor-${id}`)));
   const window = new Element('window');
+  const media = new Element('media');
+  media.matches = Boolean(options.mobile);
+  window.matchMedia = () => media;
+  window.scrollY = 0;
+  window.scrollTo = ({ top }) => { window.scrollY = top; };
   const requests = [];
   const imageRequests = [];
   const paints = [];
@@ -182,7 +202,8 @@ async function openEditor(t, options = {}) {
     }
     await flush();
   };
-  return { get, steps, document, requests, imageRequests, paints, exports, createdUrls, revokedUrls, frames, runDebounce };
+  const resize = (mobile) => { media.matches = mobile; media.dispatch('change'); };
+  return { get, steps, document, window, resize, requests, imageRequests, paints, exports, createdUrls, revokedUrls, frames, runDebounce };
 }
 
 function selectFive(fixture) {
@@ -236,6 +257,66 @@ test('Indoor requires exactly five products and a background before enabling pre
   f.document.hidden = true;
   f.document.dispatch('visibilitychange');
   assert.equal(f.frames.size, 0, 'Hiding the tab pauses playback');
+});
+
+test('mobile review preserves catalogue scroll and prices while reordering without focusing the keyboard', async (t) => {
+  const f = await openEditor(t, { mobile: true });
+  assert.equal(f.get('mobile-dock').hidden, false);
+  assert.equal(f.get('selection-panel').hidden, true);
+  assert.equal(f.get('mobile-next').disabled, true);
+  f.get('results').querySelector('[data-product-id="1"]').click();
+  f.get('results').querySelector('[data-product-id="2"]').click();
+  f.window.scrollY = 640;
+  f.get('mobile-next').click();
+  assert.equal(f.get('catalog').hidden, true);
+  assert.equal(f.get('selection-panel').hidden, false);
+  assert.equal(f.window.scrollY, 0);
+  assert.equal(f.get('mobile-next').disabled, true, 'Partial selection can be reviewed but cannot advance');
+  const input = f.get('selected').querySelector('[data-product-id="1"] input');
+  input.value = '1290';
+  input.dispatch('input');
+  f.get('selected').querySelector('[data-product-id="1"]').querySelector('[data-move="1"]').click();
+  assert.equal(f.get('selected').children[1].dataset.productId, '1');
+  assert.equal(f.get('selected').children[1].querySelector('input').value, '12,90');
+  assert.equal(f.document.activeElement.tagName, 'button', 'Reordering does not open the price keyboard');
+  f.get('mobile-back').click();
+  assert.equal(f.get('catalog').hidden, false);
+  assert.equal(f.get('selection-panel').hidden, true);
+  assert.equal(f.window.scrollY, 640, 'Returning to the catalogue restores the browsing position');
+  f.resize(false);
+  assert.equal(f.get('catalog').hidden, false);
+  assert.equal(f.get('selection-panel').hidden, false);
+  assert.equal(f.get('mobile-dock').hidden, true);
+  assert.equal(f.get('selected').children[1].querySelector('input').value, '12,90');
+});
+
+test('mobile actions complete the campaign and keep export cancellation available', async (t) => {
+  const f = await openEditor(t, { mobile: true, exportVideo: ({ signal }) => new Promise((resolve, reject) => {
+    signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
+  }) });
+  selectFive(f);
+  f.get('mobile-next').click();
+  assert.equal(f.get('selection-panel').hidden, false);
+  f.get('mobile-next').click();
+  await flush();
+  assert.equal(f.get('background-panel').hidden, false);
+  assert.equal(f.get('mobile-next').disabled, true, 'A background is still required');
+  f.get('backgrounds').querySelector('button').click();
+  f.get('mobile-next').click();
+  await flush();
+  assert.equal(f.get('preview-panel').hidden, false);
+  assert.equal(f.get('mobile-next').disabled, false);
+  f.get('mobile-next').click();
+  await flush();
+  assert.equal(f.exports.length, 1);
+  assert.equal(f.get('mobile-next').disabled, true);
+  assert.equal(f.get('mobile-back').textContent, 'Cancelar');
+  f.get('mobile-back').click();
+  await flush();
+  assert.equal(f.exports[0].signal.aborted, true);
+  assert.equal(f.createdUrls.length, 0);
+  assert.equal(f.get('mobile-next').disabled, false);
+  assert.match(f.get('mobile-hint').textContent, /Exportação cancelada/);
 });
 
 test('empty background inventory blocks preview and can recover after refreshing', async (t) => {
