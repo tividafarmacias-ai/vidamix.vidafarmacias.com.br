@@ -134,7 +134,8 @@ test('browsing navigation resolves route aliases, while editors keep their own n
   for (const [path, screen] of expected) assert.equal(getAppScreen(path), screen);
   const catalogue = fixture();
   const nav = catalogue.doc.body.children[0];
-  assert.equal(nav.children.length, 5);
+  assert.equal(nav.children.length, 4);
+  assert.equal(nav.children.some((link) => link.href.includes('indoor')), false);
   assert.equal(nav.children.filter((link) => link.getAttribute('aria-current') === 'page').length, 1);
   assert.equal(nav.children[1].href, '/catalogo');
   for (const pathname of ['/artes/stories', '/artes/feed', '/artes/indoor-h']) {

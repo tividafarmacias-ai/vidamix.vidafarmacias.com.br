@@ -54,7 +54,7 @@
               <a class="studio-primary-action" href="/artes/indoor-h"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8m-4-4v4m-2-15 5 4-5 4z"/></svg> Criar vídeo para TV</a>
               <button class="ean-launch-button" id="ean-overlay-open" type="button" data-tour="home-barcode">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 3H3v4m14-4h4v4M3 17v4h4m14-4v4h-4M7 7v10m4-10v10m3-10v10m3-10v10"/></svg>
-                Código de barras
+                <span class="home-desktop-copy">Código de barras</span><span class="home-mobile-copy">Ler com câmera</span>
               </button>
             </div>
             <div class="studio-hero-help">
@@ -134,7 +134,7 @@
         <button class="ean-scanner-close" id="ean-overlay-close" type="button" aria-label="Fechar leitor de código de barras">×</button>
         <span class="ean-scanner-mark" aria-hidden="true"></span>
         <h2 id="ean-scanner-title">Busque pelo código</h2>
-        <p>Leia o código de barras com a câmera ou digite os números do produto.</p>
+        <p id="ean-scanner-description">Leia o código de barras com a câmera ou digite os números do produto.</p>
         <form id="ean-launcher" novalidate>
           <label class="ean-format-label" for="ean-format">Formato da arte</label>
           <select id="ean-format" name="format">
@@ -143,7 +143,7 @@
           </select>
           <button class="ean-camera-button" id="ean-camera-start" type="button" aria-controls="ean-camera-panel" aria-expanded="false">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 4h8l2 3h3v13H3V7h3z" stroke-linejoin="round"/><circle cx="12" cy="13" r="4"/></svg>
-            Usar câmera
+            <span id="ean-camera-label">Usar câmera</span>
           </button>
           <div id="ean-camera-panel" class="ean-camera-panel" hidden>
             <div class="ean-camera-preview">

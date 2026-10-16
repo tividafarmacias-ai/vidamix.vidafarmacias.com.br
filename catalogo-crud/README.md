@@ -66,20 +66,25 @@ manifesto, ícones, rotas, autenticação, fallback offline e fluxo de instalaç
 ## Experiência mobile
 
 Até 900 px, as telas usam cabeçalhos compactos, áreas de toque maiores e os
-espaçamentos seguros do aparelho. A central e o catálogo têm navegação inferior;
-Stories e Feed mantêm suas cinco etapas, e a TV Indoor mostra as ações da etapa
-atual. O modo instalado é identificado tanto por `display-mode: standalone`
-quanto pelo sinal do Safari no iOS.
+espaçamentos seguros do aparelho. A central e o catálogo têm navegação inferior
+com **Início**, **Catálogo**, **Stories** e **Feed**. Os cartões, botões e links de
+TV Indoor ficam ocultos no mobile; a rota direta continua disponível. No desktop,
+os acessos a TV Indoor permanecem. O modo instalado é identificado tanto por
+`display-mode: standalone` quanto pelo sinal do Safari no iOS.
 
 O catálogo oferece filtros recolhíveis, categorias com rolagem horizontal,
 paginação também no final da lista e edição em tela inteira. Cabeçalho e ações
 do formulário permanecem visíveis enquanto os campos rolam. Na central, o código
-de barras pode ser digitado ou colado e confirmado; no desktop, a leitura
-automática por leitor continua disponível.
+de barras é lido pela câmera: **Ler com câmera** abre o leitor e inicia a captura
+no mesmo toque. No mobile não há digitação manual nem leitura por dispositivo
+externo. No desktop, continuam disponíveis a entrada manual, o leitor conectado
+e a câmera opcional.
 
-Stories e Feed adaptam o espaço da prévia à etapa, permitem ampliá-la e mantêm
-os controles de exportação acessíveis. Na TV Indoor, alterne entre Catálogo e
-Selecionados para revisar ordem e preços antes de escolher o fundo e a prévia.
+Stories e Feed mantêm o canvas ampliado e editável. Os botões quadrados **Fundo**,
+**Produtos** e **Oferta**, à direita sob a grade, abrem os respectivos modais;
+**Ajuste automático** e **Vincular** ficam à esquerda, e a exportação no cabeçalho.
+Não há abas de etapas nem painel Ajustes no mobile: produtos, ofertas e textos
+podem ser arrastados e redimensionados diretamente na arte.
 
 `public/app-shell.css` e `public/js/app-shell.js` centralizam navegação, modo
 instalado e ajuste ao teclado. Os estilos mobile específicos ficam em
@@ -90,23 +95,29 @@ a tela, sem desativar o zoom do navegador.
 `npm run test:app-mobile`, `npm run test:catalogue`, `npm run test:stories-mobile`
 e `npm run test:indoor` verificam esses fluxos e integram `npm run verify`.
 Ao validar no aparelho, confira instalação em standalone, rotação, teclado,
-edição de produto e as etapas de criação de cada formato.
+edição de produto, leitura pela câmera e os modais e gestos dos editores.
 
 ## Leitor pela câmera
 
-Na central, abra **Código de barras**, escolha Stories ou Feed e toque em
-**Usar câmera**. Autorize a câmera e enquadre o código inteiro, com boa iluminação.
-O leitor prefere a câmera traseira, confirma duas leituras do mesmo código e
-abre o produto no formato escolhido. Para usar o teclado, toque em
-**Desligar câmera e digitar código**. A entrada manual e o leitor USB/Bluetooth
-continuam disponíveis.
+No mobile, toque em **Ler com câmera** na central: o diálogo abre e já inicia
+a câmera. Autorize o acesso, escolha Stories ou Feed e enquadre o código inteiro,
+com boa iluminação. O leitor prefere a câmera traseira, confirma duas leituras
+do mesmo código e abre o produto no formato escolhido. Não há campo de código,
+envio manual nem opção de alternar para um leitor USB/Bluetooth no mobile.
+
+No desktop, **Código de barras** mantém a entrada manual e o leitor conectado.
+Para ler pela câmera, toque em **Usar câmera**; **Desligar câmera e digitar código**
+retorna à entrada manual.
 
 A câmera exige HTTPS em produção (ou `localhost` para desenvolvimento) e
 permissão do navegador. O acesso ocorre apenas depois do toque do usuário, sem
-microfone. Fechar o leitor, trocar para digitação, encontrar um código ou colocar
+microfone. Fechar o leitor, trocar para digitação no desktop, encontrar um código ou colocar
 o app em segundo plano encerra a captura. Voltar ao app não religa a câmera
-automaticamente. As imagens são processadas no dispositivo; somente o código
-identificado é enviado à API existente de produtos.
+automaticamente. No mobile, uma pausa ou erro mantém a entrada manual oculta e
+oferece **Tentar câmera novamente**. A captura só recomeça após esse toque;
+erros na consulta do produto também não abrem o teclado nem reiniciam a câmera.
+As imagens são processadas no dispositivo; somente o código identificado é
+enviado à API existente de produtos.
 
 O decodificador ZXing 0.23.0 é servido localmente e carregado sob demanda, sem
 depender de `BarcodeDetector`, permitindo o uso em Safari/iOS. São aceitos
@@ -201,30 +212,34 @@ para verificar seleção, ordem dos produtos, animação e exportação Full HD.
 
 ## Editor de Stories no celular
 
-Em telas de até 900 pixels, o editor apresenta cinco etapas na barra inferior:
-**Fundo**, **Produtos**, **Oferta**, **Ajustes** e **Exportar**. A prévia acompanha
-as escolhas acima do painel; **Ampliar prévia** permite conferir a arte inteira.
-As etapas continuam acessíveis durante a ampliação. Ao vir do catálogo com um
-produto selecionado, o fluxo mobile abre diretamente em Oferta.
+Em telas de até 900 pixels, Stories e Feed mantêm o canvas ampliado, sem abas
+de etapas e sem painel **Ajustes**. À direita, sob a grade, três botões quadrados
+abrem **Fundo**, **Produtos** e **Oferta**. À esquerda ficam **Ajuste automático**
+e **Vincular**; a exportação permanece no cabeçalho.
 
-Em Ajustes, escolha um produto, cartão de oferta ou texto pelos botões de seleção.
-Arraste o elemento na prévia, use as setas para posicioná-lo com precisão ou os
-botões de tamanho e o controle deslizante para redimensionar. **Ajuste automático**
-continua disponível, inclusive para dois produtos e combos. Fora dessa etapa,
-a prévia não move elementos por acidente.
+O modal de fundo fecha assim que uma opção é escolhida. O modal de produtos
+fecha quando a seleção exigida está completa: um produto no modo individual ou
+dois nos modos com dois produtos. O modal de oferta reúne preços e
+texto livre; **Salvar oferta** confirma a edição e retorna à arte.
 
-Os campos usam teclado apropriado e fontes de pelo menos 16 pixels. Quando o
-teclado virtual abre, o painel recebe o espaço da prévia; **Concluir digitação**
-ou Enter fecha o teclado. O layout considera a área segura do aparelho, a altura
-visível do navegador e a orientação horizontal. Os botões principais têm áreas
+Toque em um produto, cartão de oferta ou texto para selecioná-lo. Arraste para
+reposicionar e use as alças para redimensionar diretamente no canvas.
+**Ajuste automático** continua disponível para organizar um ou dois produtos
+e combos, e **Vincular** controla o movimento conjunto dos elementos.
+
+Os campos usam teclado apropriado e fontes de pelo menos 16 pixels. Os modais
+acompanham a altura visível quando o teclado abre. O layout considera a área
+segura do aparelho e a orientação horizontal; os botões principais têm áreas
 de toque de pelo menos 44 pixels.
 
-As duas versões compartilham os mesmos controles e canvas. Mudar o tamanho da
-janela preserva produtos, preços, posições e downloads em andamento. O tour
-revela a etapa correspondente e retorna à etapa anterior ao fechar.
+Desktop e mobile compartilham os mesmos controles e canvas. Mudar o tamanho
+da janela preserva produtos, preços, posições e downloads em andamento; o
+desktop mantém seus painéis. O tour mobile apresenta a barra de ferramentas
+e os controles correspondentes ao fluxo de edição por modais.
 
 O comportamento fica em `public/js/features/stories/mobile-editor.js`, os estilos
-em `public/stories-mobile.css` e os testes em `scripts/stories-mobile.test.mjs`.
+em `public/stories-mobile.css` e os testes em `scripts/stories-mobile.test.mjs`
+e `scripts/stories-gestures.test.mjs`.
 Execute `npm run test:stories-mobile` ou `npm run verify`. Os testes verificam
 navegação, foco, teclado virtual e restauração dos controles com DOM simulado;
 a aparência e os gestos devem também ser conferidos em aparelhos reais.

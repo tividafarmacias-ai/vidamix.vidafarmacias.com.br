@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 import { normalizeEan, isValidEan } from '../public/js/features/barcode/code.js';
+import { cameraErrorMessage } from '../public/js/features/barcode/camera.js';
 
 const [markup, script] = await Promise.all([
   readFile(new URL('../public/index.html', import.meta.url), 'utf8'),
@@ -58,7 +59,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function openHome({ touch = true, lookup = async () => response() } = {}) {
+function openHome({ touch = true, mobile = false, lookup = async () => response() } = {}) {
   const document = { hidden: false };
   document.body = new Element(document);
   const events = new Element(document);
@@ -84,11 +85,13 @@ function openHome({ touch = true, lookup = async () => response() } = {}) {
     fail(message) { this.stop(); cameraCallbacks.onError(message); },
   };
   const windowEvents = new Element(document);
+  const mobileMedia = new Element(document);
+  mobileMedia.matches = mobile;
   const sandbox = vm.createContext({
     document, AbortController,
     normalizeEan, isValidEan,
     createCameraScanner: (callbacks) => { cameraCallbacks = callbacks; return camera; },
-    window: { matchMedia: () => ({ matches: touch }), location: { assign: (url) => destinations.push(url) }, addEventListener: windowEvents.addEventListener.bind(windowEvents) },
+    window: { matchMedia: (query) => query.includes('max-width') ? mobileMedia : ({ matches: touch }), location: { assign: (url) => destinations.push(url) }, addEventListener: windowEvents.addEventListener.bind(windowEvents) },
     requestAnimationFrame: (callback) => frames.push(callback),
     setTimeout: (callback, duration) => { timers.set(++timerId, { callback, duration }); return timerId; },
     clearTimeout: (id) => timers.delete(id),
@@ -104,27 +107,109 @@ function openHome({ touch = true, lookup = async () => response() } = {}) {
     timers.clear();
     pending.forEach(({ callback }) => callback());
   };
-  return { get, show, input, submit, runTimers, document, requests, destinations, timers, camera, windowEvents };
+  return { get, show, input, submit, runTimers, document, requests, destinations, timers, camera, windowEvents,
+    mobileMedia, manualEntryAllowed: () => cameraCallbacks.allowManualEntry() };
 }
 
-test('touch scanner opens as a dialog without raising the keyboard and waits for explicit submit', async () => {
-  const f = openHome();
+test('mobile scan opens the camera directly without a keyboard or manual entry', async () => {
+  const f = openHome({ mobile: true });
   f.show();
   assert.equal(f.get('scanner-overlay').open, true);
   assert.equal(f.document.body.classList.contains('scanner-open'), true);
   assert.equal(f.document.activeElement, f.get('overlay-close'));
-  assert.equal(f.get('submit').disabled, false);
+  assert.equal(f.camera.starts, 1);
+  assert.equal(f.get('scanner-title').textContent, 'Ler com câmera');
+  assert.equal(f.get('manual-fields').hidden, true);
+  assert.equal(f.get('input').disabled, true);
+  assert.equal(f.get('submit').disabled, true);
+  assert.equal(f.get('camera-stop').hidden, true);
+  assert.equal(f.manualEntryAllowed(), false);
   f.input(validEan);
   f.runTimers();
   await flush();
-  assert.equal(f.requests.length, 0, 'Touch typing does not launch an artwork before confirmation');
+  assert.equal(f.requests.length, 0, 'External reader and manual input events are ignored on mobile');
   const event = f.submit();
   assert.equal(event.defaultPrevented, true);
   assert.equal(f.get('submit').disabled, true);
+  assert.equal(f.requests.length, 0, 'Form submit cannot bypass camera mode');
+  f.camera.detect(validEan);
   await flush();
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0].url, `/api/products/by-ean/${validEan}`);
   assert.deepEqual(f.destinations, ['/artes/stories?productId=42']);
+});
+
+test('mobile camera errors and background pauses only restart after an explicit retry', () => {
+  const f = openHome({ mobile: true });
+  f.show();
+  f.camera.fail(cameraErrorMessage({ name: 'NotAllowedError' }, { allowManualEntry: f.manualEntryAllowed() }));
+  assert.equal(f.get('manual-fields').hidden, true);
+  assert.equal(f.get('camera-start').hidden, false);
+  assert.equal(f.get('camera-label').textContent, 'Tentar câmera novamente');
+  assert.doesNotMatch(f.get('status').textContent, /digite/i);
+  assert.equal(f.document.activeElement, f.get('overlay-close'));
+  assert.equal(f.camera.starts, 1);
+  f.get('format').dispatch('change');
+  assert.notEqual(f.document.activeElement, f.get('input'));
+  f.get('camera-start').click();
+  assert.equal(f.camera.starts, 2);
+  f.document.hidden = true;
+  f.document.dispatch('visibilitychange');
+  assert.equal(f.camera.state, 'idle');
+  assert.equal(f.get('manual-fields').hidden, true);
+  assert.match(f.get('status').textContent, /Tentar câmera novamente/);
+  f.document.hidden = false;
+  f.document.dispatch('visibilitychange');
+  assert.equal(f.camera.starts, 2);
+  f.get('camera-start').click();
+  assert.equal(f.camera.starts, 3);
+  f.get('overlay-close').click();
+  assert.equal(f.camera.state, 'idle');
+});
+
+test('mobile lookup failure keeps the keyboard closed and can retry the same code by camera', async () => {
+  let calls = 0;
+  const f = openHome({ mobile: true, lookup: async () => ++calls === 1 ? response({ error: 'Produto indisponível' }, 404) : response() });
+  f.show();
+  f.get('format').value = 'feed';
+  f.camera.detect(validEan);
+  await flush();
+  assert.match(f.get('status').textContent, /Produto indisponível/);
+  assert.equal(f.get('manual-fields').hidden, true);
+  assert.equal(f.get('input').disabled, true);
+  assert.equal(f.get('submit').disabled, true);
+  assert.equal(f.camera.starts, 1, 'An error must not automatically restart the camera');
+  assert.notEqual(f.document.activeElement, f.get('input'));
+  f.get('camera-start').click();
+  f.camera.detect(validEan);
+  await flush();
+  assert.deepEqual(f.destinations, ['/artes/feed?productId=42']);
+});
+
+test('changing to mobile removes manual controls without automatically requesting the camera', () => {
+  const f = openHome({ touch: false });
+  f.show();
+  f.mobileMedia.matches = true;
+  f.mobileMedia.dispatch('change');
+  assert.equal(f.camera.starts, 0);
+  assert.equal(f.get('input').disabled, true);
+  assert.equal(f.get('manual-fields').hidden, true);
+  assert.equal(f.document.activeElement, f.get('overlay-close'));
+  f.get('camera-start').click();
+  assert.equal(f.camera.starts, 1);
+  f.mobileMedia.matches = false;
+  f.mobileMedia.dispatch('change');
+  assert.equal(f.camera.state, 'idle');
+  assert.equal(f.get('input').disabled, false);
+  assert.equal(f.get('manual-fields').hidden, false);
+  assert.equal(f.manualEntryAllowed(), true);
+});
+
+test('camera-only errors never suggest typing and desktop errors preserve their fallback', () => {
+  for (const name of ['NotAllowedError', 'NotFoundError', 'NotReadableError', 'UnknownError']) {
+    assert.doesNotMatch(cameraErrorMessage({ name }, { allowManualEntry: false }), /digite|leitor conectado/i);
+  }
+  assert.match(cameraErrorMessage({ name: 'NotAllowedError' }), /digite/);
 });
 
 test('manual submit normalizes a valid code and opens the selected Feed format', async () => {

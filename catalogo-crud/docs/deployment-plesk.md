@@ -20,8 +20,14 @@ origem e mantenha o microfone desabilitado. Não é necessário liberar CDN ou
 Publique `public/js/features/barcode/`, `public/js/vendor/zxing-library-0.23.0.js`
 e sua licença, junto com os arquivos atualizados da central. Reinicie o processo
 Node para aplicar a alteração dos cabeçalhos. Após publicar, teste no Safari e
-no PWA instalado: autorizar, ler um produto, fechar, negar permissão e continuar
-pela digitação manual. A decodificação não envia imagens ao servidor.
+no PWA instalado: tocar em **Ler com câmera** deve abrir o diálogo e iniciar a
+câmera diretamente, sem campo de digitação nem opção de leitor externo. Confira
+a autorização, a leitura de um produto em Stories e Feed, o fechamento e a
+negação de permissão. Após uma falha ou ao voltar do segundo plano, a câmera
+deve permanecer desligada até o toque em **Tentar câmera novamente**, sem abrir
+o teclado. No desktop, confira também a entrada manual, o leitor conectado e
+a câmera opcional pelo botão **Usar câmera**. A decodificação não envia imagens
+ao servidor.
 
 ## Estrutura a manter no servidor
 

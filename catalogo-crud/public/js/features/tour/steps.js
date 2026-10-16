@@ -1,4 +1,4 @@
-export const TOUR_VERSION = 1;
+export const TOUR_VERSION = 2;
 
 export const tours = {
   home: {
@@ -110,7 +110,7 @@ export const tours = {
         target: '[data-tour="stories-preview"]',
         eyebrow: 'Ajuste os detalhes',
         title: 'Veja sua arte ganhar forma',
-        description: 'A prévia acompanha suas escolhas. No celular, abra Ajustes para escolher um elemento, mover com as setas ou mudar seu tamanho. Ampliar prévia ajuda a conferir o resultado. No desktop, arraste os elementos e use os cantos, o zoom e a grade.',
+        description: 'A prévia acompanha suas escolhas. Arraste os elementos para movê-los e use os cantos para mudar seu tamanho. O zoom e a grade ajudam a conferir o alinhamento.',
         placement: 'left',
       },
       {
@@ -134,3 +134,38 @@ tours.feed = {
     description: step.description.replace('1080 × 1920', '1080 × 1350'),
   })),
 };
+
+const mobileHome = {
+  ...tours.home,
+  steps: tours.home.steps.map((step) => ({
+    ...step,
+    description: ({
+      create: 'Escolha Stories ou Feed para criar uma arte a partir dos produtos do catálogo. Os atalhos na parte inferior também levam aos formatos e ao catálogo.',
+      barcode: 'Toque em Ler com câmera e autorize o acesso. Enquadre o código de barras inteiro; quando o produto for encontrado, ele abrirá em Stories ou Feed conforme o formato escolhido.',
+      formats: 'Stories e Feed mostram os formatos disponíveis para criar sua campanha. Escolha um deles para começar; os formatos em desenvolvimento ainda não podem ser usados.',
+    })[step.id] || step.description,
+  })),
+};
+
+function mobileArtworkTour(format) {
+  return {
+    ...tours[format],
+    title: 'Crie diretamente na arte',
+    description: 'A arte fica ampliada enquanto você edita. Conheça os botões para escolher o conteúdo, organizar os elementos e salvar.',
+    steps: [
+      { id: 'background', target: '#story-mobile-background-button', title: 'Escolha o fundo', description: 'Este botão abre os fundos em uma janela. Toque no visual desejado; a janela fecha e você volta à arte.', placement: 'left' },
+      { id: 'product', target: '#story-mobile-products-button', title: 'Escolha os produtos', description: 'Abra a seleção e escolha entre 1 produto, 2 produtos ou um combo. Busque no catálogo e toque nos itens. A janela fecha quando a seleção estiver completa.', placement: 'left' },
+      { id: 'offer', target: '#story-mobile-offer-button', title: 'Defina o preço', description: 'Abra a oferta, informe o preço e, se quiser, uma chamada curta. Toque em Salvar oferta para voltar à arte.', placement: 'left' },
+      { id: 'preview', target: '[data-tour="stories-preview"]', title: 'Arraste para ajustar', description: 'Toque no produto, na oferta ou no texto e arraste para mover. Arraste os cantos do elemento selecionado para redimensionar. A grade ajuda a alinhar a composição.', placement: 'bottom' },
+      { id: 'organize', target: '#story-mobile-auto-layout', title: 'Organize com um toque', description: 'À esquerda, Ajuste automático distribui os elementos na arte. Vincular elementos permite arrastar os produtos e suas ofertas juntos.', placement: 'right' },
+      { id: 'download', target: '#story-mobile-export-button', title: 'Salve sua arte', description: 'Quando fundo, produtos e preços estiverem prontos, abra as opções de exportação para baixar PNG ou MP4 de 15 segundos.', placement: 'bottom' },
+    ],
+  };
+}
+
+export function getTour(page, { mobile = false } = {}) {
+  if (!mobile) return tours[page];
+  if (page === 'home') return mobileHome;
+  if (page === 'stories' || page === 'feed') return mobileArtworkTour(page);
+  return tours[page];
+}

@@ -1,22 +1,29 @@
 import { createBarcodeDecoder } from './decoder.js';
 import { isValidEan } from './code.js';
 
-export function cameraErrorMessage(error) {
+export function cameraErrorMessage(error, { allowManualEntry = true } = {}) {
   if (['NotAllowedError', 'PermissionDeniedError', 'SecurityError'].includes(error?.name)) {
-    return 'A câmera não foi autorizada. Permita o acesso nas configurações deste site ou digite o código.';
+    return allowManualEntry
+      ? 'A câmera não foi autorizada. Permita o acesso nas configurações deste site ou digite o código.'
+      : 'A câmera não foi autorizada. Permita o acesso nas configurações deste site e tente novamente.';
   }
   if (['NotFoundError', 'DevicesNotFoundError'].includes(error?.name)) {
-    return 'Nenhuma câmera foi encontrada. Digite o código para continuar.';
+    return allowManualEntry
+      ? 'Nenhuma câmera foi encontrada. Digite o código para continuar.'
+      : 'Nenhuma câmera foi encontrada. Verifique se a câmera está disponível e tente novamente.';
   }
   if (['NotReadableError', 'TrackStartError', 'AbortError'].includes(error?.name)) {
     return 'Não foi possível abrir a câmera. Feche outros apps que estejam usando a câmera e tente novamente.';
   }
-  return 'Não foi possível iniciar a leitura. Tente novamente ou digite o código.';
+  return allowManualEntry
+    ? 'Não foi possível iniciar a leitura. Tente novamente ou digite o código.'
+    : 'Não foi possível iniciar a leitura. Tente abrir a câmera novamente.';
 }
 
 /** Owns one camera session, including permission requests that resolve after closing. */
 export function createCameraScanner({
   video, onCode, onState = () => {}, onError = () => {},
+  allowManualEntry = () => true,
   mediaDevices = globalThis.navigator?.mediaDevices,
   secureContext = globalThis.isSecureContext,
   loadDecoder = createBarcodeDecoder,
@@ -47,11 +54,15 @@ export function createCameraScanner({
   async function start() {
     if (state !== 'idle') return;
     if (!secureContext) {
-      onError('A câmera precisa de uma conexão HTTPS. Abra o endereço seguro do aplicativo ou digite o código.');
+      onError(allowManualEntry()
+        ? 'A câmera precisa de uma conexão HTTPS. Abra o endereço seguro do aplicativo ou digite o código.'
+        : 'A câmera precisa de uma conexão HTTPS. Abra o endereço seguro do aplicativo para continuar.');
       return;
     }
     if (!mediaDevices?.getUserMedia) {
-      onError('Este navegador não disponibiliza a câmera. Abra no Safari ou Chrome atualizado, ou digite o código.');
+      onError(allowManualEntry()
+        ? 'Este navegador não disponibiliza a câmera. Abra no Safari ou Chrome atualizado, ou digite o código.'
+        : 'Este navegador não disponibiliza a câmera. Abra no Safari ou Chrome atualizado para continuar.');
       return;
     }
     const session = ++generation;
@@ -70,7 +81,7 @@ export function createCameraScanner({
         track.addEventListener('ended', () => {
           if (!current()) return;
           stop();
-          onError('A câmera foi interrompida. Toque em Usar câmera para tentar novamente.');
+          onError('A câmera foi interrompida. Tente abrir a câmera novamente.');
         }, { once: true });
       }
       video.muted = true;
@@ -108,14 +119,14 @@ export function createCameraScanner({
         } catch (error) {
           if (!current()) return;
           stop();
-          onError(cameraErrorMessage(error));
+          onError(cameraErrorMessage(error, { allowManualEntry: allowManualEntry() }));
         }
       };
       timer = schedule(scan, 0);
     } catch (error) {
       if (!current()) return;
       stop();
-      onError(cameraErrorMessage(error));
+      onError(cameraErrorMessage(error, { allowManualEntry: allowManualEntry() }));
     }
   }
 

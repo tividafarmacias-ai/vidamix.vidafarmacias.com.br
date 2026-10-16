@@ -100,6 +100,9 @@ class Element extends EventHost {
     this.ownerDocument.dispatch('focusout', { target: this });
   }
   click() { if (!this.disabled) this.dispatch('click'); }
+  showModal() { this.open = true; }
+  close() { this.open = false; this.dispatch('close'); }
+  dispatchEvent(event) { this.dispatch(event.type, event); }
 }
 
 function createFixture(isMobile = true) {
@@ -113,6 +116,7 @@ function createFixture(isMobile = true) {
   Object.assign(view, {
     innerHeight: 800, innerWidth: isMobile ? 390 : 1280, visualViewport: viewport,
     matchMedia: () => media,
+    Event: class { constructor(type) { this.type = type; } },
     requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; },
     cancelAnimationFrame(id) { frames.delete(id); },
   });
@@ -125,30 +129,30 @@ function createFixture(isMobile = true) {
   doc.querySelectorAll = (selector) => doc.body.querySelectorAll(selector);
   doc.createComment = () => new Element(doc, '#comment');
   const add = (id, parent = doc.body, tag = 'section') => {
-    const element = new Element(doc, tag, id);
-    parent.append(element);
-    return element;
+    const node = new Element(doc, tag, id);
+    parent.append(node);
+    return node;
   };
   const sidebar = add('desktop-sidebar');
   const actions = add('desktop-actions');
-  const sheet = add('story-mobile-sheet');
-  const nav = add('story-mobile-nav');
-  const scrollport = add('mobile-panels-scrollport', sheet);
+  const dialog = add('story-mobile-dialog', doc.body, 'dialog');
+  const scrollport = add('mobile-panels-scrollport', dialog);
   scrollport.classList.add('story-mobile-panels');
   const backLink = add('desktop-back-link', doc.body, 'a');
   backLink.classList.add('stories-back-link');
-  const previewBar = add('mobile-preview-bar');
-  previewBar.classList.add('story-mobile-only');
   const panels = {};
-  const tabs = {};
+  const buttons = {};
   const controls = {};
-  for (const name of ['background', 'products', 'offer', 'adjust', 'export']) {
+  for (const name of ['background', 'products', 'offer', 'export']) {
     controls[name] = add(`control-${name}`, name === 'export' ? actions : sidebar);
     controls[name].dataset.mobileGroup = name;
     panels[name] = add(`story-mobile-panel-${name}`, scrollport);
-    tabs[name] = add(`tab-${name}`, nav, 'button');
-    tabs[name].dataset.mobileStep = name;
+    buttons[name] = add(`story-mobile-${name}-button`, doc.body, 'button');
+    buttons[name].dataset.mobilePanel = name;
+    buttons[name].classList.add('story-mobile-only');
   }
+  const desktopAdjust = add('desktop-adjust-controls', sidebar);
+  desktopAdjust.dataset.mobileGroup = 'adjust';
   const toggle = add('story-background-toggle', controls.background, 'button');
   toggle.classList.add('story-section-collapse-toggle');
   toggle.setAttribute('aria-expanded', 'false');
@@ -159,302 +163,243 @@ function createFixture(isMobile = true) {
     toggle.setAttribute('aria-expanded', String(!backgroundContent.hidden));
   });
   const input = add('story-price', controls.offer, 'input');
-  input.type = 'text';
-  input.value = '29,90';
-  const dependentControl = add('second-product-price', controls.offer, 'input');
-  dependentControl.hidden = true;
+  input.type = 'text'; input.value = '29,90';
+  const sourceAuto = add('story-auto-layout-button', desktopAdjust, 'button');
+  sourceAuto.disabled = true;
+  const anchorSection = add('story-anchor-section', desktopAdjust);
+  anchorSection.hidden = true;
+  const sourceAnchor = add('story-elements-anchor', anchorSection, 'input');
+  sourceAnchor.type = 'checkbox'; sourceAnchor.checked = false;
   const nodes = {};
-  for (const name of ['step-title', 'step-count', 'next', 'back', 'preview-toggle', 'preview-edit', 'done', 'status']) {
-    nodes[name] = add(`story-mobile-${name}`, ['preview-toggle', 'preview-edit'].includes(name) ? previewBar : sheet, 'button');
-  }
+  for (const name of ['dialog-title', 'close', 'confirm', 'dialog-footer', 'status']) nodes[name] = add(`story-mobile-${name}`, dialog, 'button');
+  for (const name of ['auto-layout', 'anchor', 'canvas-status']) nodes[name] = add(`story-mobile-${name}`, doc.body, 'button');
   const sourceStatus = add('story-status');
   sourceStatus.textContent = 'Informe o preço para finalizar a arte.';
   const progress = { background: true, products: false, offer: false, ready: false, exporting: false };
   const changes = [];
-  const initialize = () => initStoriesMobileEditor({ root: doc, getProgress: () => progress,
-    onStepChange: (step) => changes.push(step) });
-  const resize = (mobile) => {
-    media.matches = mobile;
-    view.innerWidth = mobile ? 390 : 1280;
-    media.dispatch('change');
-  };
-  const flush = () => {
-    const callbacks = [...frames.values()];
-    frames.clear();
-    callbacks.forEach((callback) => callback());
-  };
-  return { doc, view, viewport, media, sidebar, actions, sheet, nav, controls, panels, tabs, nodes, scrollport, backLink,
-    toggle, backgroundContent, input, dependentControl, sourceStatus, progress, changes, initialize, resize, flush };
+  const initialize = () => initStoriesMobileEditor({ root: doc, getProgress: () => progress, onStepChange: (step) => changes.push(step) });
+  const resize = (mobile) => { media.matches = mobile; view.innerWidth = mobile ? 390 : 1280; media.dispatch('change'); };
+  const flush = () => { const callbacks = [...frames.values()]; frames.clear(); callbacks.forEach((callback) => callback()); };
+  return { doc, view, viewport, media, sidebar, actions, dialog, controls, panels, buttons, nodes, scrollport, backLink,
+    desktopAdjust, toggle, backgroundContent, input, sourceAuto, sourceAnchor, anchorSection, sourceStatus,
+    progress, changes, initialize, resize, flush };
 }
 
-test('mobile shares the original inputs and restores exact desktop order on resize and destruction', () => {
+test('mobile opens on an unlocked canvas and shares controls without exposing adjustment panels', () => {
   const f = createFixture();
-  const originalOrder = [...f.sidebar.children];
-  let changes = 0;
-  f.input.addEventListener('input', () => { changes += 1; });
   const editor = f.initialize();
+  assert.equal(Boolean(f.dialog.open), false);
+  assert.equal(f.doc.body.classList.contains('story-mobile-modal-open'), false);
   assert.equal(f.controls.offer.parentNode, f.panels.offer);
   assert.equal(f.doc.querySelector('#story-price'), f.input);
-  assert.equal(f.dependentControl.hidden, true);
-  f.input.value = '37,50';
-  f.input.dispatch('input');
-  assert.equal(changes, 1);
-  f.resize(false);
-  assert.deepEqual(f.sidebar.children, originalOrder);
-  assert.equal(f.controls.export.parentNode, f.actions);
-  assert.equal(f.input.value, '37,50');
-  assert.equal(f.sheet.hidden, true);
-  f.resize(true);
-  assert.equal(f.controls.offer.parentNode, f.panels.offer);
-  editor.destroy();
-  assert.deepEqual(f.sidebar.children, originalOrder);
-  assert.equal(f.doc.body.classList.contains('is-mobile-editor'), false);
-  f.resize(true);
-  assert.equal(f.controls.offer.parentNode, f.sidebar, 'destroy removes the media listener');
-});
-
-test('desktop stays in place and a focused field remains visible when entering mobile', () => {
-  const f = createFixture(false);
-  const editor = f.initialize();
-  assert.equal(f.controls.offer.parentNode, f.sidebar);
-  assert.equal(f.nav.hidden, true);
-  f.input.focus();
-  f.resize(true);
-  assert.equal(f.doc.body.dataset.mobileStep, 'offer');
-  assert.equal(f.panels.offer.hidden, false);
-  assert.equal(f.doc.activeElement, f.input);
-  f.resize(false);
-  assert.equal(f.doc.activeElement, f.input);
-  assert.equal(f.doc.body.dataset.mobileStep, undefined);
-  editor.destroy();
-});
-
-test('leaving mobile restores visible desktop focus from navigation and mobile-only tools', () => {
-  const f = createFixture();
-  const editor = f.initialize();
-  for (const control of [f.tabs.products, f.nodes.next, f.nodes['preview-toggle']]) {
-    control.focus();
-    f.resize(false);
-    assert.equal(f.doc.activeElement, f.backLink, control.id);
-    f.resize(true);
-  }
-  f.tabs.offer.click();
-  f.input.focus();
-  f.resize(false);
-  assert.equal(f.doc.activeElement, f.input, 'original fields retain their focus');
-  editor.destroy();
-});
-
-test('changing steps resets the shared panel scrollport without resetting the current step on sync', () => {
-  const f = createFixture();
-  const editor = f.initialize();
-  f.tabs.adjust.click();
-  f.scrollport.scrollTop = 520;
-  editor.sync();
-  assert.equal(f.scrollport.scrollTop, 520);
-  f.tabs.adjust.click();
-  assert.equal(f.scrollport.scrollTop, 520);
-  f.tabs.background.click();
-  assert.equal(f.scrollport.scrollTop, 0);
-  editor.destroy();
-});
-
-test('tabs support arrow keys, Home and End with a single selected tab and focused next panels', () => {
-  const f = createFixture();
-  const editor = f.initialize();
-  assert.equal(f.nav.getAttribute('role'), 'tablist');
-  assert.equal(f.nodes['step-count'].textContent, 'Etapa 1 de 5');
-  assert.equal(f.nodes.next.textContent, 'Continuar');
-  assert.equal(f.nodes.next.getAttribute('aria-label'), 'Escolher produtos');
-  assert.equal(f.nodes.back.disabled, true);
-  const event = f.tabs.background.dispatch('keydown', { key: 'ArrowRight' });
-  assert.equal(event.defaultPrevented, true);
-  assert.equal(f.doc.activeElement, f.tabs.products);
-  assert.equal(f.tabs.products.getAttribute('aria-selected'), 'true');
-  assert.equal(f.tabs.background.tabIndex, -1);
-  assert.equal(f.panels.background.hidden, true);
-  assert.equal(f.panels.products.hidden, false);
-  f.nodes.next.click();
-  assert.equal(f.doc.activeElement, f.panels.offer);
-  assert.equal(f.nodes.next.getAttribute('aria-label'), 'Ajustar arte');
-  f.tabs.offer.dispatch('keydown', { key: 'End' });
-  assert.equal(f.doc.activeElement, f.tabs.export);
-  assert.equal(f.nodes.next.hidden, true);
-  f.tabs.export.dispatch('keydown', { key: 'ArrowRight' });
-  assert.equal(f.doc.activeElement, f.tabs.background);
-  f.tabs.background.dispatch('keydown', { key: 'ArrowLeft' });
-  assert.equal(f.doc.activeElement, f.tabs.export);
-  f.tabs.export.dispatch('keydown', { key: 'Home' });
-  assert.equal(f.doc.activeElement, f.tabs.background);
-  editor.destroy();
-});
-
-test('a tablist wrapper keeps the navigation landmark intact', () => {
-  const f = createFixture();
-  const tablist = new Element(f.doc, 'div');
-  tablist.setAttribute('role', 'tablist');
-  tablist.append(...Object.values(f.tabs));
-  f.nav.append(tablist);
-  const editor = f.initialize();
-  assert.equal(f.nav.getAttribute('role'), null);
-  assert.equal(f.nav.querySelectorAll('[role="tablist"]').length, 1);
-  f.tabs.offer.click();
-  assert.equal(f.panels.offer.hidden, false);
-  editor.destroy();
-});
-
-test('returning to a step opens its existing accordion, while sync preserves editor-owned hidden state', () => {
-  const f = createFixture();
-  const editor = f.initialize();
-  assert.equal(f.backgroundContent.hidden, false);
-  f.toggle.click();
-  editor.sync();
-  assert.equal(f.backgroundContent.hidden, true);
-  assert.equal(f.dependentControl.hidden, true);
-  f.tabs.products.click();
-  f.tabs.background.click();
-  assert.equal(f.backgroundContent.hidden, false);
+  assert.equal(f.desktopAdjust.parentNode, f.sidebar);
+  assert.equal(editor.showStep('adjust'), false);
   assert.equal(editor.showStep('unknown'), false);
   editor.destroy();
 });
 
-test('expanded preview retains navigation and returns to editable panels through tabs or Escape', () => {
+test('background selection closes its dialog and restores focus to its floating button', () => {
   const f = createFixture();
   const editor = f.initialize();
-  f.nodes['preview-toggle'].click();
-  assert.equal(f.sheet.hidden, true);
-  assert.equal(f.nav.hidden, false);
-  assert.equal(f.nodes['preview-toggle'].getAttribute('aria-pressed'), 'true');
-  f.tabs.offer.click();
-  assert.equal(f.sheet.hidden, false);
-  assert.equal(f.panels.offer.hidden, false);
-  assert.equal(f.doc.body.classList.contains('story-mobile-preview-expanded'), false);
-  f.nodes['preview-toggle'].click();
-  f.doc.dispatch('keydown', { key: 'Escape' });
-  assert.equal(f.doc.activeElement, f.nodes['preview-toggle']);
-  assert.equal(f.sheet.hidden, false);
-  f.nodes['preview-edit'].click();
-  assert.equal(f.doc.activeElement, f.panels.adjust);
+  f.buttons.background.click();
+  assert.equal(f.dialog.open, true);
+  assert.equal(f.backgroundContent.hidden, false);
+  assert.equal(f.doc.activeElement, f.nodes.close);
+  assert.equal(f.buttons.background.getAttribute('aria-expanded'), 'true');
+  assert.equal(f.doc.body.classList.contains('story-mobile-modal-open'), true);
+  editor.selectionComplete('background');
+  assert.equal(f.dialog.open, false);
+  assert.equal(f.doc.activeElement, f.buttons.background);
+  assert.equal(f.doc.body.classList.contains('story-mobile-modal-open'), false);
   editor.destroy();
 });
 
-test('changing steps and expanding the preview dismiss the keyboard for hidden input fields', () => {
+test('product dialog stays open for incomplete slots, and closes only after a completed selection', () => {
   const f = createFixture();
   const editor = f.initialize();
-  f.tabs.offer.click();
-  f.input.focus();
-  f.tabs.products.click();
-  assert.equal(f.doc.activeElement, f.doc.body);
-  f.tabs.offer.click();
-  f.input.focus();
-  f.nodes['preview-toggle'].click();
-  assert.equal(f.doc.activeElement, f.doc.body);
-  assert.equal(f.nodes['preview-toggle'].textContent, 'Voltar aos controles');
-  f.nodes['preview-toggle'].click();
-  assert.equal(f.nodes['preview-toggle'].textContent, 'Ampliar prévia');
-  editor.destroy();
-});
-
-test('progress and errors follow the editor without preventing navigation through unfinished steps', () => {
-  const f = createFixture();
-  const editor = f.initialize();
-  assert.equal(f.tabs.background.classList.contains('is-complete'), true);
-  assert.equal(f.tabs.products.classList.contains('is-complete'), false);
-  assert.equal(f.nodes.status.textContent, f.sourceStatus.textContent);
-  f.tabs.products.click();
-  f.nodes.next.click();
-  assert.equal(f.panels.offer.hidden, false);
-  Object.assign(f.progress, { products: true, offer: true, ready: true, exporting: true });
-  f.sourceStatus.classList.add('is-error');
-  f.sourceStatus.textContent = 'Falha ao carregar a imagem.';
+  f.buttons.products.click();
+  editor.selectionComplete('products', false);
+  assert.equal(f.dialog.open, true, 'first of two products remains in the picker');
+  f.progress.products = true;
   editor.sync();
-  assert.equal(f.nodes.status.textContent, 'Falha ao carregar a imagem.');
-  assert.equal(f.nodes.status.classList.contains('is-error'), true);
-  assert.equal(f.tabs.products.classList.contains('is-complete'), true);
-  assert.equal(f.tabs.export.classList.contains('is-ready'), true);
-  assert.equal(f.nav.getAttribute('aria-busy'), 'true');
+  assert.equal(f.dialog.open, true, 'background image loading does not dismiss a picker');
+  editor.selectionComplete('background');
+  assert.equal(f.dialog.open, true, 'a different panel cannot dismiss this dialog');
+  editor.selectionComplete('products', true);
+  assert.equal(f.dialog.open, false);
+  assert.equal(f.doc.activeElement, f.buttons.products);
+  f.buttons.products.click();
+  assert.equal(f.dialog.open, true, 'completed products can be reopened and changed');
+  editor.selectionComplete('products');
+  assert.equal(f.dialog.open, false, 'a single product selection can close immediately');
   editor.destroy();
 });
 
-test('visual viewport tracks keyboard, scrolling, zoom and desktop cleanup', () => {
+test('price edits remain open until explicit confirmation and keep the original input state', () => {
   const f = createFixture();
   const editor = f.initialize();
-  f.tabs.offer.click();
+  let inputEvents = 0;
+  f.input.addEventListener('input', () => inputEvents += 1);
+  f.buttons.offer.click();
+  assert.equal(f.nodes['dialog-footer'].hidden, false);
+  f.input.focus();
+  f.input.value = '37,50';
+  f.input.dispatch('input');
+  f.progress.offer = true;
+  editor.sync();
+  editor.selectionComplete('offer');
+  assert.equal(f.dialog.open, true);
+  f.nodes.confirm.click();
+  assert.equal(f.dialog.open, false);
+  assert.equal(f.doc.activeElement, f.buttons.offer);
+  assert.equal(f.input.value, '37,50');
+  assert.equal(inputEvents, 1);
+  editor.destroy();
+});
+
+test('close button, Escape and backdrop dismiss with focus restoration; dragging off a field does not', () => {
+  const f = createFixture();
+  const editor = f.initialize();
+  f.buttons.offer.click();
+  f.dialog.dispatch('pointerdown', { target: f.input });
+  f.dialog.dispatch('click');
+  assert.equal(f.dialog.open, true);
+  f.dialog.dispatch('pointerdown');
+  f.dialog.dispatch('click');
+  assert.equal(f.dialog.open, false);
+  f.buttons.offer.click();
+  const cancel = f.dialog.dispatch('cancel');
+  assert.equal(cancel.defaultPrevented, true);
+  assert.equal(f.dialog.open, false);
+  assert.equal(f.doc.activeElement, f.buttons.offer);
+  f.buttons.offer.click();
+  f.nodes.close.click();
+  assert.equal(f.dialog.open, false);
+  editor.destroy();
+});
+
+test('desktop order and focused inputs survive resizing and destruction', () => {
+  const f = createFixture(false);
+  const order = [...f.sidebar.children];
+  const editor = f.initialize();
+  assert.equal(f.controls.offer.parentNode, f.sidebar);
+  f.input.focus();
+  f.resize(true);
+  assert.equal(f.dialog.open, true);
+  assert.equal(f.panels.offer.hidden, false);
+  assert.equal(f.doc.activeElement, f.input);
+  f.resize(false);
+  assert.equal(f.dialog.open, false);
+  assert.deepEqual(f.sidebar.children, order);
+  assert.equal(f.controls.export.parentNode, f.actions);
+  assert.equal(f.doc.activeElement, f.input);
+  f.resize(true);
+  f.nodes.close.focus();
+  f.resize(false);
+  assert.equal(f.doc.activeElement, f.backLink);
+  f.resize(true);
+  editor.destroy();
+  assert.deepEqual(f.sidebar.children, order);
+  f.buttons.offer.click();
+  assert.equal(f.dialog.open, false, 'destroy removes floating button listeners');
+});
+
+test('auto layout and linking buttons mirror the existing desktop actions and availability', () => {
+  const f = createFixture();
+  const editor = f.initialize();
+  let autoCalls = 0;
+  let anchorCalls = 0;
+  f.sourceAuto.addEventListener('click', () => autoCalls += 1);
+  f.sourceAnchor.addEventListener('change', () => anchorCalls += 1);
+  assert.equal(f.nodes['auto-layout'].disabled, true);
+  assert.equal(f.nodes.anchor.disabled, true);
+  f.sourceAuto.disabled = false;
+  f.anchorSection.hidden = false;
+  editor.sync();
+  f.nodes['auto-layout'].click();
+  assert.equal(autoCalls, 1);
+  f.nodes.anchor.click();
+  assert.equal(f.sourceAnchor.checked, true);
+  assert.equal(f.nodes.anchor.getAttribute('aria-pressed'), 'true');
+  f.nodes.anchor.click();
+  assert.equal(f.sourceAnchor.checked, false);
+  assert.equal(anchorCalls, 2);
+  editor.destroy();
+});
+
+test('export uses original controls, preserves progress while closed, and reflects errors on reopening', () => {
+  const f = createFixture();
+  const editor = f.initialize();
+  f.buttons.export.click();
+  assert.equal(f.controls.export.parentNode, f.panels.export);
+  assert.equal(f.nodes['dialog-footer'].hidden, true);
+  f.progress.exporting = true;
+  editor.sync();
+  assert.equal(f.dialog.getAttribute('aria-busy'), 'true');
+  f.nodes.close.click();
+  f.sourceStatus.textContent = 'Falha ao exportar. Tente novamente.';
+  f.sourceStatus.classList.add('is-error');
+  editor.sync();
+  assert.equal(f.dialog.open, false);
+  assert.equal(f.nodes['canvas-status'].hidden, false, 'asynchronous errors remain visible after a picker is closed');
+  assert.equal(f.nodes['canvas-status'].textContent, f.sourceStatus.textContent);
+  f.buttons.export.click();
+  assert.equal(f.nodes.status.textContent, f.sourceStatus.textContent);
+  assert.equal(f.nodes.status.classList.contains('is-error'), true);
+  f.sourceStatus.classList.remove('is-error');
+  f.sourceStatus.textContent = 'Arte pronta.';
+  editor.sync();
+  assert.equal(f.nodes['canvas-status'].hidden, true);
+  assert.equal(f.doc.body.classList.contains('story-mobile-has-error'), false);
+  editor.destroy();
+});
+
+test('visual viewport follows the iOS keyboard and panning without confusing pinch zoom', () => {
+  const f = createFixture();
+  const editor = f.initialize();
+  f.buttons.offer.click();
   f.input.focus();
   f.viewport.height = 470;
-  f.viewport.offsetTop = 28;
+  f.viewport.offsetTop = 180;
   f.viewport.dispatch('resize');
   f.flush();
   assert.equal(f.doc.body.classList.contains('story-mobile-keyboard-open'), true);
   assert.equal(f.doc.body.style.getPropertyValue('--story-viewport-height'), '470px');
-  assert.equal(f.doc.body.style.getPropertyValue('--story-viewport-top'), '28px');
-  assert.equal(f.nodes.done.hidden, false);
+  assert.equal(f.doc.body.style.getPropertyValue('--story-viewport-top'), '180px');
   f.viewport.scale = 1.5;
-  f.viewport.dispatch('resize');
-  f.flush();
-  assert.equal(f.doc.body.classList.contains('story-mobile-keyboard-open'), false, 'pinch zoom is not a keyboard');
-  f.viewport.scale = 1;
-  f.viewport.dispatch('resize');
-  f.flush();
-  f.nodes.done.click();
-  f.flush();
-  assert.equal(f.doc.activeElement, f.doc.body);
+  f.viewport.dispatch('resize'); f.flush();
   assert.equal(f.doc.body.classList.contains('story-mobile-keyboard-open'), false);
+  f.nodes.confirm.click(); f.flush();
+  assert.equal(f.dialog.open, false);
   f.resize(false);
   assert.equal(f.doc.body.style.getPropertyValue('--story-viewport-height'), '');
   assert.equal(f.doc.body.style.getPropertyValue('--story-viewport-top'), '');
   editor.destroy();
 });
 
-test('keyboard detection also handles browsers which shrink innerHeight without VisualViewport', () => {
+test('keyboard detection handles Android layout resizing and resets on rotation', () => {
   const f = createFixture();
   f.view.visualViewport = null;
   const editor = f.initialize();
-  f.input.focus();
-  f.view.innerHeight = 470;
-  f.doc.documentElement.clientHeight = 470;
-  f.view.dispatch('resize');
-  f.flush();
+  f.buttons.offer.click(); f.input.focus();
+  f.view.innerHeight = f.doc.documentElement.clientHeight = 470;
+  f.view.dispatch('resize'); f.flush();
   assert.equal(f.doc.body.classList.contains('story-mobile-keyboard-open'), true);
   f.view.innerWidth = 800;
-  f.view.innerHeight = 390;
-  f.doc.documentElement.clientHeight = 390;
-  f.view.dispatch('orientationchange');
-  f.flush();
-  assert.equal(f.doc.body.classList.contains('story-mobile-keyboard-open'), false, 'rotation resets the height baseline');
+  f.view.innerHeight = f.doc.documentElement.clientHeight = 390;
+  f.view.dispatch('orientationchange'); f.flush();
+  assert.equal(f.doc.body.classList.contains('story-mobile-keyboard-open'), false);
   editor.destroy();
 });
 
-test('tour reveal selects the hidden target panel and expands its accordion without stealing focus', () => {
+test('tour reveal highlights floating controls without stacking a second modal', () => {
   const f = createFixture();
   const editor = f.initialize();
-  f.tabs.offer.click();
-  f.toggle.click();
-  f.nodes['preview-toggle'].focus();
-  f.doc.dispatch('story:reveal-target', { detail: { target: f.backgroundContent } });
-  assert.equal(f.panels.background.hidden, false);
-  assert.equal(f.backgroundContent.hidden, false);
-  assert.equal(f.doc.activeElement, f.nodes['preview-toggle']);
-  f.doc.dispatch('story:reveal-target', { detail: { target: f.controls.export } });
-  assert.equal(f.panels.export.hidden, false);
-  f.doc.dispatch('story:tour-end');
-  assert.equal(f.panels.offer.hidden, false);
-  assert.equal(f.doc.activeElement, f.nodes['preview-toggle']);
-  editor.destroy();
-});
-
-test('closing a tour restores an expanded preview and clears the tour snapshot', () => {
-  const f = createFixture();
-  const editor = f.initialize();
-  f.tabs.adjust.click();
-  f.nodes['preview-toggle'].click();
-  f.doc.dispatch('story:reveal-target', { detail: { target: f.controls.background } });
-  assert.equal(f.sheet.hidden, false);
-  f.doc.dispatch('story:tour-end');
-  assert.equal(f.doc.body.dataset.mobileStep, 'adjust');
-  assert.equal(f.sheet.hidden, true);
-  f.tabs.offer.click();
-  f.doc.dispatch('story:tour-end');
-  assert.equal(f.doc.body.dataset.mobileStep, 'offer');
+  f.buttons.products.click();
+  f.doc.dispatch('story:reveal-target', { detail: { target: f.buttons.background } });
+  assert.equal(f.dialog.open, false);
+  assert.equal(f.doc.body.classList.contains('story-mobile-modal-open'), false);
+  f.doc.dispatch('story:reveal-target', { detail: { target: f.buttons.offer } });
+  assert.equal(f.dialog.open, false);
   editor.destroy();
 });

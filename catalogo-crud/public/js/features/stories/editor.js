@@ -64,7 +64,7 @@ function setStatus(message, isError = false) {
 
 function setPanelCollapsed({ section, content, toggle, selection, name, isComplete, summary }, collapsed) {
   if (!section || !content || !toggle) return;
-  // Mobile already shows one creation step at a time; its choices stay reachable.
+  // Mobile dialogs keep their shared controls expanded while they are open.
   if (document.body.classList.contains('is-mobile-editor')) collapsed = false;
 
   const complete = isComplete();
@@ -1606,6 +1606,7 @@ function renderBackgrounds() {
       setPanelCollapsed(backgroundPanel, true);
       renderBackgrounds();
       renderPreview();
+      mobileEditor?.selectionComplete('background');
     });
     return button;
   });
@@ -1822,6 +1823,8 @@ function selectProductForComposition(product) {
   }
 
   refreshProductSelection({ collapseWhenComplete: true });
+  mobileEditor?.selectionComplete('products', Boolean(state.selectedProduct
+    && (!compositionRequiresSecondaryProduct() || state.secondaryProduct)));
 }
 
 function addProductToResults(product) {
@@ -2249,17 +2252,48 @@ function transformFromResizeGesture(target, handle, point, startTransform) {
 }
 
 function isMobilePreviewLocked() {
-  return document.body.classList.contains('is-mobile-editor') && document.body.dataset.mobileStep !== 'adjust';
+  return document.body.classList.contains('is-mobile-editor') && document.body.classList.contains('story-mobile-modal-open');
+}
+
+let mobileCanvasSelection = null;
+let lastCanvasTap = null;
+
+function getMobileCanvasTargets(point) {
+  // Match paint order, which differs from the order of the transparent DOM overlays.
+  return ['free-text', 'details-secondary', 'details', 'product-secondary', 'product'].filter((target) => {
+    const selection = getEditorSelection(target);
+    const box = getEditorBox(target);
+    return selection && !selection.hidden && box
+      && point.x >= box.x && point.x <= box.x + box.width
+      && point.y >= box.y && point.y <= box.y + box.height;
+  });
+}
+
+function getResizeStartCorner(target, handle, transform) {
+  const box = getEditorBox(target, transform);
+  return {
+    x: box.x + (handle.includes('e') ? box.width : 0),
+    y: box.y + (handle.includes('s') ? box.height : 0),
+  };
 }
 
 function beginGesture(event) {
-  const target = event.currentTarget.dataset.editTarget;
-  const transform = getEditorTransform(target);
-  if (!transform || event.button !== 0 || state.gesture || event.isPrimary === false) return;
+  if (event.button !== 0 || state.gesture || event.isPrimary === false) return;
   if (isMobilePreviewLocked()) return;
 
-  setActiveEditor(target);
+  const mobile = document.body.classList.contains('is-mobile-editor');
   const handle = event.target.closest('[data-resize-handle]')?.dataset.resizeHandle || null;
+  const startPoint = artPointFromEvent(event);
+  const candidates = mobile && !handle ? getMobileCanvasTargets(startPoint) : [];
+  // Keep a deliberately selected lower layer draggable until the user cycles again.
+  const selectedTarget = mobileCanvasSelection === state.activeEditor && candidates.includes(mobileCanvasSelection)
+    ? mobileCanvasSelection : candidates[0];
+  const target = selectedTarget || event.currentTarget.dataset.editTarget;
+  const transform = getEditorTransform(target);
+  if (!transform) return;
+  setActiveEditor(target);
+  if (mobile) mobileCanvasSelection = target;
+  else lastCanvasTap = null;
   const linkedStartTransforms = !handle && target !== 'free-text' && hasAnchoredEditors()
     ? Object.fromEntries(
       getAnchoredEditorTargets()
@@ -2272,9 +2306,15 @@ function beginGesture(event) {
     target,
     type: handle ? 'resize' : 'move',
     handle,
-    startPoint: artPointFromEvent(event),
+    startPoint,
     startTransform: { ...transform },
     linkedStartTransforms,
+    mobile,
+    candidates,
+    startClientPoint: { x: event.clientX, y: event.clientY },
+    startedAt: performance.now(),
+    moved: false,
+    resizeStartCorner: mobile && handle ? getResizeStartCorner(target, handle, transform) : null,
   };
   const selection = getEditorSelection(target);
   selection.setPointerCapture(event.pointerId);
@@ -2287,7 +2327,13 @@ function moveGesture(event) {
   const gesture = state.gesture;
   if (!gesture || gesture.pointerId !== event.pointerId) return;
 
-  const point = artPointFromEvent(event);
+  let point = artPointFromEvent(event);
+  const distance = Math.hypot(event.clientX - gesture.startClientPoint.x, event.clientY - gesture.startClientPoint.y);
+  gesture.moved ||= distance >= 5;
+  if (gesture.mobile && gesture.type === 'move' && !gesture.moved) {
+    event.preventDefault();
+    return;
+  }
   if (gesture.type === 'move') {
     const horizontal = point.x - gesture.startPoint.x;
     const vertical = point.y - gesture.startPoint.y;
@@ -2304,6 +2350,13 @@ function moveGesture(event) {
       }));
     }
   } else {
+    if (gesture.resizeStartCorner) {
+      // A finger can land anywhere in the 44px handle. Preserve that grab offset.
+      point = {
+        x: gesture.resizeStartCorner.x + point.x - gesture.startPoint.x,
+        y: gesture.resizeStartCorner.y + point.y - gesture.startPoint.y,
+      };
+    }
     setEditorTransform(
       gesture.target,
       transformFromResizeGesture(gesture.target, gesture.handle, point, gesture.startTransform),
@@ -2315,12 +2368,34 @@ function moveGesture(event) {
 }
 
 function finishGesture(event) {
-  if (!state.gesture || (event && state.gesture.pointerId !== event.pointerId)) return;
-  const pointerId = state.gesture.pointerId;
-  const selection = getEditorSelection(state.gesture.target);
+  if (!state.gesture) {
+    if (!event) {
+      mobileCanvasSelection = null;
+      lastCanvasTap = null;
+    }
+    return;
+  }
+  if (event && state.gesture.pointerId !== event.pointerId) return;
+  const gesture = state.gesture;
+  const pointerId = gesture.pointerId;
+  const selection = getEditorSelection(gesture.target);
   state.gesture = null;
   selection.classList.remove('is-dragging');
   if (selection.hasPointerCapture(pointerId)) selection.releasePointerCapture(pointerId);
+  const tap = gesture.mobile && gesture.type === 'move' && !gesture.moved
+    && event?.type === 'pointerup' && performance.now() - gesture.startedAt < 350
+    && Math.hypot(event.clientX - gesture.startClientPoint.x, event.clientY - gesture.startClientPoint.y) < 5;
+  if (tap) {
+    const repeated = lastCanvasTap && performance.now() - lastCanvasTap.time < 800
+      && Math.hypot(event.clientX - lastCanvasTap.x, event.clientY - lastCanvasTap.y) < 12;
+    if (repeated && gesture.candidates.length > 1) {
+      const index = gesture.candidates.indexOf(gesture.target);
+      mobileCanvasSelection = gesture.candidates[(index + 1) % gesture.candidates.length];
+      setActiveEditor(mobileCanvasSelection);
+      getEditorSelection(mobileCanvasSelection)?.focus({ preventScroll: true });
+    }
+    lastCanvasTap = { x: event.clientX, y: event.clientY, time: performance.now() };
+  } else lastCanvasTap = null;
   syncProductEditor();
   updateAvailability();
 }
@@ -2807,9 +2882,9 @@ export async function initStoriesEditor() {
   drawPreviewNow();
   try {
     await Promise.all([loadBackgrounds(), loadProducts()]);
-    const preselected = await preselectProductFromLocation();
+    await preselectProductFromLocation();
     await renderPreview();
-    if (preselected) mobileEditor.showStep('offer');
+    // The mobile canvas stays expanded even when a product arrives from the catalogue.
   } catch {
     // The individual loading functions already show a useful error in the interface.
   }

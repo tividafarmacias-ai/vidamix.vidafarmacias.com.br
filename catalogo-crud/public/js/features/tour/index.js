@@ -1,8 +1,9 @@
-import { TOUR_VERSION, tours } from './steps.js';
+import { TOUR_VERSION, getTour } from './steps.js';
 import { createTourStorage, TOUR_STORAGE_KEY } from './storage.js';
 
 const page = document.body.dataset.tourPage;
-const tour = tours[page];
+const currentTour = () => getTour(page, { mobile: window.matchMedia('(max-width: 900px)').matches });
+let tour = currentTour();
 if (tour && typeof HTMLDialogElement !== 'undefined') initTour();
 
 function initTour() {
@@ -268,6 +269,7 @@ function initTour() {
 
   function open({ replay = false } = {}) {
     if (dialog.open) return;
+    tour = currentTour();
     // Let the scanner or product dialog finish before offering onboarding.
     if ([...document.querySelectorAll('dialog[open], [aria-modal="true"]:not([hidden])')]
         .some((element) => element !== dialog && element.getClientRects().length)) return;

@@ -3,7 +3,6 @@ const destinations = [
   { screen: 'catalogue', href: '/catalogo', label: 'Catálogo', icon: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>' },
   { screen: 'stories', href: '/artes/stories', label: 'Stories', icon: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-5 7h6m-3-3v6m-1 4h2"/>' },
   { screen: 'feed', href: '/artes/feed', label: 'Feed', icon: '<rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>' },
-  { screen: 'indoor', href: '/artes/indoor-h', label: 'TV Indoor', icon: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4m-2-14 5 3-5 3z"/>' },
 ];
 
 export function getAppScreen(pathname) {

@@ -266,7 +266,7 @@ dialog.ean-scanner-overlay::backdrop { background: rgba(24, 44, 70, .45); backdr
   .studio-hero-actions > a:first-child { background: var(--azul); color: #fff; }
   .studio-hero-actions > a:nth-child(2) { background: #e5eefb; color: var(--azul); border-color: #d8e5f5; }
   .studio-hero-actions > a:nth-child(3) { background: #fff0f1; color: #ac2534; border-color: #f6dfe3; }
-  .studio-hero-actions > .ean-launch-button { color: var(--azul); border-color: #e0e8f1; background: #fff; }
+  .studio-hero-actions > .ean-launch-button { grid-column: 1 / -1; min-height: 64px; flex-direction: row; align-items: center; justify-content: center; color: var(--azul); border-color: #e0e8f1; background: #fff; }
   .studio-hero-actions > :is(a, button):active { transform: scale(.98); }
   .studio-hero-help { max-width: none; margin-top: 14px; padding-top: 0; border: 0; gap: 8px 12px; justify-content: space-between; }
   .studio-hero-help .pwa-install-button { flex: 1 0 100%; background: #fff; }
@@ -278,6 +278,7 @@ dialog.ean-scanner-overlay::backdrop { background: rgba(24, 44, 70, .45); backdr
   .section-heading h2 { font-size: 19px; letter-spacing: -.035em; }
   .section-heading > p { display: none; }
   .format-grid-available { grid-template-columns: 1fr; gap: 12px; }
+  .format-card-indoor { display: none; }
   .format-card.is-ready { position: relative; min-height: 0; padding: 16px; border: 1px solid #e0e8f2; border-radius: 20px; background: #fff; box-shadow: 0 3px 12px #234e7710; }
   .is-ready .format-card-topline { flex-wrap: nowrap; }
   .is-ready .format-icon { width: 40px; height: 40px; border-radius: 13px; background: #edf3fc; }
@@ -321,6 +322,9 @@ dialog.ean-scanner-overlay::backdrop { background: rgba(24, 44, 70, .45); backdr
   .ean-format-label, .ean-input-label { margin-top: 16px; font-size: 12px; font-weight: 500; }
   #ean-format { min-height: 48px; padding-inline: 12px; border-radius: 12px; }
   .ean-submit-button { min-height: 48px; margin-top: 16px; border-radius: 14px; }
+  #ean-manual-fields, #ean-camera-stop { display: none; }
+  .ean-scanner-mark { display: none; }
+  .ean-scanner-dialog h2 { padding-right: 36px; }
   .app-keyboard-open .ean-scanner-mark { display: none; }
   .app-keyboard-open .ean-scanner-dialog { padding-top: 22px; }
   .app-keyboard-open .ean-scanner-dialog h2 { padding-right: 36px; font-size: 18px; }
