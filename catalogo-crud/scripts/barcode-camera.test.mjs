@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createCameraScanner } from '../public/js/features/barcode/camera.js';
+import { createCameraScanner, visibleCameraFrame } from '../public/js/features/barcode/camera.js';
 
 const ean = '7894900011517';
 const flush = () => new Promise((resolve) => setImmediate(resolve));
@@ -58,6 +58,39 @@ test('camera requests rear video only, bounds decoding size and confirms a repea
   assert.equal(f.scanner.state, 'idle');
   await f.tick();
   assert.deepEqual(f.codes, [ean]);
+});
+
+test('camera cropping matches the visible portrait or landscape preview without stretching', () => {
+  const video = { videoWidth: 1920, videoHeight: 1080, clientWidth: 360, clientHeight: 640 };
+  const portrait = visibleCameraFrame(video);
+  assert.equal(portrait.height, 1080);
+  assert.equal(portrait.width, 607.5);
+  assert.equal(portrait.x, 656.25);
+  assert.equal(portrait.y, 0);
+  Object.assign(video, { videoWidth: 1080, videoHeight: 1920, clientWidth: 640, clientHeight: 360 });
+  const landscape = visibleCameraFrame(video);
+  assert.equal(landscape.width, 1080);
+  assert.equal(landscape.height, 607.5);
+  assert.equal(landscape.x, 0);
+  assert.equal(landscape.y, 656.25);
+  Object.assign(video, { clientWidth: 0, clientHeight: 0 });
+  assert.deepEqual(visibleCameraFrame(video), { x: 0, y: 0, width: 1080, height: 1920 });
+});
+
+test('portrait reader requests portrait video and decodes only the portion shown after rotation', async () => {
+  const draws = [];
+  const canvas = { width: 0, height: 0, getContext: () => ({ drawImage: (...args) => draws.push(args) }) };
+  const f = setup({ createCanvas: () => canvas, loadDecoder: async () => () => null });
+  Object.assign(f.video, { clientWidth: 360, clientHeight: 640 });
+  await f.scanner.start();
+  assert.equal(f.requests[0].video.width.ideal, 720);
+  assert.equal(f.requests[0].video.height.ideal, 1280);
+  await f.tick();
+  assert.deepEqual(draws[0].slice(1), [656.25, 0, 607.5, 1080, 0, 0, 608, 1080]);
+  Object.assign(f.video, { clientWidth: 640, clientHeight: 360 });
+  await f.tick();
+  assert.deepEqual(draws[1].slice(1), [0, 0, 1920, 1080, 0, 0, 1280, 720]);
+  f.scanner.stop();
 });
 
 test('insecure or unsupported browsers fail without loading the decoder or requesting permission', async () => {

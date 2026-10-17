@@ -26,7 +26,7 @@ export const tours = {
         target: '[data-tour="home-formats"]',
         eyebrow: 'Explore as possibilidades',
         title: 'Escolha o formato da campanha',
-        description: 'Stories, Feed e TV Indoor aparecem em Disponível agora, com seus recursos e botões de criação. TV Indoor exporta um vídeo horizontal em 1920 × 1080. Mais abaixo, Em desenvolvimento reúne os formatos que ainda não podem ser usados.',
+        description: 'Stories, Feed e TV Indoor aparecem em Disponível agora, com seus recursos e botões de criação. TV Indoor exporta um vídeo horizontal em 1920 × 1080.',
         placement: 'bottom',
       },
     ],
@@ -142,7 +142,7 @@ const mobileHome = {
     description: ({
       create: 'Escolha Stories ou Feed para criar uma arte a partir dos produtos do catálogo. Os atalhos na parte inferior também levam aos formatos e ao catálogo.',
       barcode: 'Toque em Ler com câmera e autorize o acesso. Enquadre o código de barras inteiro; quando o produto for encontrado, ele abrirá em Stories ou Feed conforme o formato escolhido.',
-      formats: 'Stories e Feed mostram os formatos disponíveis para criar sua campanha. Escolha um deles para começar; os formatos em desenvolvimento ainda não podem ser usados.',
+      formats: 'Stories e Feed mostram os formatos disponíveis para criar sua campanha. Escolha um deles para começar.',
     })[step.id] || step.description,
   })),
 };

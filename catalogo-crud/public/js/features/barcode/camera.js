@@ -1,6 +1,17 @@
 import { createBarcodeDecoder } from './decoder.js';
 import { isValidEan } from './code.js';
 
+// Match the centered object-fit: cover preview, including after phone rotation.
+export function visibleCameraFrame(video) {
+  const width = video.videoWidth;
+  const height = video.videoHeight;
+  const ratio = video.clientWidth > 0 && video.clientHeight > 0
+    ? video.clientWidth / video.clientHeight : width / height;
+  const cropWidth = Math.min(width, height * ratio);
+  const cropHeight = Math.min(height, width / ratio);
+  return { x: (width - cropWidth) / 2, y: (height - cropHeight) / 2, width: cropWidth, height: cropHeight };
+}
+
 export function cameraErrorMessage(error, { allowManualEntry = true } = {}) {
   if (['NotAllowedError', 'PermissionDeniedError', 'SecurityError'].includes(error?.name)) {
     return allowManualEntry
@@ -71,9 +82,10 @@ export function createCameraScanner({
     try {
       const decode = await loadDecoder();
       if (!current()) return;
+      const portrait = video.clientHeight > video.clientWidth;
       const acquired = await mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: portrait ? 720 : 1280 }, height: { ideal: portrait ? 1280 : 720 } },
       });
       if (!current()) { release(acquired); return; }
       stream = acquired;
@@ -97,12 +109,13 @@ export function createCameraScanner({
         if (!current()) return;
         try {
           if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
-            const scale = Math.min(1, 1280 / Math.max(video.videoWidth, video.videoHeight));
-            const width = Math.round(video.videoWidth * scale);
-            const height = Math.round(video.videoHeight * scale);
+            const visible = visibleCameraFrame(video);
+            const scale = Math.min(1, 1280 / Math.max(visible.width, visible.height));
+            const width = Math.max(1, Math.round(visible.width * scale));
+            const height = Math.max(1, Math.round(visible.height * scale));
             if (canvas.width !== width) canvas.width = width;
             if (canvas.height !== height) canvas.height = height;
-            context.drawImage(video, 0, 0, width, height);
+            context.drawImage(video, visible.x, visible.y, visible.width, visible.height, 0, 0, width, height);
             const code = await decode(canvas);
             if (!current()) return;
             if (code && isValidEan(code)) {
