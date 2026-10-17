@@ -15,7 +15,10 @@
   function apply() {
     const dark = (preference || (system.matches ? 'dark' : 'light')) === 'dark';
     root.dataset.theme = dark ? 'dark' : 'light';
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#101923' : '#f5f8fc');
+    for (const logo of document.querySelectorAll('header .site-brand-logo')) {
+      logo.setAttribute('src', dark ? '/branding/vida-horizontal-dark.png' : '/branding/vida-horizontal.png');
+    }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#09090b' : '#f5f8fc');
     if (button) {
       const label = dark ? 'Ativar modo claro' : 'Ativar modo escuro';
       button.setAttribute('aria-label', label);

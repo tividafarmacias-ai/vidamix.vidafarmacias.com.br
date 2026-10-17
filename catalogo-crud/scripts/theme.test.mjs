@@ -18,6 +18,7 @@ function fixture({ saved = null, dark = false, blocked = false } = {}) {
   const meta = { setAttribute: (_name, value) => { meta.content = value; } };
   const header = { children: [], append(child) { this.children.push(child); } };
   const root = { dataset: {} };
+  const logo = { setAttribute(name, value) { this[name] = value; } };
   const storage = new Map(saved === null ? [] : [[key, saved]]);
   const win = { ...events(), matchMedia: () => media, localStorage: {
     getItem(name) { if (blocked) throw Error('blocked'); return storage.get(name) ?? null; },
@@ -25,17 +26,19 @@ function fixture({ saved = null, dark = false, blocked = false } = {}) {
   } };
   const doc = { ...events(), documentElement: root, readyState: 'loading', body: header,
     createElement: () => button,
+    querySelectorAll: () => [logo],
     querySelector: (selector) => selector === 'meta[name="theme-color"]' ? meta : selector === '.site-header-inner' ? header : null,
   };
   vm.runInNewContext(source, { window: win, document: doc });
-  return { win, doc, root, media, storage, attributes, button, header, meta };
+  return { win, doc, root, media, storage, attributes, button, header, meta, logo };
 }
 
 test('system theme is applied before content and the toggle mounts after parsing', () => {
   for (const dark of [true, false]) {
     const f = fixture({ dark });
     assert.equal(f.root.dataset.theme, dark ? 'dark' : 'light');
-    assert.equal(f.meta.content, dark ? '#101923' : '#f5f8fc');
+    assert.equal(f.logo.src, dark ? '/branding/vida-horizontal-dark.png' : '/branding/vida-horizontal.png');
+    assert.equal(f.meta.content, dark ? '#09090b' : '#f5f8fc');
     assert.equal(f.header.children.length, 0);
     f.doc.emit('DOMContentLoaded');
     assert.equal(f.header.children[0], f.button);
@@ -49,11 +52,13 @@ test('a click saves the choice and updates accessible labels and browser chrome'
   f.button.emit('click');
   assert.equal(f.root.dataset.theme, 'dark');
   assert.equal(f.storage.get(key), 'dark');
+  assert.equal(f.logo.src, '/branding/vida-horizontal-dark.png');
   assert.equal(f.attributes.get('aria-label'), 'Ativar modo claro');
-  assert.equal(f.meta.content, '#101923');
+  assert.equal(f.meta.content, '#09090b');
   assert.equal(fixture({ saved: f.storage.get(key) }).root.dataset.theme, 'dark');
   f.button.emit('click');
   assert.equal(f.storage.get(key), 'light');
+  assert.equal(f.logo.src, '/branding/vida-horizontal.png');
   assert.equal(f.attributes.get('aria-label'), 'Ativar modo escuro');
 });
 
