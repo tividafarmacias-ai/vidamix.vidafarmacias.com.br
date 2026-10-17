@@ -23,6 +23,43 @@ export function hasSoftwareKeyboard({ editable, layoutHeight, visibleHeight, sca
     && layoutHeight - visibleHeight > Math.max(120, layoutHeight * 0.18));
 }
 
+export function initNavigationFeedback(win, doc) {
+  let indicator;
+  let timer;
+  const hide = () => {
+    if (indicator) indicator.hidden = true;
+    win.clearTimeout(timer);
+  };
+  const show = () => {
+    if (!indicator) {
+      indicator = doc.createElement('div');
+      indicator.className = 'app-navigation-loading';
+      indicator.setAttribute('role', 'status');
+      indicator.setAttribute('aria-live', 'polite');
+      indicator.innerHTML = '<span class="app-navigation-progress" aria-hidden="true"></span><span class="app-navigation-message">Carregando tela…</span>';
+      doc.body.append(indicator);
+    }
+    indicator.hidden = false;
+    win.clearTimeout(timer);
+    // A canceled unload prompt or a failed navigation must not leave stale UI.
+    timer = win.setTimeout(hide, 15000);
+  };
+  doc.addEventListener('click', (event) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest?.('a[href]');
+    if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+    const destination = new URL(link.href, win.location.href);
+    if (destination.origin !== win.location.origin || !getAppScreen(destination.pathname)) return;
+    if (destination.pathname === win.location.pathname && destination.search === win.location.search) return;
+    // Allow other click handlers (including editor guards) to cancel navigation.
+    Promise.resolve().then(() => { if (!event.defaultPrevented) show(); });
+  });
+  win.addEventListener('pageshow', hide);
+  win.addEventListener('pagehide', hide);
+  win.addEventListener('load', hide);
+  if (doc.readyState === 'interactive' || doc.readyState === 'loading') show();
+}
+
 export function initAppShell(win = window, doc = document) {
   const root = doc.documentElement;
   const screen = doc.body.classList.contains('offline-page') ? 'offline' : getAppScreen(win.location.pathname);
@@ -85,6 +122,7 @@ export function initAppShell(win = window, doc = document) {
   doc.addEventListener('focusin', updateViewport);
   doc.addEventListener('focusout', () => win.requestAnimationFrame(updateViewport));
   mobile.addEventListener('change', updateViewport);
+  initNavigationFeedback(win, doc);
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') initAppShell();

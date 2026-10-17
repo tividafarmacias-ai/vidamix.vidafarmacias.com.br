@@ -33,9 +33,10 @@ function element(tag, className, text) {
 
 function thumbnail(url, alt = '') {
   const image = element('img');
-  image.src = url;
   image.alt = alt;
   image.loading = 'lazy';
+  image.decoding = 'async';
+  image.src = url;
   return image;
 }
 
@@ -288,7 +289,9 @@ function renderBackgrounds() {
     const card = button('', () => {
       state.background = background;
       invalidatePreview();
-      renderBackgrounds();
+      for (const option of ui.backgrounds.querySelectorAll('.indoor-background-option')) {
+        option.setAttribute('aria-pressed', String(option === card));
+      }
       ui.backgrounds.querySelector('[aria-pressed="true"]')?.focus();
       status('Fundo selecionado. Continue para conferir o vídeo.');
     }, 'indoor-background-option');
@@ -333,6 +336,7 @@ function loadImage(url) {
   if (images.has(url)) return images.get(url);
   const promise = new Promise((resolve, reject) => {
     const image = new Image();
+    image.decoding = 'async';
     const timeout = setTimeout(() => finish(new Error('O carregamento de uma imagem demorou demais. Tente novamente.')), 20000);
     function finish(error) {
       clearTimeout(timeout);

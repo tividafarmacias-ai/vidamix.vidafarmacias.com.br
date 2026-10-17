@@ -85,6 +85,7 @@ function attachImage(container, product) {
   const image = new Image();
   image.alt = product.nome || 'Imagem do produto';
   image.loading = 'lazy';
+  image.decoding = 'async';
   image.src = product.imagem_local_url;
   image.addEventListener('error', () => {
     image.remove();

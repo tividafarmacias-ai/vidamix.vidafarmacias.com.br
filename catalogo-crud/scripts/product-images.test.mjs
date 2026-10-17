@@ -8,6 +8,8 @@ import { createApplication } from '../src/app.mjs';
 import { loadConfig } from '../src/config.mjs';
 import { initializeCatalogDatabase } from '../src/database/catalog-database.mjs';
 
+const imagePath = (url) => new URL(url, 'http://localhost').pathname;
+
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aH3sAAAAASUVORK5CYII=', 'base64');
 const webp = Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA', 'base64');
 const names = ['convertido.png', 'pendente.png', 'lote.png', 'Oferta verão #1.PNG',
@@ -62,14 +64,14 @@ after(async () => {
 test('list, detail and barcode lookup prefer WebP while preserving database and source references', async () => {
   for (const route of ['/api/products/1', '/api/products/by-ean/7896007548400']) {
     const product = await (await fetch(origin + route)).json();
-    assert.equal(product.imagem_local_url, '/assets/imagens/convertido.webp');
+    assert.equal(imagePath(product.imagem_local_url), '/assets/imagens/convertido.webp');
     assert.equal(product.imagem_arquivo, 'imagens/convertido.png');
     assert.equal(product.imagem_url, 'https://original.example/convertido.png');
   }
   const { items } = await (await fetch(origin + '/api/products?imagem=com')).json();
   assert.equal(items.length, names.length);
-  assert.equal(items.find((item) => item.id === 1).imagem_local_url, '/assets/imagens/convertido.webp');
-  assert.equal(items.find((item) => item.id === 2).imagem_local_url, '/assets/imagens/pendente.png');
+  assert.equal(imagePath(items.find((item) => item.id === 1).imagem_local_url), '/assets/imagens/convertido.webp');
+  assert.equal(imagePath(items.find((item) => item.id === 2).imagem_local_url), '/assets/imagens/pendente.png');
   assert.equal(database.prepare('SELECT imagem_arquivo FROM products WHERE id = 1').get().imagem_arquivo, 'imagens/convertido.png');
   const manifest = JSON.parse(await readFile(config.sourceManifestPath, 'utf8'));
   assert.equal(manifest.produtos[0].arquivo, 'imagens/convertido.png');
@@ -92,7 +94,7 @@ test('legacy PNG GET/HEAD redirect to WebP with correct MIME, bytes and length',
 test('converted images load with PNG removed, including converter suffix and encoded names', async () => {
   for (const [id, filename] of [[3, 'lote_resultado.webp'], [4, 'Oferta verão #1.webp']]) {
     const product = await (await fetch(origin + `/api/products/${id}`)).json();
-    assert.equal(product.imagem_local_url, '/assets/imagens/' + encodeURIComponent(filename));
+    assert.equal(imagePath(product.imagem_local_url), '/assets/imagens/' + encodeURIComponent(filename));
     const image = await fetch(origin + '/assets/imagens/' + encodeURIComponent(names[id - 1]));
     assert.equal(image.status, 200);
     assert.equal(image.headers.get('content-type'), 'image/webp');
@@ -104,10 +106,10 @@ test('new conversions become available without restart and removal falls back to
   const target = path.join(imagesDirectory, 'imagens/pendente.webp');
   await writeFile(target, webp);
   const converted = await (await fetch(origin + '/api/products/2')).json();
-  assert.equal(converted.imagem_local_url, '/assets/imagens/pendente.webp');
+  assert.equal(imagePath(converted.imagem_local_url), '/assets/imagens/pendente.webp');
   await unlink(target);
   const restored = await (await fetch(origin + '/api/products/2')).json();
-  assert.equal(restored.imagem_local_url, '/assets/imagens/pendente.png');
+  assert.equal(imagePath(restored.imagem_local_url), '/assets/imagens/pendente.png');
   const pngResponse = await fetch(origin + restored.imagem_local_url);
   assert.equal(pngResponse.status, 200);
   assert.equal(pngResponse.headers.get('content-type'), 'image/png');
@@ -118,13 +120,13 @@ test('product edits accept old PNG paths after conversion and new native WebP pa
   const updated = await fetch(origin + '/api/products/3', { method: 'PUT',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: 'Nome editado', imagem_arquivo: 'imagens/lote.png' }) });
   assert.equal(updated.status, 200);
-  assert.equal((await updated.json()).imagem_local_url, '/assets/imagens/lote_resultado.webp');
+  assert.equal(imagePath((await updated.json()).imagem_local_url), '/assets/imagens/lote_resultado.webp');
   for (const filename of ['lote.png', 'nativo.webp']) {
     const response = await fetch(origin + '/api/products', { method: 'POST',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: 'Novo produto', imagem_arquivo: `imagens/${filename}` }) });
     assert.equal(response.status, 201);
     const created = await response.json();
-    assert.match(created.imagem_local_url, /\.webp$/);
+    assert.match(imagePath(created.imagem_local_url), /\.webp$/);
     await fetch(origin + `/api/products/${created.id}`, { method: 'DELETE' });
   }
 });
@@ -132,7 +134,7 @@ test('product edits accept old PNG paths after conversion and new native WebP pa
 test('empty files and directories are not selected as converted images; missing files still return 404', async () => {
   for (const id of [7, 8, 9]) {
     const product = await (await fetch(origin + `/api/products/${id}`)).json();
-    assert.equal(product.imagem_local_url, `/assets/imagens/${names[id - 1]}`);
+    assert.equal(imagePath(product.imagem_local_url), `/assets/imagens/${names[id - 1]}`);
   }
   assert.equal((await fetch(origin + '/assets/imagens/inexistente.png')).status, 404);
   const native = await fetch(origin + '/assets/imagens/nativo.webp');
@@ -162,4 +164,17 @@ test('legacy and WebP URLs stay behind authentication and reject writes', async 
   assert.equal(authorized.status, 200);
   assert.equal(authorized.headers.get('content-type'), 'image/webp');
   assert.equal((await fetch(origin + '/assets/imagens/convertido.png', { method: 'POST' })).status, 405);
+});
+
+test('product image versions remain stable and invalidate when the same filename is replaced', async () => {
+  const get = async () => (await fetch(origin + '/api/products/5')).json();
+  const first = await get();
+  assert.ok(new URL(first.imagem_local_url, origin).searchParams.get('v'));
+  assert.equal((await get()).imagem_local_url, first.imagem_local_url);
+  const response = await fetch(origin + first.imagem_local_url);
+  assert.match(response.headers.get('cache-control'), /private.*immutable/);
+  await writeFile(path.join(imagesDirectory, 'imagens/nativo.webp'), Buffer.concat([webp, Buffer.from('changed')]));
+  const changed = await get();
+  assert.notEqual(changed.imagem_local_url, first.imagem_local_url);
+  assert.equal((await fetch(origin + changed.imagem_local_url)).status, 200);
 });

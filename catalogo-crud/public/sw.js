@@ -1,6 +1,70 @@
 // Bump this version when changing the offline page or one of its dependencies.
 const CACHE_PREFIX = 'vidamix-offline-';
-const CACHE_NAME = `${CACHE_PREFIX}v3`;
+const CACHE_NAME = `${CACHE_PREFIX}v4`;
+// Separate from the offline shell: image downloads survive app updates.
+const IMAGE_CACHE = 'vidamix-images-v1';
+const MAX_IMAGES = 240;
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const MAX_CACHE_BYTES = 96 * 1024 * 1024;
+const imageRequests = new Map();
+let imageWrites = Promise.resolve();
+let imageSizes;
+
+async function storeImage(cache, request, response) {
+  // Serialize eviction so simultaneous thumbnail downloads respect the limits.
+  imageWrites = imageWrites.catch(() => {}).then(async () => {
+    if (!imageSizes) {
+      const entries = await Promise.all((await cache.keys()).map(async (key) => {
+        const cached = await cache.match(key);
+        return [key.url, Number(cached?.headers.get('content-length')) || MAX_IMAGE_BYTES];
+      }));
+      imageSizes = new Map(entries);
+    }
+    const incoming = new URL(request.url);
+    for (const key of imageSizes.keys()) {
+      if (new URL(key).pathname === incoming.pathname && key !== incoming.href) {
+        await cache.delete(key);
+        imageSizes.delete(key);
+      }
+    }
+    await cache.put(request, response);
+    imageSizes.delete(request.url);
+    imageSizes.set(request.url, Number(response.headers.get('content-length')));
+    let bytes = [...imageSizes.values()].reduce((sum, size) => sum + size, 0);
+    for (const [key, size] of imageSizes) {
+      if (imageSizes.size <= MAX_IMAGES && bytes <= MAX_CACHE_BYTES) break;
+      await cache.delete(key);
+      imageSizes.delete(key);
+      bytes -= size;
+    }
+  });
+  return imageWrites;
+}
+
+async function cachedImage(request) {
+  let cache;
+  try {
+    cache = await caches.open(IMAGE_CACHE);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+  } catch { /* Storage may be disabled or full; the network still works. */ }
+  if (!imageRequests.has(request.url)) {
+    const pending = (async () => {
+      const response = await fetch(request);
+      const size = Number(response.headers.get('content-length'));
+      if (cache && response.status === 200 && !response.redirected
+        && response.headers.get('content-type')?.startsWith('image/')
+        && response.headers.get('cache-control')?.includes('immutable')
+        && size > 0 && size <= MAX_IMAGE_BYTES) {
+        try { await storeImage(cache, request, response.clone()); } catch { /* Best effort. */ }
+      }
+      return response;
+    })();
+    imageRequests.set(request.url, pending);
+    pending.finally(() => imageRequests.delete(request.url)).catch(() => {});
+  }
+  return (await imageRequests.get(request.url)).clone();
+}
 const OFFLINE_URL = '/offline.html';
 const OFFLINE_ASSETS = [
   OFFLINE_URL,
@@ -47,6 +111,11 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
   const pathname = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, '') : '/';
+  if (request.mode !== 'navigate' && url.searchParams.has('v')
+    && /^(?:\/assets\/imagens\/|\/(?:story|feed|indoor)-backgrounds\/).+\.(?:png|jpe?g|webp)$/i.test(pathname)) {
+    event.respondWith(cachedImage(request));
+    return;
+  }
   if (request.mode === 'navigate' && PAGE_PATHS.has(pathname)) {
     event.respondWith((async () => {
       try {

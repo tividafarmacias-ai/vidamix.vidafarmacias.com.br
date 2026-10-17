@@ -12,7 +12,7 @@
     "check:production": "node scripts/production-check.mjs",
     "check:pwa": "node scripts/pwa-deployment-check.mjs",
     "test:smoke": "node scripts/smoke.mjs",
-    "test:catalogue": "node --test scripts/catalogue-loading.test.mjs scripts/catalogue-mobile.test.mjs scripts/product-images.test.mjs",
+    "test:catalogue": "node --test scripts/catalogue-loading.test.mjs scripts/catalogue-mobile.test.mjs scripts/product-images.test.mjs scripts/image-cache.test.mjs",
     "test:app-mobile": "node --test scripts/app-shell.test.mjs scripts/home-mobile.test.mjs scripts/barcode-*.test.mjs",
     "test:tour": "node --test scripts/tour-storage.test.mjs",
     "test:stories-layout": "node --test scripts/stories-auto-layout.test.mjs",

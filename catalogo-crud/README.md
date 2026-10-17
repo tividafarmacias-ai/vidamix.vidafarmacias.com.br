@@ -408,6 +408,33 @@ scripts/                 verificações locais
 Leia [a arquitetura detalhada](docs/architecture.md) antes de criar um novo
 formato ou integração.
 
+## Cache de imagens e carregamento
+
+Backgrounds de Stories, Feed e Indoor e imagens de produtos recebem URLs com
+`?v=` calculado pelo tamanho e pelas datas de alteração do arquivo. Imagens
+inalteradas são reaproveitadas pelo cache local do navegador por até um ano.
+Adicionar um fundo não invalida os demais; substituir um arquivo gera uma nova
+URL automaticamente, sem precisar reiniciar a aplicação. Os diretórios de fundos
+continuam sendo a fonte dos arquivos, sem alterar imagens originais ou o banco.
+
+A lista de fundos é revalidada a cada abertura do editor (ou ao atualizar os
+fundos no Indoor), usando ETag/304 quando nada mudou. Miniaturas são carregadas
+sob demanda e decodificadas de forma assíncrona; selecionar outro fundo preserva
+as miniaturas existentes. O editor limita as imagens decodificadas em memória.
+
+Em HTTPS ou localhost, o service worker também mantém as imagens já utilizadas
+em Cache Storage entre visitas e atualizações do aplicativo. Esse cache é limitado
+a 240 imagens/96 MiB, com até 12 MiB por arquivo; versões substituídas são
+descartadas. O navegador pode remover dados locais por falta de espaço ou quando
+o usuário limpa o armazenamento. Nesses casos, ou se o cache estiver indisponível,
+as imagens são baixadas novamente normalmente. Arquivos maiores usam o cache HTTP.
+As páginas e os dados de produtos continuam sendo consultados no servidor.
+
+A navegação entre páginas mostra uma barra de progresso e o aviso “Carregando
+tela…”, respeitando redução de movimento e restaurando o estado ao voltar pelo
+histórico. Após publicar esta atualização, feche as abas antigas do aplicativo
+e reabra para ativar o novo service worker sem interromper edições em andamento.
+
 ## Crescer sem acoplamento
 
 Para um formato novo, crie o módulo em `public/js/features/<formato>/`,

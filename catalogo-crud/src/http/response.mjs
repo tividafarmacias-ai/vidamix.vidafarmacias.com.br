@@ -1,4 +1,5 @@
 import { badRequest } from './errors.mjs';
+import { createHash } from 'node:crypto';
 
 export const defaultSecurityHeaders = Object.freeze({
   'X-Content-Type-Options': 'nosniff',
@@ -31,6 +32,23 @@ export function sendJson(response, statusCode, body) {
     'Cache-Control': 'no-store',
   });
   response.end(payload);
+}
+
+// The browser keeps the manifest, but checks for additions/replacements on each visit.
+export function sendRevalidatedJson(request, response, body) {
+  const payload = `${JSON.stringify(body)}\n`;
+  const etag = `"${createHash('sha256').update(payload).digest('hex')}"`;
+  const unchanged = request.headers['if-none-match']?.split(',').some((tag) => (
+    tag.trim() === '*' || tag.trim().replace(/^W\//, '') === etag
+  ));
+  response.writeHead(unchanged ? 304 : 200, {
+    ...defaultSecurityHeaders,
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'private, no-cache',
+    ETag: etag,
+    ...(!unchanged ? { 'Content-Length': Buffer.byteLength(payload) } : {}),
+  });
+  response.end(unchanged ? undefined : payload);
 }
 
 export function sendError(response, statusCode, message) {

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileVersion } from '../../http/file-version.mjs';
 
 export const storyBackgroundExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
@@ -48,13 +49,22 @@ export function createStoryBackgroundService({ storyBackgroundsDirectory, format
     if (!existsSync(storyBackgroundsDirectory)) return [];
 
     const entries = await fs.readdir(storyBackgroundsDirectory, { withFileTypes: true });
-    return entries
+    const backgrounds = await Promise.all(entries
       .filter((entry) => entry.isFile() && isSupportedStoryBackground(entry.name))
-      .map((entry) => ({
-        arquivo: entry.name,
-        nome: storyBackgroundLabel(entry.name, format),
-        url: makeStoryBackgroundUrl(entry.name, urlPrefix),
-      }))
+      .map(async (entry) => {
+        try {
+          const info = await fs.stat(path.join(storyBackgroundsDirectory, entry.name));
+          return {
+            arquivo: entry.name,
+            nome: storyBackgroundLabel(entry.name, format),
+            url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}`,
+          };
+        } catch (error) {
+          if (error.code === 'ENOENT') return null;
+          throw error;
+        }
+      }));
+    return backgrounds.filter(Boolean)
       .sort((first, second) => first.nome.localeCompare(second.nome, 'pt-BR'));
   }
 

@@ -2,6 +2,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { defaultSecurityHeaders, sendError } from './response.mjs';
+import { fileVersion } from './file-version.mjs';
 
 const mimeTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -49,7 +50,7 @@ export function resolveStaticFile(rootDirectory, urlPath) {
   return candidate;
 }
 
-export async function serveFile({ request, response, rootDirectory, urlPath, cacheControl = 'no-store' }) {
+export async function serveFile({ request, response, rootDirectory, urlPath, cacheControl = 'no-store', versioned = false }) {
   const filePath = resolveStaticFile(rootDirectory, urlPath);
   if (!filePath) {
     sendError(response, 403, 'Caminho não permitido.');
@@ -64,12 +65,26 @@ export async function serveFile({ request, response, rootDirectory, urlPath, cac
     }
 
     const contentType = mimeTypes.get(path.extname(filePath).toLowerCase()) || 'application/octet-stream';
-    response.writeHead(200, {
+    const version = fileVersion(info);
+    const etag = `W/"${version}"`;
+    const requestedVersion = new URL(request.url, 'http://localhost').searchParams.get('v');
+    const headers = {
       ...defaultSecurityHeaders,
       'Content-Type': contentType,
-      'Content-Length': info.size,
-      'Cache-Control': cacheControl,
-    });
+      'Cache-Control': versioned && requestedVersion === version
+        ? 'private, max-age=31536000, immutable' : cacheControl,
+      ETag: etag,
+      'Last-Modified': info.mtime.toUTCString(),
+    };
+    const matches = request.headers['if-none-match']?.split(',').some((tag) => (
+      tag.trim() === '*' || tag.trim().replace(/^W\//, '') === etag.replace(/^W\//, '')
+    ));
+    if (headers['Cache-Control'] !== 'no-store' && matches) {
+      response.writeHead(304, headers);
+      response.end();
+      return;
+    }
+    response.writeHead(200, { ...headers, 'Content-Length': info.size });
 
     if (request.method === 'HEAD') {
       response.end();

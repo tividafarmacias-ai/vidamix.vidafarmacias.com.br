@@ -83,7 +83,7 @@ function serializeProduct(row, imagesDirectory) {
     ...row,
     generico: Boolean(row.generico),
     produto_destaque: Boolean(row.produto_destaque),
-    imagem_local_url: imageFile ? productImageUrl(imageFile) : null,
+    imagem_local_url: imageFile ? productImageUrl(imageFile, imagesDirectory) : null,
     possui_imagem_local: ['baixado', 'existente', 'manual'].includes(row.imagem_status),
   };
 }

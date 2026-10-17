@@ -1,4 +1,4 @@
-import { readJsonBody, sendError, sendJson, sendNoContent } from '../http/response.mjs';
+import { readJsonBody, sendError, sendJson, sendNoContent, sendRevalidatedJson } from '../http/response.mjs';
 import { createRouter } from '../http/router.mjs';
 
 function getRequestedProductId(productService, value) {
@@ -20,16 +20,16 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
     sendJson(response, 200, { items: productService.listCategories() });
   });
 
-  router.get('/api/story-backgrounds', async ({ response }) => {
-    sendJson(response, 200, { items: await storyBackgroundService.listStoryBackgrounds() });
+  router.get('/api/story-backgrounds', async ({ request, response }) => {
+    sendRevalidatedJson(request, response, { items: await storyBackgroundService.listStoryBackgrounds() });
   });
 
-  router.get('/api/feed-backgrounds', async ({ response }) => {
-    sendJson(response, 200, { items: await feedBackgroundService.listStoryBackgrounds() });
+  router.get('/api/feed-backgrounds', async ({ request, response }) => {
+    sendRevalidatedJson(request, response, { items: await feedBackgroundService.listStoryBackgrounds() });
   });
 
-  router.get('/api/indoor-backgrounds', async ({ response }) => {
-    sendJson(response, 200, { items: await indoorBackgroundService.listStoryBackgrounds() });
+  router.get('/api/indoor-backgrounds', async ({ request, response }) => {
+    sendRevalidatedJson(request, response, { items: await indoorBackgroundService.listStoryBackgrounds() });
   });
 
   router.get('/api/products', ({ response, url }) => {

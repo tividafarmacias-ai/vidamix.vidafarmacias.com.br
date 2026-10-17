@@ -272,6 +272,11 @@ function loadImage(source) {
   });
 
   state.imageCache.set(source, promise);
+  promise.catch(() => {
+    if (state.imageCache.get(source) === promise) state.imageCache.delete(source);
+  });
+  // Avoid retaining every decoded product/background for the whole editing session.
+  if (state.imageCache.size > 24) state.imageCache.delete(state.imageCache.keys().next().value);
   return promise;
 }
 
@@ -1598,13 +1603,17 @@ function renderBackgrounds() {
     const image = new Image();
     image.alt = '';
     image.loading = 'lazy';
+    image.decoding = 'async';
     image.src = background.url;
     button.append(image, createElement('span', null, background.nome));
     button.addEventListener('click', () => {
       state.selectedBackground = background;
       state.backgroundChosen = true;
       setPanelCollapsed(backgroundPanel, true);
-      renderBackgrounds();
+      for (const option of options) {
+        option.classList.toggle('is-selected', option === button);
+        option.setAttribute('aria-pressed', String(option === button));
+      }
       renderPreview();
       mobileEditor?.selectionComplete('background');
     });
@@ -1895,6 +1904,7 @@ function renderProducts() {
       const image = new Image();
       image.alt = '';
       image.loading = 'lazy';
+      image.decoding = 'async';
       image.src = product.imagem_local_url;
       imageWrap.append(image);
     } else {

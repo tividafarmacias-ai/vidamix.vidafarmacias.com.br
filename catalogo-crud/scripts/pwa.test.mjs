@@ -138,6 +138,9 @@ function workerHarness() {
           }
         },
         match: async (request) => store.get(key(request))?.clone(),
+        keys: async () => [...store.keys()].map((url) => ({ url })),
+        put: async (request, response) => { store.set(key(request), response); },
+        delete: async (request) => store.delete(key(request)),
       };
     },
   };
@@ -200,6 +203,63 @@ test('worker mantém respostas online e erros de autenticação; não intercepta
   }
   assert.equal(worker.request('/catalogo', { method: 'POST' }), null);
   for (const cache of worker.stores.values()) assert.ok(!cache.has(origin + '/catalogo'));
+});
+
+test('versioned images persist across navigation, coalesce downloads and fetch only new versions', async () => {
+  const worker = workerHarness();
+  let downloads = 0;
+  worker.fetch = async () => {
+    downloads++;
+    return new Response(`image-${downloads}`, { headers: {
+      'Content-Type': 'image/webp', 'Content-Length': '7',
+      'Cache-Control': 'private, max-age=31536000, immutable',
+    } });
+  };
+  const request = (path) => worker.request(path, { mode: 'cors' });
+  const url = '/story-backgrounds/a.webp?v=1';
+  const pair = await Promise.all([request(url), request(url)]);
+  assert.equal(downloads, 1);
+  assert.equal(await pair[0].text(), await pair[1].text());
+  await request(url);
+  assert.equal(downloads, 1);
+  await request('/story-backgrounds/b.webp?v=1');
+  await request(url);
+  assert.equal(downloads, 2, 'adding a background preserves the existing download');
+  await request('/story-backgrounds/a.webp?v=2');
+  assert.equal(downloads, 3);
+  const cache = worker.stores.get('vidamix-images-v1');
+  assert.ok(!cache.has(origin + url), 'obsolete version is evicted');
+  await request('/assets/imagens/product.webp?v=1');
+  worker.fetch = async () => { throw new Error('offline'); };
+  assert.equal((await request('/assets/imagens/product.webp?v=1')).status, 200);
+  await worker.lifecycle('activate');
+  assert.ok(worker.stores.has('vidamix-images-v1'), 'shell updates preserve images');
+});
+
+test('image cache rejects errors and unversioned responses, bounds storage and tolerates write failures', async () => {
+  const worker = workerHarness();
+  let downloads = 0;
+  let status = 401;
+  worker.fetch = async () => {
+    downloads++;
+    return new Response('image', { status, headers: {
+      'Content-Type': 'image/webp', 'Content-Length': String(12 * 1024 * 1024),
+      'Cache-Control': 'private, max-age=31536000, immutable',
+    } });
+  };
+  const request = (path) => worker.request(path, { mode: 'cors' });
+  const url = '/feed-backgrounds/a.webp?v=1';
+  for (status of [401, 403, 404, 500]) {
+    assert.equal((await request(url)).status, status);
+    assert.equal((await request(url)).status, status);
+  }
+  assert.equal(downloads, 8);
+  status = 200;
+  for (let i = 0; i < 10; i++) await request(`/indoor-backgrounds/${i}.webp?v=1`);
+  assert.equal(worker.stores.get('vidamix-images-v1').size, 8, '96 MiB limit');
+  worker.stores.get('vidamix-images-v1').set = () => { throw new Error('quota'); };
+  assert.equal((await request(url)).status, 200, 'storage failure does not break an image');
+  assert.equal(worker.request('/story-backgrounds/a.webp'), null);
 });
 
 function clientHarness({ apple = false, standalone = false, secure = true } = {}) {

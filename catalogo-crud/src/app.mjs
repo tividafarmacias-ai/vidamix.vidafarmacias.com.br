@@ -118,7 +118,8 @@ export function createApplication({ config, database, logger = console }) {
           response,
           rootDirectory: config.imagesDirectory,
           urlPath: assetPath,
-          cacheControl: 'public, max-age=86400',
+          cacheControl: 'private, no-cache',
+          versioned: true,
         });
         return;
       }
@@ -136,7 +137,8 @@ export function createApplication({ config, database, logger = console }) {
           response,
           rootDirectory,
           urlPath: backgroundPath,
-          cacheControl: 'public, max-age=86400',
+          cacheControl: 'private, no-cache',
+          versioned: true,
         });
         return;
       }

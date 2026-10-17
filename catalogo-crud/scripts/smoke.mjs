@@ -157,7 +157,8 @@ try {
     await writeFile(fixturePath, png);
     const populatedResponse = await fetch(fixtureBaseUrl + '/api/indoor-backgrounds');
     const { items } = await populatedResponse.json();
-    assert.deepEqual(items, [{
+    assert.ok(new URL(items[0].url, fixtureBaseUrl).searchParams.get('v'), 'Background deve possuir versão de cache');
+    assert.deepEqual(items.map((item) => ({ ...item, url: new URL(item.url, fixtureBaseUrl).pathname })), [{
       arquivo: fixtureFilename,
       nome: 'Oferta DA Semana',
       url: `/indoor-backgrounds/${encodeURIComponent(fixtureFilename)}`,
@@ -165,7 +166,7 @@ try {
     const backgroundResponse = await fetch(fixtureBaseUrl + items[0].url);
     assert.equal(backgroundResponse.status, 200);
     assert.match(backgroundResponse.headers.get('content-type'), /^image\/png/);
-    assert.match(backgroundResponse.headers.get('cache-control'), /max-age=86400/);
+    assert.match(backgroundResponse.headers.get('cache-control'), /max-age=31536000, immutable/);
     assert.deepEqual(Buffer.from(await backgroundResponse.arrayBuffer()), png);
     for (const format of ['story', 'feed']) {
       const otherFormatResponse = await fetch(fixtureBaseUrl + `/${format}-backgrounds/${encodeURIComponent(fixtureFilename)}`);

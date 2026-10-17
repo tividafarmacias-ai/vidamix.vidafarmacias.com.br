@@ -1,8 +1,16 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
+import { fileVersion } from '../../http/file-version.mjs';
 
-export function productImageUrl(filename) {
-  return `/assets/${filename.split('/').map(encodeURIComponent).join('/')}`;
+export function productImageUrl(filename, imagesDirectory) {
+  const url = `/assets/${filename.split('/').map(encodeURIComponent).join('/')}`;
+  if (!imagesDirectory) return url;
+  try {
+    const info = statSync(path.join(imagesDirectory, filename));
+    return info.isFile() ? `${url}?v=${fileVersion(info)}` : url;
+  } catch {
+    return url;
+  }
 }
 
 function isUsableFile(filename) {
