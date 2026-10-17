@@ -1,6 +1,6 @@
 // Bump this version when changing the offline page or one of its dependencies.
 const CACHE_PREFIX = 'vidamix-offline-';
-const CACHE_NAME = `${CACHE_PREFIX}v6`;
+const CACHE_NAME = `${CACHE_PREFIX}v7`;
 // Separate from the offline shell: image downloads survive app updates.
 const IMAGE_CACHE = 'vidamix-images-v1';
 const MAX_IMAGES = 240;
@@ -74,6 +74,8 @@ const OFFLINE_ASSETS = [
   OFFLINE_URL,
   '/brand.css',
   '/pwa.css',
+  '/theme.css',
+  '/js/theme.js',
   '/app-shell.css',
   '/js/app-shell.js',
   '/js/pwa.js',

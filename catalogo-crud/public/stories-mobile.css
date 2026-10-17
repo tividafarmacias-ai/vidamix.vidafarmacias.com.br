@@ -47,7 +47,7 @@
   .is-mobile-editor .story-interaction-layer { inset: 0; }
   .is-mobile-editor .story-stage-help, .is-mobile-editor .story-workspace-header, .is-mobile-editor .story-zoom-control { display: none; }
   .is-mobile-editor .story-workspace-tools { inset: 12px max(10px, env(safe-area-inset-right, 0px)) auto auto; display: flex; flex-direction: column; gap: 8px; z-index: 4; }
-  .is-mobile-editor .story-mobile-left-tools { position: absolute; inset: 12px auto auto max(10px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 8px; z-index: 4; }
+  .is-mobile-editor .story-composition-tools { inset: auto max(10px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) auto; flex-direction: row; gap: 8px; }
   .is-mobile-editor .story-grid-toggle, .is-mobile-editor .story-mobile-tool {
     display: inline-flex; width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; gap: 0;
     align-items: center; justify-content: center; border-radius: 14px; border: 1px solid #d4dfed;

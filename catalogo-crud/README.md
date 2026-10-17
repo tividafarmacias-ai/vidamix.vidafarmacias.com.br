@@ -18,6 +18,12 @@ As páginas carregam essa base antes dos estilos de cada tela; o tour também
 usa os mesmos tokens. A fonte é servida localmente por `public/fonts/`, com sua
 licença SIL, sem depender do Google Fonts em tempo de execução.
 O tema da interface é independente da composição e das fontes das artes exportadas.
+O botão de sol/lua no cabeçalho alterna entre os modos claro e escuro. Sem uma
+preferência salva, o app acompanha o tema do sistema. A escolha é guardada neste
+navegador e sincronizada entre abas. `public/js/theme.js` aplica o tema antes do
+primeiro conteúdo; `public/theme.css` cobre também os modais mobile, tour e tela
+offline. Imagens e exportações PNG/MP4 conservam suas cores. Execute
+`npm run test:theme` para verificar preferência, sincronização e inicialização.
 
 ## Instalar como aplicativo (PWA)
 

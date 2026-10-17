@@ -15,13 +15,14 @@
     "test:catalogue": "node --test scripts/catalogue-loading.test.mjs scripts/catalogue-mobile.test.mjs scripts/product-images.test.mjs scripts/image-cache.test.mjs scripts/background-variants.test.mjs",
     "test:app-mobile": "node --test scripts/app-shell.test.mjs scripts/home-mobile.test.mjs scripts/barcode-*.test.mjs",
     "test:tour": "node --test scripts/tour-storage.test.mjs",
+    "test:theme": "node --test scripts/theme.test.mjs",
     "test:stories-layout": "node --test scripts/stories-auto-layout.test.mjs",
     "test:stories-prices": "node --test scripts/stories-price-input.test.mjs",
     "test:stories-video": "node --test scripts/stories-video-*.test.mjs",
     "test:stories-mobile": "node --test scripts/stories-mobile.test.mjs scripts/stories-gestures.test.mjs",
     "test:indoor": "node --test scripts/indoor-*.test.mjs",
     "test:pwa": "node --test scripts/pwa.test.mjs scripts/pwa-launch.test.mjs",
-    "verify": "npm run check && npm run test:catalogue && npm run test:app-mobile && npm run test:tour && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:indoor && npm run test:pwa && npm run test:smoke"
+    "verify": "npm run check && npm run test:catalogue && npm run test:app-mobile && npm run test:tour && npm run test:theme && npm run test:stories-layout && npm run test:stories-prices && npm run test:stories-video && npm run test:stories-mobile && npm run test:indoor && npm run test:pwa && npm run test:smoke"
   },
   "engines": {
     "node": ">=22.13.0 <25",

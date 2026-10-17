@@ -134,7 +134,12 @@ export function initStoriesMobileEditor({ root = document, getProgress = () => (
     if (scrollport) scrollport.scrollTop = 0;
     onStepChange(id);
     if (!dialog.open) dialog.showModal();
-    if (focus) closeButton?.focus({ preventScroll: true });
+    if (focus) {
+      const priceInput = id === 'offer' ? find('#story-price') : null;
+      // Keep focus in the tap handler so mobile Safari can open the numeric keyboard.
+      const focusTarget = isTextEntry(priceInput) ? priceInput : closeButton;
+      focusTarget?.focus({ preventScroll: true });
+    }
     scheduleViewport();
     return true;
   }

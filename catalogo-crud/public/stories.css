@@ -1723,11 +1723,54 @@ body.stories-page {
 .story-workspace-tools {
   position: absolute;
   right: clamp(28px, 3vw, 48px);
-  bottom: 18px;
+  top: 18px;
   z-index: 4;
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.story-composition-tools {
+  position: absolute;
+  right: clamp(28px, 3vw, 48px);
+  bottom: 18px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.story-composition-tools .story-workspace-tool-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass-surface-strong);
+  box-shadow: var(--glass-shadow);
+  font-size: 17px;
+}
+
+.story-composition-tools .story-workspace-tool-button[aria-pressed="true"] {
+  color: #fff;
+  border-color: var(--azul);
+  background: var(--azul);
+}
+
+.story-composition-tools #story-mobile-auto-layout {
+  color: #365c91;
+  border-color: #c5d2ed;
+  background: linear-gradient(135deg, #e0efff, #ebe4fa 65%, #f9e8ed);
+}
+
+.story-composition-tools #story-mobile-auto-layout:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d0e6ff, #dfd5f6 65%, #f5dae3);
+}
+
+.story-composition-tools .story-workspace-tool-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
 }
 
 .story-zoom-control,
@@ -1928,7 +1971,7 @@ body.stories-page {
 
   .story-workspace-tools {
     right: 14px;
-    bottom: 14px;
+    top: 14px;
   }
 
   .story-control-sidebar {

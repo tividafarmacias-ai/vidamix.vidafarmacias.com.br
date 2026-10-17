@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#f5f8fc" />
+    <script src="/js/theme.js"></script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="VidaMix" />
@@ -25,6 +26,7 @@
     <link rel="stylesheet" href="/tour.css" />
     <link rel="stylesheet" href="/stories-mobile.css" />
     <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="stylesheet" href="/theme.css" />
     <script type="module" src="/js/app-shell.js"></script>
   </head>
   <body class="stories-page" data-tour-page="stories">
@@ -391,9 +393,13 @@
           </div>
         </div>
 
-        <div class="story-mobile-only story-mobile-left-tools" role="group" aria-label="Organizar elementos">
+        <div class="story-composition-tools" role="group" aria-label="Grade e organização dos elementos">
           <button id="story-mobile-auto-layout" class="story-workspace-tool-button story-mobile-tool" type="button" aria-label="Ajuste automático" title="Ajuste automático" disabled><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></button>
           <button id="story-mobile-anchor" class="story-workspace-tool-button story-mobile-tool" type="button" aria-label="Vincular produto e oferta" title="Vincular produto e oferta" aria-pressed="false" disabled><i class="fa-solid fa-link" aria-hidden="true"></i></button>
+          <button class="story-workspace-tool-button story-grid-toggle" id="story-thirds-grid-toggle" type="button" aria-pressed="false" aria-label="Mostrar grade de terços" title="Mostrar grade de terços">
+            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+
+          </button>
         </div>
         <p id="story-mobile-canvas-status" class="story-mobile-only" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div class="story-workspace-tools" aria-label="Controles de visualização">
@@ -407,10 +413,7 @@
               <i class="fa-solid fa-plus" aria-hidden="true"></i>
             </button>
           </div>
-          <button class="story-workspace-tool-button story-grid-toggle" id="story-thirds-grid-toggle" type="button" aria-pressed="false" aria-label="Mostrar grade de terços" title="Mostrar grade de terços">
-            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
-  
-          </button>
+
           <button id="story-mobile-background-button" class="story-mobile-only story-workspace-tool-button story-mobile-tool" type="button" aria-label="Escolher fundo" title="Fundo" aria-haspopup="dialog" aria-controls="story-mobile-dialog" data-mobile-panel="background"><i class="fa-regular fa-image" aria-hidden="true"></i></button>
           <button id="story-mobile-products-button" class="story-mobile-only story-workspace-tool-button story-mobile-tool" type="button" aria-label="Escolher produtos" title="Produtos" aria-haspopup="dialog" aria-controls="story-mobile-dialog" data-mobile-panel="products"><i class="fa-solid fa-box" aria-hidden="true"></i></button>
           <button id="story-mobile-offer-button" class="story-mobile-only story-workspace-tool-button story-mobile-tool" type="button" aria-label="Preço e texto da oferta" title="Preço e texto" aria-haspopup="dialog" aria-controls="story-mobile-dialog" data-mobile-panel="offer"><span aria-hidden="true">R$</span></button>

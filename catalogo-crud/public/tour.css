@@ -170,6 +170,9 @@ html.tour-is-open * { scroll-behavior: auto; }
   text-wrap: balance;
 }
 
+/* The heading receives programmatic focus for screen readers, not keyboard interaction. */
+.tour-dialog .tour-title:focus { outline: none; }
+
 .tour-card[data-mode="welcome"] .tour-title,
 .tour-card[data-mode="complete"] .tour-title { font-size: 1.85rem; }
 

@@ -242,7 +242,8 @@ test('price edits remain open until explicit confirmation and keep the original 
   f.input.addEventListener('input', () => inputEvents += 1);
   f.buttons.offer.click();
   assert.equal(f.nodes['dialog-footer'].hidden, false);
-  f.input.focus();
+  assert.equal(f.doc.activeElement, f.input, 'the price field receives focus synchronously on tap');
+  assert.equal(f.input.value, '29,90', 'opening the dialog preserves the current price');
   f.input.value = '37,50';
   f.input.dispatch('input');
   f.progress.offer = true;
