@@ -8,6 +8,10 @@ const VIDEO_HEIGHT = 1920;
 const FRAME_COUNT = STORY_VIDEO_DURATION * STORY_VIDEO_FPS;
 const MAX_QUEUED_FRAMES = 4;
 const ENCODER_TIMEOUT_MS = 30000;
+// WebKit may round a canvas VideoFrame timestamp by one microsecond when
+// converting through seconds. Normalize only that rounding, never missing or
+// reordered frames: https://bugs.webkit.org/show_bug.cgi?id=321880
+const TIMESTAMP_ROUNDING_TOLERANCE_US = 1;
 const DIMENSIONS_MESSAGE = 'Use um canvas de 1080 × 1920 (Stories), 1080 × 1350 (Feed) ou 1920 × 1080 (Indoor TV) pixels.';
 const UNSUPPORTED_MESSAGE = 'Este navegador não oferece exportação MP4 em H.264. Abra o editor em uma versão atual do Chrome ou Edge com suporte a H.264.';
 
@@ -156,7 +160,8 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
         try {
           const frameIndex = Math.round(chunk.timestamp * STORY_VIDEO_FPS / 1_000_000);
           const timestamp = timestampForFrame(frameIndex);
-          if (frameIndex !== encodedFrames || chunk.timestamp !== timestamp) {
+          if (frameIndex !== encodedFrames
+              || Math.abs(chunk.timestamp - timestamp) > TIMESTAMP_ROUNDING_TOLERANCE_US) {
             throw new Error('O codificador não preservou a sequência de quadros da arte.');
           }
           const data = new Uint8Array(chunk.byteLength);

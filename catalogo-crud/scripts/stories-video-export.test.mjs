@@ -356,8 +356,32 @@ test('does not return an incomplete MP4 when a frame is missing', async (t) => {
   assertReleased(recordings);
 });
 
-test('rejects changed encoder timestamps rather than downloading a mistimed MP4', async (t) => {
-  const recordings = installEncoder(t, { outputTimestamp: (input) => input.timestamp + 1 });
+for (const height of [1920, 1350]) {
+  test(`normalizes WebKit microsecond rounding for 1080 × ${height} without altering MP4 timing`, async (t) => {
+    const recordings = installEncoder(t, {
+      outputTimestamp: (input) => input.timestamp + (input.index % 3 - 1),
+    });
+    const blob = await exportStoryVideo(options({ canvas: { width: 1080, height } }));
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    const boxes = readBoxes(buffer);
+    assert.equal(blob.type, 'video/mp4');
+    assert.equal(boxDuration(buffer, findBox(boxes, 'mvhd')), 15);
+    assert.equal(boxDuration(buffer, findBox(boxes, 'mdhd')), 15);
+    assert.equal(buffer.readUInt32BE(findBox(boxes, 'stsz').start + 16), 450);
+    assertReleased(recordings);
+  });
+}
+
+test('rejects timestamp changes beyond rounding rather than downloading a mistimed MP4', async (t) => {
+  const recordings = installEncoder(t, { outputTimestamp: (input) => input.timestamp + 2 });
+  await assert.rejects(exportStoryVideo(options()), /sequência/);
+  assertReleased(recordings);
+});
+
+test('still rejects duplicated frame timestamps despite microsecond rounding tolerance', async (t) => {
+  const recordings = installEncoder(t, {
+    outputTimestamp: (input) => input.index === 2 ? 33333 : input.timestamp,
+  });
   await assert.rejects(exportStoryVideo(options()), /sequência/);
   assertReleased(recordings);
 });
