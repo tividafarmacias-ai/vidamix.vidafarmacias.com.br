@@ -50,7 +50,7 @@ export function resolveStaticFile(rootDirectory, urlPath) {
   return candidate;
 }
 
-export async function serveFile({ request, response, rootDirectory, urlPath, cacheControl = 'no-store', versioned = false }) {
+export async function serveFile({ request, response, rootDirectory, urlPath, cacheControl = 'no-store', versioned = false, cacheVersion }) {
   const filePath = resolveStaticFile(rootDirectory, urlPath);
   if (!filePath) {
     sendError(response, 403, 'Caminho não permitido.');
@@ -65,7 +65,7 @@ export async function serveFile({ request, response, rootDirectory, urlPath, cac
     }
 
     const contentType = mimeTypes.get(path.extname(filePath).toLowerCase()) || 'application/octet-stream';
-    const version = fileVersion(info);
+    const version = cacheVersion || fileVersion(info);
     const etag = `W/"${version}"`;
     const requestedVersion = new URL(request.url, 'http://localhost').searchParams.get('v');
     const headers = {

@@ -250,6 +250,27 @@ test('versioned images persist across navigation, coalesce downloads and fetch o
   assert.ok(worker.stores.has('vidamix-images-v1'), 'shell updates preserve images');
 });
 
+test('background thumbnail and render variants coexist in persistent cache', async () => {
+  const worker = workerHarness();
+  let downloads = 0;
+  worker.fetch = async () => {
+    downloads++;
+    return new Response('image', { headers: { 'Content-Type': 'image/webp',
+      'Content-Length': '5', 'Cache-Control': 'private, max-age=31536000, immutable' } });
+  };
+  const request = (variant, version = 1) => worker.request(`/story-backgrounds/a.webp?v=${version}&variant=${variant}`, { mode: 'cors' });
+  await request('thumb-v1');
+  await request('render-v1');
+  await request('thumb-v1');
+  await request('render-v1');
+  assert.equal(downloads, 2);
+  assert.equal(worker.stores.get('vidamix-images-v1').size, 2);
+  await request('thumb-v1', 2);
+  await request('render-v1');
+  assert.equal(downloads, 3);
+  assert.equal(worker.stores.get('vidamix-images-v1').size, 2);
+});
+
 test('image cache rejects errors and unversioned responses, bounds storage and tolerates write failures', async () => {
   const worker = workerHarness();
   let downloads = 0;

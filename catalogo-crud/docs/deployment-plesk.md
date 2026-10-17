@@ -131,6 +131,12 @@ as variáveis do painel têm efeito mesmo que o `.env` local tenha sido alterado
 
 Clique em **NPM Install** e depois em **Restart App** (ou **Enable Node.js**).
 
+A geração de miniaturas e fundos otimizados depende do Sharp, incluído no
+`package-lock.json`. Instale as dependências no próprio servidor (`npm ci` ou
+**NPM Install**) para obter o binário correto. Mantenha
+`CATALOG_STORAGE_ROOT/background-cache` gravável pelo usuário do Node.js.
+O cache é gerado automaticamente e pode ser reconstruído a partir dos originais.
+
 ## Validação após publicar
 
 Abra diretamente, sem credenciais:

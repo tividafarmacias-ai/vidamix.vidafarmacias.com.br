@@ -58,6 +58,8 @@ export function createStoryBackgroundService({ storyBackgroundsDirectory, format
             arquivo: entry.name,
             nome: storyBackgroundLabel(entry.name, format),
             url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}`,
+            thumbnail_url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}&variant=thumb-v1`,
+            preview_url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}&variant=render-v1`,
           };
         } catch (error) {
           if (error.code === 'ENOENT') return null;

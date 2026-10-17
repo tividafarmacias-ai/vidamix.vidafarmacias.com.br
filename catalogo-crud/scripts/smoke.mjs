@@ -158,7 +158,7 @@ try {
     const populatedResponse = await fetch(fixtureBaseUrl + '/api/indoor-backgrounds');
     const { items } = await populatedResponse.json();
     assert.ok(new URL(items[0].url, fixtureBaseUrl).searchParams.get('v'), 'Background deve possuir versão de cache');
-    assert.deepEqual(items.map((item) => ({ ...item, url: new URL(item.url, fixtureBaseUrl).pathname })), [{
+    assert.deepEqual(items.map((item) => ({ arquivo: item.arquivo, nome: item.nome, url: new URL(item.url, fixtureBaseUrl).pathname })), [{
       arquivo: fixtureFilename,
       nome: 'Oferta DA Semana',
       url: `/indoor-backgrounds/${encodeURIComponent(fixtureFilename)}`,

@@ -29,6 +29,7 @@ let detailsMeasureContext;
 let videoDownloadUrl;
 let mobileEditor;
 let artworkReady = false;
+let previewTask = null;
 
 const COMPOSITION_MODES = new Set(['single', 'two-products', 'combo']);
 
@@ -266,8 +267,17 @@ function loadImage(source) {
   const promise = new Promise((resolve, reject) => {
     const image = new Image();
     image.decoding = 'async';
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Não foi possível carregar uma imagem da arte.'));
+    const timeout = setTimeout(() => finish(new Error('O carregamento da imagem demorou demais. Selecione o fundo novamente.')), 20000);
+    function finish(error) {
+      clearTimeout(timeout);
+      image.onload = image.onerror = null;
+      if (error) {
+        image.src = '';
+        reject(error);
+      } else resolve(image);
+    }
+    image.onload = () => finish();
+    image.onerror = () => finish(new Error('Não foi possível carregar uma imagem da arte.'));
     image.src = source;
   });
 
@@ -276,7 +286,7 @@ function loadImage(source) {
     if (state.imageCache.get(source) === promise) state.imageCache.delete(source);
   });
   // Avoid retaining every decoded product/background for the whole editing session.
-  if (state.imageCache.size > 24) state.imageCache.delete(state.imageCache.keys().next().value);
+  if (state.imageCache.size > 4) state.imageCache.delete(state.imageCache.keys().next().value);
   return promise;
 }
 
@@ -1512,9 +1522,25 @@ function getMobileProgress() {
   };
 }
 
-async function renderPreview() {
+function renderPreview() {
+  ++state.previewRequestId;
+  updateAvailability();
+  // Rapid taps only load the latest selection after the current decode finishes.
+  // Ignoring stale results alone still decodes every intermediate full-size image.
+  if (!previewTask) {
+    previewTask = (async () => {
+      let requestId;
+      do {
+        requestId = state.previewRequestId;
+        await renderPreviewOnce(requestId);
+      } while (requestId !== state.previewRequestId);
+    })().finally(() => { previewTask = null; });
+  }
+  return previewTask;
+}
+
+async function renderPreviewOnce(requestId) {
   syncAutoLayoutAvailability();
-  const requestId = ++state.previewRequestId;
   const backgroundUrl = state.selectedBackground?.url || null;
   const productUrl = state.selectedProduct?.imagem_local_url || null;
   const secondaryProductUrl = state.secondaryProduct?.imagem_local_url || null;
@@ -1604,7 +1630,7 @@ function renderBackgrounds() {
     image.alt = '';
     image.loading = 'lazy';
     image.decoding = 'async';
-    image.src = background.url;
+    image.src = background.thumbnail_url || background.url;
     button.append(image, createElement('span', null, background.nome));
     button.addEventListener('click', () => {
       state.selectedBackground = background;
@@ -1935,7 +1961,7 @@ async function loadBackgrounds() {
 
   state.backgroundRequest = requestJson(format.backgroundsUrl)
     .then((response) => {
-      state.backgrounds = response.items || [];
+      state.backgrounds = (response.items || []).map((item) => ({ ...item, url: item.preview_url || item.url }));
       state.selectedBackground = state.backgrounds[0] || null;
       renderBackgrounds();
       return state.backgrounds;

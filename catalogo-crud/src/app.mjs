@@ -1,4 +1,6 @@
 import { HttpError } from './http/errors.mjs';
+import path from 'node:path';
+import { backgroundVariant } from './modules/stories/background-variants.mjs';
 import { isRequestAuthorized, sendUnauthorized } from './http/auth.mjs';
 import { defaultSecurityHeaders, sendError } from './http/response.mjs';
 import { serveFile } from './http/static-files.mjs';
@@ -53,9 +55,9 @@ export function createApplication({ config, database, logger = console }) {
     productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService,
   });
   const backgroundRoutes = [
-    ['/story-backgrounds/', config.storyBackgroundsDirectory],
-    ['/feed-backgrounds/', config.feedBackgroundsDirectory],
-    ['/indoor-backgrounds/', config.indoorBackgroundsDirectory],
+    ['/story-backgrounds/', config.storyBackgroundsDirectory, 'stories'],
+    ['/feed-backgrounds/', config.feedBackgroundsDirectory, 'feed'],
+    ['/indoor-backgrounds/', config.indoorBackgroundsDirectory, 'indoor-h'],
   ];
 
   return async function requestHandler(request, response) {
@@ -126,17 +128,21 @@ export function createApplication({ config, database, logger = console }) {
 
       const backgroundRoute = backgroundRoutes.find(([prefix]) => url.pathname.startsWith(prefix));
       if (backgroundRoute) {
-        const [prefix, rootDirectory] = backgroundRoute;
+        const [prefix, rootDirectory, format] = backgroundRoute;
         const backgroundPath = url.pathname.slice(prefix.length);
         if (!isSupportedStoryBackground(backgroundPath)) {
           sendError(response, 403, 'Formato de background não permitido.');
           return;
         }
+        const variant = url.searchParams.get('variant');
+        const file = variant ? await backgroundVariant({
+          rootDirectory, urlPath: backgroundPath, variant, format,
+          cacheDirectory: path.join(config.storageDirectory, 'background-cache'),
+        }) : { rootDirectory, urlPath: backgroundPath };
         await serveFile({
           request,
           response,
-          rootDirectory,
-          urlPath: backgroundPath,
+          ...file,
           cacheControl: 'private, no-cache',
           versioned: true,
         });

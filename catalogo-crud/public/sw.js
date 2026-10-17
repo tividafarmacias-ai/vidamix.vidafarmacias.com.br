@@ -1,6 +1,6 @@
 // Bump this version when changing the offline page or one of its dependencies.
 const CACHE_PREFIX = 'vidamix-offline-';
-const CACHE_NAME = `${CACHE_PREFIX}v4`;
+const CACHE_NAME = `${CACHE_PREFIX}v5`;
 // Separate from the offline shell: image downloads survive app updates.
 const IMAGE_CACHE = 'vidamix-images-v1';
 const MAX_IMAGES = 240;
@@ -14,15 +14,19 @@ async function storeImage(cache, request, response) {
   // Serialize eviction so simultaneous thumbnail downloads respect the limits.
   imageWrites = imageWrites.catch(() => {}).then(async () => {
     if (!imageSizes) {
-      const entries = await Promise.all((await cache.keys()).map(async (key) => {
+      const entries = [];
+      for (const key of await cache.keys()) {
         const cached = await cache.match(key);
-        return [key.url, Number(cached?.headers.get('content-length')) || MAX_IMAGE_BYTES];
-      }));
+        entries.push([key.url, Number(cached?.headers.get('content-length')) || MAX_IMAGE_BYTES]);
+      }
       imageSizes = new Map(entries);
     }
     const incoming = new URL(request.url);
     for (const key of imageSizes.keys()) {
-      if (new URL(key).pathname === incoming.pathname && key !== incoming.href) {
+      const previous = new URL(key);
+      if (previous.pathname === incoming.pathname
+        && previous.searchParams.get('variant') === incoming.searchParams.get('variant')
+        && key !== incoming.href) {
         await cache.delete(key);
         imageSizes.delete(key);
       }

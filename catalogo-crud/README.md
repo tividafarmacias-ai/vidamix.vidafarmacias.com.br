@@ -421,7 +421,23 @@ continuam sendo a fonte dos arquivos, sem alterar imagens originais ou o banco.
 A lista de fundos é revalidada a cada abertura do editor (ou ao atualizar os
 fundos no Indoor), usando ETag/304 quando nada mudou. Miniaturas são carregadas
 sob demanda e decodificadas de forma assíncrona; selecionar outro fundo preserva
-as miniaturas existentes. O editor limita as imagens decodificadas em memória.
+as miniaturas existentes. O servidor gera miniaturas WebP de até 240 × 240 pixels
+e versões da arte limitadas a 1080 × 1920 (Stories), 1080 × 1350 (Feed) ou
+1920 × 1080 (Indoor), preservando a proporção e os arquivos originais.
+Esses arquivos ficam em `CATALOG_STORAGE_ROOT/background-cache`, são gerados
+sob demanda uma única vez por versão e reaproveitados nas visitas seguintes.
+A conversão usa Sharp, com uma imagem por vez e limite de fila. Arquivos inválidos
+retornam erro sem enviar o original pesado como alternativa. O diretório de cache
+precisa ser gravável pelo processo Node.js.
+
+O editor mantém no máximo quatro entradas no cache de imagens decodificadas.
+Ao trocar fundos rapidamente, termina a carga atual e processa somente a seleção
+mais recente, evitando decodificações simultâneas de fundos intermediários.
+As miniaturas e a imagem da arte têm caches independentes por URL.
+
+Ao publicar esta versão, execute `npm ci` (ou **NPM Install** no Plesk) no servidor
+e reinicie a aplicação. Isso instala o Sharp com o binário adequado ao sistema
+operacional; não copie a pasta `node_modules` do Windows para o servidor Linux.
 
 Em HTTPS ou localhost, o service worker também mantém as imagens já utilizadas
 em Cache Storage entre visitas e atualizações do aplicativo. Esse cache é limitado

@@ -296,7 +296,7 @@ function renderBackgrounds() {
       status('Fundo selecionado. Continue para conferir o vídeo.');
     }, 'indoor-background-option');
     card.setAttribute('aria-pressed', String(state.background?.url === background.url));
-    card.append(thumbnail(background.url), element('span', '', background.nome));
+    card.append(thumbnail(background.thumbnail_url || background.url), element('span', '', background.nome));
     ui.backgrounds.append(card);
   }
   if (!state.backgrounds.length) ui.backgrounds.append(element('p', 'indoor-empty', state.backgroundsLoading
@@ -314,7 +314,7 @@ async function loadBackgrounds() {
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
     const response = await fetchJson('/api/indoor-backgrounds', controller.signal);
-    state.backgrounds = response.items;
+    state.backgrounds = response.items.map((item) => ({ ...item, url: item.preview_url || item.url }));
     state.backgroundsLoaded = true;
     if (state.background && !state.backgrounds.some((item) => item.url === state.background.url)) {
       state.background = null;
