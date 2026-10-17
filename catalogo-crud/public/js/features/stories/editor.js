@@ -1156,6 +1156,26 @@ function drawPlaceholder(context) {
   context.restore();
 }
 
+function drawProductImage(context, image, bounds) {
+  // Use artwork pixels so the shadow scales with the product in preview and exports.
+  const size = Math.min(bounds.width, bounds.height);
+  const blur = size * 0.025;
+  const offset = size * 0.025;
+  const color = 'rgba(0, 0, 0, 0.24)';
+  context.save();
+  if ('filter' in context) {
+    context.filter = `drop-shadow(0px ${offset}px ${blur}px ${color})`;
+  } else {
+    // Canvas shadows also follow image alpha on browsers without Canvas filters.
+    context.shadowColor = color;
+    context.shadowBlur = blur * 2;
+    context.shadowOffsetX = 0;
+    context.shadowOffsetY = offset;
+  }
+  context.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height);
+  context.restore();
+}
+
 function getCompositionLayers() {
   const layers = [];
   ['product', 'product-secondary'].forEach((target, index) => {
@@ -1164,7 +1184,7 @@ function getCompositionLayers() {
     if (!productImage || !bounds) return;
     layers.push({
       kind: 'product', index, bounds, compositeOperation: 'multiply',
-      draw: (context) => context.drawImage(productImage, bounds.x, bounds.y, bounds.width, bounds.height),
+      draw: (context) => drawProductImage(context, productImage, bounds),
     });
   });
   const detailsTargets = isTwoProductsMode() ? ['details', 'details-secondary'] : ['details'];
