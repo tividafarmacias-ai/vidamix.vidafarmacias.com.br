@@ -40,3 +40,105 @@
   .site-header { padding-top: env(safe-area-inset-top, 0px); }
   .pwa-install-button { display: none; }
 }
+
+/* Painted before the page content; the system's native splash stays OS-managed. */
+.pwa-launch {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #f5f8fc;
+  color: #084f98;
+  font-family: "Poppins", Arial, sans-serif;
+  text-align: center;
+  isolation: isolate;
+  transition: opacity 340ms ease, visibility 340ms;
+  animation: pwa-launch-safety 0s 3400ms forwards;
+}
+.pwa-launch.is-leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+.pwa-launch-glow {
+  position: absolute;
+  z-index: -1;
+  width: min(90vw, 640px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: pwa-launch-glow-in 1600ms ease-out both;
+}
+.pwa-launch-glow-blue {
+  top: -25%;
+  left: -25%;
+  background: radial-gradient(circle, #d7e8fc 0%, transparent 70%);
+}
+.pwa-launch-glow-red {
+  right: -30%;
+  bottom: -25%;
+  background: radial-gradient(circle, #fbe4e7 0%, transparent 70%);
+}
+.pwa-launch-content { position: relative; padding: 24px; transform: translateY(-12px); }
+.pwa-launch-emblem { position: relative; width: 190px; height: 190px; margin: 0 auto 28px; }
+.pwa-launch-icon {
+  position: absolute;
+  inset: 27px;
+  overflow: hidden;
+  border: 1px solid #fff;
+  border-radius: 34px;
+  background: #fff;
+  box-shadow: 0 18px 45px #084f9814, 0 3px 8px #084f9808;
+  animation: pwa-launch-icon-in 850ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.pwa-launch-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.pwa-launch-orbit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid #084f981c;
+  border-radius: 50%;
+  animation: pwa-launch-ring-in 1100ms ease-out both;
+}
+.pwa-launch-orbit::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border: 1px solid #084f9809;
+  border-radius: inherit;
+}
+.pwa-launch-spark { position: absolute; z-index: 1; border-radius: 50%; animation: pwa-launch-icon-in 950ms 120ms both; }
+.pwa-launch-spark-blue { width: 9px; height: 9px; top: 27px; right: 22px; background: #084f98; }
+.pwa-launch-spark-red { width: 7px; height: 7px; bottom: 27px; left: 23px; background: #f21e26; }
+.pwa-launch-copy { animation: pwa-launch-copy-in 650ms 180ms both; }
+.pwa-launch-title { margin: 0; font-size: clamp(32px, 8vw, 40px); font-weight: 700; letter-spacing: -1.6px; line-height: 1.2; }
+.pwa-launch-title span { color: #f21e26; }
+.pwa-launch-studio { margin: 8px 0 0; padding-left: 6px; font-size: 11px; font-weight: 600; letter-spacing: 6px; }
+.pwa-launch-tagline { margin: 22px 0 0; color: #526d8c; font-size: 13px; }
+.pwa-launch-track { width: 64px; height: 3px; margin: 30px auto 0; overflow: hidden; border-radius: 4px; background: #084f9810; }
+.pwa-launch-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #084f98 55%, #f21e26); transform-origin: left; animation: pwa-launch-line-in 1400ms ease-in-out both; }
+.pwa-launch-footer {
+  position: absolute;
+  right: 20px;
+  bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  left: 20px;
+  margin: 0;
+  color: #617995;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  animation: pwa-launch-copy-in 700ms 300ms both;
+}
+@keyframes pwa-launch-icon-in { from { opacity: 0; transform: translateY(14px) scale(.88) rotate(-6deg); } to { opacity: 1; transform: none; } }
+@keyframes pwa-launch-ring-in { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
+@keyframes pwa-launch-copy-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pwa-launch-glow-in { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
+@keyframes pwa-launch-line-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes pwa-launch-safety { to { visibility: hidden; pointer-events: none; } }
+@media (max-height: 500px) {
+  .pwa-launch-emblem { width: 140px; height: 140px; margin-bottom: 12px; }
+  .pwa-launch-icon { inset: 20px; border-radius: 25px; }
+  .pwa-launch-tagline { margin-top: 12px; }
+  .pwa-launch-track { margin-top: 16px; }
+  .pwa-launch-footer { bottom: max(12px, env(safe-area-inset-bottom, 0px)); font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pwa-launch { transition: none; }
+  .pwa-launch *, .pwa-launch *::after { animation: none; }
+}

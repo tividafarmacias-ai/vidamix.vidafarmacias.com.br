@@ -37,6 +37,12 @@ de geração obrigatória no servidor. Para regenerá-los no Windows, execute
 
 `public/manifest.json` define o modo standalone e a abertura na central.
 Todas as telas e seus aliases carregam o manifesto e `public/js/pwa.js`.
+A abertura animada está em `public/js/pwa-launch.js` e `public/pwa.css`.
+Ela aparece na entrada do app instalado (inclusive no iOS), sem repetir em links
+internos, recargas ou retorno pelo histórico. A apresentação leva cerca de 1,8 s,
+respeita movimento reduzido e pode ser encerrada por toque ou teclado.
+Para visualizar no navegador, abra `/?abertura=1`. A animação é exibida dentro
+do app; a tela nativa anterior à página continua sendo controlada pelo sistema.
 O manifesto e os ícones de instalação aceitam GET/HEAD sem autenticação, para
 que a descoberta do ícone não dependa da sessão HTTP Basic do navegador.
 As páginas, a API e os demais recursos também não exigem login por padrão.
