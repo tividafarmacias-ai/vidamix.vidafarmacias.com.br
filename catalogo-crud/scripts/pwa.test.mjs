@@ -41,6 +41,20 @@ after(async () => {
   })));
 });
 
+test('production starts without credentials and serves pages and API without a login challenge', async () => {
+  const production = loadConfig({ NODE_ENV: 'production' });
+  assert.equal(production.auth.enabled, false);
+  const publicOrigin = await startServer(production);
+  for (const route of ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h', '/api/health', '/sw.js']) {
+    const response = await fetch(publicOrigin + route);
+    assert.equal(response.status, 200, route);
+    assert.equal(response.headers.get('www-authenticate'), null, route);
+  }
+  assert.equal(loadConfig({ NODE_ENV: 'production', APP_AUTH_ENABLED: 'false',
+    APP_AUTH_USERNAME: 'old-user', APP_AUTH_PASSWORD: 'old-password' }).auth.enabled, false);
+  assert.throws(() => loadConfig({ NODE_ENV: 'production', APP_AUTH_ENABLED: 'true' }), /APP_AUTH_USERNAME/);
+});
+
 test('todas as entradas oferecem o manifesto e a marca; ícones têm dimensões reais', async () => {
   for (const route of ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h',
     '/index.html', '/catalogo.html', '/stories.html', '/feed.html', '/indoor-h.html']) {

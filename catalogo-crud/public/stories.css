@@ -483,6 +483,15 @@ body.stories-page {
   color: var(--brand-red-dark);
 }
 
+/* The artwork is a gesture surface, not selectable page text. Keep this scoped
+   to the stage so text/price inputs in the editor panels remain editable. */
+.story-stage,
+.story-stage * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 .story-stage {
   display: grid;
   width: 100%;
@@ -493,6 +502,7 @@ body.stories-page {
 
 .story-canvas-wrap {
   position: relative;
+  touch-action: none;
   width: min(80%, 368px);
   filter: drop-shadow(0 25px 34px rgba(0, 0, 0, 0.28));
 }

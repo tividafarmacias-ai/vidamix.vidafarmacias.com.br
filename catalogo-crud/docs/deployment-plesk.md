@@ -119,19 +119,21 @@ Em **Websites & Domains > Node.js**:
 
 ```env
 NODE_ENV=production
-APP_AUTH_ENABLED=true
-APP_AUTH_USERNAME=administrador
-APP_AUTH_PASSWORD=uma-senha-longa-e-exclusiva
+APP_AUTH_ENABLED=false
 ```
 
 Não defina `PORT`: o Plesk fornece esse valor ao processo Node.js. Também não
 é preciso declarar variáveis de caminho se a estrutura acima foi preservada.
 
+O acesso não exige login. Em instalações existentes, altere também
+`APP_AUTH_ENABLED` de `true` para `false` no painel do Plesk e reinicie a aplicação;
+as variáveis do painel têm efeito mesmo que o `.env` local tenha sido alterado.
+
 Clique em **NPM Install** e depois em **Restart App** (ou **Enable Node.js**).
 
 ## Validação após publicar
 
-Abra, com as credenciais configuradas:
+Abra diretamente, sem credenciais:
 
 ```text
 https://seu-dominio/api/health
@@ -179,7 +181,7 @@ antigas a `/icons/`, erro HTTP (como 404/401) ou manifesto sem Content-Type JSON
 Com HTML protegido, informa que as tags da página não foram verificadas e
 confere os arquivos públicos de instalação diretamente.
 
-Após autenticar, confira o manifesto e o service worker nas ferramentas do
+Após abrir a aplicação, confira o manifesto e o service worker nas ferramentas do
 navegador e use **Instalar aplicativo** na central. Abra o ícone instalado e
 confirme que o VidaMix inicia na central em uma janela standalone. Em iOS,
 use o Safari e **Compartilhar > Adicionar à Tela de Início**, mantendo

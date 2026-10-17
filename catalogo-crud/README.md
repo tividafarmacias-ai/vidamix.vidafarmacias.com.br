@@ -39,7 +39,8 @@ de geração obrigatória no servidor. Para regenerá-los no Windows, execute
 Todas as telas e seus aliases carregam o manifesto e `public/js/pwa.js`.
 O manifesto e os ícones de instalação aceitam GET/HEAD sem autenticação, para
 que a descoberta do ícone não dependa da sessão HTTP Basic do navegador.
-As páginas, a API e os demais recursos continuam sujeitos à autenticação do Node.
+As páginas, a API e os demais recursos também não exigem login por padrão.
+HTTP Basic só é aplicado se `APP_AUTH_ENABLED=true` for configurado explicitamente.
 O manifesto `.webmanifest` permanece disponível para compatibilidade, com o
 mesmo conteúdo do `.json` (verificado pelos testes).
 
@@ -376,7 +377,7 @@ e a aparência do vídeo também devem ser conferidas em um navegador compatíve
 
 O projeto está preparado para ser executado no Plesk com Node.js 22.13+.
 Antes de publicar, mantenha o SQLite, o catálogo de importação e as imagens em
-um caminho persistente fora da aplicação, ative a autenticação administrativa e
+um caminho persistente fora da aplicação, configure `APP_AUTH_ENABLED=false` e
 execute npm.cmd run check:production.
 
 O procedimento completo, com caminhos, variáveis e rollback, está em

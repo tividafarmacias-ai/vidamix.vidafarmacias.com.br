@@ -64,8 +64,8 @@ Essa regra evita que Stories conheça decisões de Feed, encarte ou publicação
 ## Segurança e operação
 
 - Variáveis de ambiente são lidas apenas na configuração do servidor.
-- Em produção, a aplicação exige credenciais HTTP Basic configuradas por
-  ambiente; o catálogo não deve ser exposto para edição anônima.
+- O acesso às páginas e à API não exige login, inclusive em produção.
+  HTTP Basic é opcional e só é ativado explicitamente com `APP_AUTH_ENABLED=true`.
 - Tokens e chaves de integrações futuras nunca podem ir para `public/`.
 - A entrega de arquivos estáticos usa resolução de caminho restrita, sem acesso
   arbitrário ao disco.
@@ -81,6 +81,6 @@ Essa regra evita que Stories conheça decisões de Feed, encarte ou publicação
 
 - Persistir artes como rascunhos e versões.
 - Criar uma camada de storage para exportações e assets.
-- Adicionar autenticação e perfis de equipe antes de expor a aplicação.
+- Adicionar perfis de equipe caso seja necessário restringir o acesso futuramente.
 - Criar uma fila de publicação para Instagram e outros canais.
 - Introduzir migrations versionadas ao evoluir o schema além do catálogo atual.

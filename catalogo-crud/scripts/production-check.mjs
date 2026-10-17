@@ -69,10 +69,6 @@ if (config.environment !== 'production') {
   addIssue('NODE_ENV deve ser production para validar a configuração de publicação.');
 }
 
-if (!config.auth.enabled) {
-  addIssue('APP_AUTH_ENABLED deve estar ativo em produção.');
-}
-
 await checkWritableDatabaseParent(config.databasePath);
 await checkReadableDirectory('Diretório de imagens de produtos', config.imagesDirectory);
 

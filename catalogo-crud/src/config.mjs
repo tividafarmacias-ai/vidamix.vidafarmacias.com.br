@@ -26,14 +26,14 @@ function getBoolean(value, fallback) {
   throw new Error('APP_AUTH_ENABLED deve ser true ou false.');
 }
 
-function getAuthConfig(env, environment) {
-  const enabled = getBoolean(env.APP_AUTH_ENABLED, environment === 'production');
+function getAuthConfig(env) {
+  const enabled = getBoolean(env.APP_AUTH_ENABLED, false);
   const username = String(env.APP_AUTH_USERNAME || '').trim();
   const password = String(env.APP_AUTH_PASSWORD || '');
 
   if (enabled && (!username || !password)) {
     throw new Error(
-      'Defina APP_AUTH_USERNAME e APP_AUTH_PASSWORD antes de iniciar em produção.',
+      'Defina APP_AUTH_USERNAME e APP_AUTH_PASSWORD quando APP_AUTH_ENABLED=true.',
     );
   }
 
@@ -92,6 +92,6 @@ export function loadConfig(env = process.env) {
       path.join(projectDirectory, '..', 'imagens-produtos'),
     ),
     port: getPort(env.PORT || env.CATALOGO_PORT),
-    auth: getAuthConfig(env, environment),
+    auth: getAuthConfig(env),
   });
 }
