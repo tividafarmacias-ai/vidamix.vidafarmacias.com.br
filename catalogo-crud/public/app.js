@@ -35,11 +35,13 @@ const elements = {
   saveButton: document.querySelector('#save-product-button'),
   imagePreview: document.querySelector('#dialog-image-preview'),
   imageCaption: document.querySelector('#image-caption'),
+  imageFile: document.querySelector('#image-upload'),
   toast: document.querySelector('#toast'),
 };
 
 let toastTimer;
 let searchTimer;
+let selectedImagePreviewUrl = null;
 
 async function requestJson(url, options = {}) {
   const { headers, ...requestOptions } = options;
@@ -264,10 +266,16 @@ function formValue(name) {
 }
 
 function resetForm() {
+  clearSelectedImagePreview();
   elements.form.reset();
   setFormValue('status', 'ativo');
   setFormValue('direcao_imagem', 'vertical');
   setFormValue('imagem_arquivo', '');
+}
+
+function clearSelectedImagePreview() {
+  if (selectedImagePreviewUrl) URL.revokeObjectURL(selectedImagePreviewUrl);
+  selectedImagePreviewUrl = null;
 }
 
 function renderDialogImage(product) {
@@ -289,6 +297,7 @@ function renderDialogImage(product) {
 }
 
 function previewTypedImage() {
+  if (elements.imageFile?.files?.length) return;
   const localFile = String(formValue('imagem_arquivo') || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
   if (!localFile.startsWith('imagens/') || localFile.includes('..')) return renderDialogImage(null);
   renderDialogImage({
@@ -296,6 +305,23 @@ function previewTypedImage() {
     imagem_local_url: `/assets/${localFile.split('/').map(encodeURIComponent).join('/')}`,
     imagem_status: 'manual',
   });
+}
+
+function previewSelectedImage() {
+  const file = elements.imageFile?.files?.[0];
+  if (!file) {
+    clearSelectedImagePreview();
+    previewTypedImage();
+    return;
+  }
+  clearSelectedImagePreview();
+  selectedImagePreviewUrl = URL.createObjectURL(file);
+  renderDialogImage({
+    nome: formValue('nome') || 'Imagem do produto',
+    imagem_local_url: selectedImagePreviewUrl,
+    imagem_status: 'upload',
+  });
+  elements.imageCaption.textContent = `Imagem selecionada: ${file.name}. Ela será enviada ao salvar.`;
 }
 
 function openDialog(product = null) {
@@ -333,6 +359,7 @@ function openDialog(product = null) {
 
 function closeDialog() {
   if (elements.dialog.open) elements.dialog.close();
+  clearSelectedImagePreview();
   state.editingId = null;
 }
 
@@ -357,6 +384,15 @@ function payloadFromForm() {
   return payload;
 }
 
+async function uploadProductImage(productId, file) {
+  const formData = new FormData();
+  formData.append('image', file, file.name);
+  return requestJson(`/api/products/${productId}/image`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
 async function saveProduct(event) {
   event.preventDefault();
   const name = String(formValue('nome')).trim();
@@ -371,11 +407,22 @@ async function saveProduct(event) {
 
   try {
     const editing = Number.isInteger(state.editingId);
-    const product = await requestJson(editing ? `/api/products/${state.editingId}` : '/api/products', {
+    let product = await requestJson(editing ? `/api/products/${state.editingId}` : '/api/products', {
       method: editing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payloadFromForm()),
     });
+    const selectedImage = elements.imageFile?.files?.[0];
+    if (selectedImage) {
+      if (!editing) {
+        state.editingId = product.id;
+        elements.dialogKicker.textContent = `Produto #${product.id}`;
+        elements.dialogTitle.textContent = 'Editar produto';
+        elements.deleteButton.hidden = false;
+      }
+      elements.saveButton.textContent = 'Enviando imagem...';
+      product = await uploadProductImage(product.id, selectedImage);
+    }
     closeDialog();
     if (!editing) state.page = 1;
     await Promise.all([loadCategories(), loadProducts()]);
@@ -430,6 +477,7 @@ function bindEvents() {
   elements.form.addEventListener('submit', saveProduct);
   elements.deleteButton.addEventListener('click', deleteCurrentProduct);
   elements.form.elements.namedItem('imagem_arquivo').addEventListener('input', previewTypedImage);
+  elements.imageFile.addEventListener('change', previewSelectedImage);
 
   elements.search.addEventListener('input', () => {
     clearTimeout(searchTimer);

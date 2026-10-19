@@ -1,4 +1,4 @@
-import { readJsonBody, sendError, sendJson, sendNoContent, sendRevalidatedJson } from '../http/response.mjs';
+import { readJsonBody, readMultipartFormData, sendError, sendJson, sendNoContent, sendRevalidatedJson } from '../http/response.mjs';
 import { createRouter } from '../http/router.mjs';
 
 function getRequestedProductId(productService, value) {
@@ -58,6 +58,26 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
   router.post('/api/products', async ({ request, response }) => {
     const product = productService.createProduct(await readJsonBody(request));
     sendJson(response, 201, product);
+  });
+
+  router.post('/api/products/:id/image', async ({ params, request, response }) => {
+    const id = getRequestedProductId(productService, params.id);
+    if (!id) {
+      sendError(response, 404, 'Produto nÃ£o encontrado.');
+      return;
+    }
+    const { files } = await readMultipartFormData(request);
+    const file = files.find((entry) => entry.fieldName === 'image');
+    if (!file) {
+      sendError(response, 400, 'Envie um arquivo no campo image.');
+      return;
+    }
+    const product = await productService.uploadProductImage(id, file);
+    if (!product) {
+      sendError(response, 404, 'Produto nÃ£o encontrado.');
+      return;
+    }
+    sendJson(response, 200, product);
   });
 
   router.put('/api/products/:id', async ({ params, request, response }) => {

@@ -1,5 +1,8 @@
 import { existsSync } from 'node:fs';
+import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import sharp from 'sharp';
 import { badRequest } from '../../http/errors.mjs';
 import { productImageUrl, resolveProductImage } from './product-images.mjs';
 
@@ -316,6 +319,44 @@ export function createProductService({ database, imagesDirectory }) {
     return result.changes > 0;
   }
 
+  async function uploadProductImage(id, file) {
+    const existing = database.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    if (!existing) return null;
+    if (!file?.buffer?.length) throw badRequest('Selecione uma imagem para o produto.');
+    if (file.buffer.length > 10_000_000) throw badRequest('A imagem excede o limite de 10 MB.');
+
+    let metadata;
+    try {
+      metadata = await sharp(file.buffer).metadata();
+    } catch {
+      throw badRequest('O arquivo enviado não é uma imagem válida.');
+    }
+
+    const extensionByFormat = {
+      jpeg: 'jpg',
+      png: 'png',
+      webp: 'webp',
+      gif: 'gif',
+      avif: 'avif',
+      tiff: 'tif',
+    };
+    const extension = extensionByFormat[metadata.format];
+    if (!extension) throw badRequest('Formato de imagem não suportado. Use PNG, JPG, WebP, GIF ou AVIF.');
+
+    const imagesSubdirectory = path.join(imagesDirectory, 'imagens');
+    await fs.mkdir(imagesSubdirectory, { recursive: true });
+    const filename = `imagens/upload-produto-${id}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
+    const absolutePath = path.join(imagesDirectory, filename);
+    await fs.writeFile(absolutePath, file.buffer, { flag: 'wx' });
+
+    try {
+      return updateProduct(id, { imagem_arquivo: filename });
+    } catch (error) {
+      await fs.unlink(absolutePath).catch(() => {});
+      throw error;
+    }
+  }
+
   return {
     productId,
     getProduct,
@@ -325,6 +366,7 @@ export function createProductService({ database, imagesDirectory }) {
     listCategories,
     createProduct,
     updateProduct,
+    uploadProductImage,
     deleteProduct,
   };
 }

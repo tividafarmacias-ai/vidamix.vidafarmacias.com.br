@@ -166,6 +166,21 @@ test('legacy and WebP URLs stay behind authentication and reject writes', async 
   assert.equal((await fetch(origin + '/assets/imagens/convertido.png', { method: 'POST' })).status, 405);
 });
 
+test('product image upload stores the file and links it to the product', async () => {
+  const form = new FormData();
+  form.append('image', new Blob([png], { type: 'image/png' }), 'produto-enviado.png');
+  const response = await fetch(origin + '/api/products/1/image', { method: 'POST', body: form });
+  assert.equal(response.status, 200);
+
+  const product = await response.json();
+  assert.match(product.imagem_arquivo, /^imagens\/upload-produto-1-/);
+  assert.match(imagePath(product.imagem_local_url), /\/assets\/imagens\/upload-produto-1-.*\.png$/);
+  const image = await fetch(origin + product.imagem_local_url);
+  assert.equal(image.status, 200);
+  assert.equal(image.headers.get('content-type'), 'image/png');
+  assert.deepEqual(Buffer.from(await image.arrayBuffer()), png);
+});
+
 test('product image versions remain stable and invalidate when the same filename is replaced', async () => {
   const get = async () => (await fetch(origin + '/api/products/5')).json();
   const first = await get();
