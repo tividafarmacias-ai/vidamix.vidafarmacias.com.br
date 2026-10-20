@@ -3,6 +3,7 @@ const destinations = [
   { screen: 'catalogue', href: '/catalogo', label: 'Catálogo', icon: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>' },
   { screen: 'stories', href: '/artes/stories', label: 'Stories', icon: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-5 7h6m-3-3v6m-1 4h2"/>' },
   { screen: 'feed', href: '/artes/feed', label: 'Feed', icon: '<rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>' },
+  { screen: 'revista', href: '/revista', label: 'Revista', icon: '<path d="M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>' },
 ];
 
 export function getAppScreen(pathname) {
@@ -10,6 +11,7 @@ export function getAppScreen(pathname) {
   return ({
     '/': 'home', '/index.html': 'home',
     '/catalogo': 'catalogue', '/catalogo.html': 'catalogue',
+    '/revista': 'revista', '/revista.html': 'revista',
     '/artes/stories': 'stories', '/stories.html': 'stories',
     '/artes/feed': 'feed', '/feed.html': 'feed',
     '/artes/indoor-h': 'indoor', '/indoor-h.html': 'indoor',
@@ -71,7 +73,7 @@ export function initAppShell(win = window, doc = document) {
   root.dataset.appScreen = screen || '';
 
   // Browsing screens share destinations. Editors keep their own step navigation.
-  if (screen === 'home' || screen === 'catalogue') {
+  if (screen === 'home' || screen === 'catalogue' || screen === 'revista') {
     const nav = doc.createElement('nav');
     nav.className = 'app-tabbar';
     nav.setAttribute('aria-label', 'Navegação do aplicativo');
@@ -86,7 +88,7 @@ export function initAppShell(win = window, doc = document) {
     doc.body.classList.add('has-app-tabbar');
     const name = doc.createElement('span');
     name.className = 'app-screen-name';
-    name.textContent = screen === 'home' ? 'VidaMix Studio' : 'Catálogo';
+    name.textContent = screen === 'home' ? 'VidaMix Studio' : screen === 'revista' ? 'Revista' : 'Catálogo';
     doc.querySelector('.site-header-inner')?.append(name);
   }
 

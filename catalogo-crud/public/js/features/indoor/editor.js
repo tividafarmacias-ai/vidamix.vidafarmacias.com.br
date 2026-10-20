@@ -1,3 +1,5 @@
+import { getBackgroundBadgeTheme } from '../stories/background-theme.js';
+import { loadArtworkSelection } from '../revista/artwork.js';
 import { PRODUCT_LIMIT, addProduct, removeProduct, moveProduct, canContinue } from './model.js';
 import { INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_DURATION, drawIndoorFrame } from './renderer.js';
 import { bindPriceInput } from '../stories/price-input.js';
@@ -193,21 +195,26 @@ function renderSelected() {
       up.disabled = index === 0;
       down.disabled = index === state.selection.length - 1;
       actions.append(up, down, remove);
-      const priceLabel = element('label', 'indoor-price', 'Preço opcional (R$)');
-      const input = element('input');
-      input.type = 'text';
-      input.inputMode = 'numeric';
-      input.placeholder = 'Sem preço';
-      input.maxLength = 16;
-      input.value = entry.price;
-      input.setAttribute('aria-label', `Preço de ${product.nome}`);
-      bindPriceInput(input, (price) => {
-        if (price === entry.price) return;
-        entry.price = price;
-        invalidatePreview();
-      });
-      priceLabel.append(input);
-      details.append(element('strong', '', product.nome), actions, priceLabel);
+      const prices = element('div', 'indoor-prices');
+      for (const [field, label] of [['originalPrice', 'De · normal (R$)'], ['price', 'Por · promoção (R$)']]) {
+        const priceLabel = element('label', 'indoor-price', label);
+        const input = element('input');
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.placeholder = '0,00';
+        input.maxLength = 16;
+        input.value = entry[field] || '';
+        input.dataset.priceField = field;
+        input.setAttribute('aria-label', label + ' de ' + product.nome);
+        bindPriceInput(input, (price) => {
+          if (price === entry[field]) return;
+          entry[field] = price;
+          invalidatePreview();
+        });
+        priceLabel.append(input);
+        prices.append(priceLabel);
+      }
+      details.append(element('strong', '', product.nome), actions, prices);
       row.dataset.productId = String(product.id);
       row.append(thumbnail(product.imagem_local_url), details);
     }
@@ -357,7 +364,7 @@ function paint() {
   if (!state.snapshot) return;
   const carousel = drawIndoorFrame(context, state.snapshot, state.seconds);
   ui.time.value = String(state.seconds);
-  ui['time-label'].textContent = `${state.seconds.toFixed(1).replace('.', ',')} / 15 s`;
+  ui['time-label'].textContent = `${state.seconds.toFixed(1).replace('.', ',')} / ${INDOOR_DURATION} s`;
   [...ui.scenes.children].forEach((node, index) => node.setAttribute('aria-pressed', String(index === carousel.index)));
 }
 
@@ -388,7 +395,7 @@ async function preparePreview() {
   ui['preview-loading'].textContent = 'Preparando as imagens…';
   ui['retry-preview'].hidden = true;
   ui.scenes.replaceChildren();
-  const selected = state.selection.map((entry) => ({ product: { ...entry.product }, price: entry.price ? `R$ ${entry.price}` : '' }));
+  const selected = state.selection.map((entry) => ({ product: { ...entry.product }, originalPrice: entry.originalPrice ? `R$ ${entry.originalPrice}` : '', price: entry.price ? `R$ ${entry.price}` : '' }));
   const backgroundUrl = state.background.url;
   const needed = new Set([backgroundUrl, ...selected.map((entry) => entry.product.imagem_local_url)]);
   for (const url of images.keys()) if (!needed.has(url)) images.delete(url);
@@ -396,7 +403,7 @@ async function preparePreview() {
     if (!context) throw new Error('Este navegador não conseguiu abrir a prévia. Tente novamente no Chrome ou Edge.');
     const [background, ...loaded] = await Promise.all([loadImage(backgroundUrl), ...selected.map((entry) => loadImage(entry.product.imagem_local_url))]);
     if (state.previewVersion !== version || state.step !== 'preview') return;
-    state.snapshot = { background, products: selected.map((entry, index) => ({ ...entry, image: loaded[index] })) };
+    state.snapshot = { background, badgeTheme: getBackgroundBadgeTheme(background, { width: 128, height: 72 }), products: selected.map((entry, index) => ({ ...entry, image: loaded[index] })) };
     state.seconds = 0;
     selected.forEach((entry, index) => {
       const node = button('', () => {
@@ -464,7 +471,7 @@ async function download() {
     const exportContext = canvas.getContext('2d');
     if (!exportContext) throw new Error('Não foi possível preparar o vídeo neste navegador.');
     const blob = await exportStoryVideo({
-      canvas, signal: controller.signal,
+      canvas, signal: controller.signal, duration: INDOOR_DURATION,
       renderFrame: (seconds) => drawIndoorFrame(exportContext, snapshot, seconds),
       onProgress: (fraction) => {
         const percentage = Math.round(fraction * 100);
@@ -560,4 +567,21 @@ window.addEventListener('pagehide', () => {
   clearDownload();
 });
 renderSelected();
-void loadProducts();
+async function initializeProducts() {
+  await loadProducts();
+  if (!window.location?.search) return;
+  try {
+    const selection = await loadArtworkSelection(window.location.search, async url => {
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível carregar a oferta.');
+      return data;
+    });
+    if (!selection) return;
+    const next = addProduct(state.selection, selection.product);
+    if (next === state.selection) return;
+    next[next.length - 1].price = selection.price || '';
+    updateSelection(next);
+  } catch (error) { status(error.message, true); }
+}
+void initializeProducts();

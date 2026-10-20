@@ -5,7 +5,7 @@ export const STORY_VIDEO_FPS = 30;
 
 const VIDEO_WIDTH = 1080;
 const VIDEO_HEIGHT = 1920;
-const FRAME_COUNT = STORY_VIDEO_DURATION * STORY_VIDEO_FPS;
+const frameCount = STORY_VIDEO_DURATION * STORY_VIDEO_FPS;
 const MAX_QUEUED_FRAMES = 4;
 const ENCODER_TIMEOUT_MS = 30000;
 // WebKit may round a canvas VideoFrame timestamp by one microsecond when
@@ -74,12 +74,16 @@ export async function getStoryVideoConfig({ signal, width = VIDEO_WIDTH, height 
 }
 
 /**
- * Encode 450 explicitly timed frames as a real MP4/H.264 file, without audio.
+ * Encode explicitly timed frames as a real MP4/H.264 file, without audio.
  * renderFrame(seconds) paints the supplied Stories, Feed or Indoor TV canvas and may be async.
  * onProgress receives a fraction between 0 and 1; 1 means the MP4 is finalized.
  * The caller owns the canvas and any images/object URLs used while rendering.
  */
-export async function exportStoryVideo({ canvas, renderFrame, onProgress = () => {}, signal }) {
+export async function exportStoryVideo({ canvas, renderFrame, onProgress = () => {}, signal, duration = STORY_VIDEO_DURATION }) {
+  if (!Number.isFinite(duration) || duration <= 0 || !Number.isSafeInteger(duration * STORY_VIDEO_FPS)) {
+    throw new RangeError('A duração deve corresponder a um número inteiro positivo de quadros.');
+  }
+  const frameCount = duration * STORY_VIDEO_FPS;
   checkAborted(signal);
   if (!canvas || !supportsDimensions(canvas.width, canvas.height)) {
     throw new Error(DIMENSIONS_MESSAGE);
@@ -180,7 +184,7 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
     encoder.configure(config);
     onProgress(0);
 
-    for (let frameIndex = 0; frameIndex < FRAME_COUNT; frameIndex += 1) {
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
       checkState();
       await Promise.race([Promise.resolve(renderFrame(frameIndex / STORY_VIDEO_FPS)), interrupted]);
       checkState();
@@ -197,10 +201,10 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
       }
       await waitForQueue();
       // Periodically drain the encoder's internal buffers as well as its queue.
-      if ((frameIndex + 1) % STORY_VIDEO_FPS === 0 && frameIndex + 1 < FRAME_COUNT) {
+      if ((frameIndex + 1) % STORY_VIDEO_FPS === 0 && frameIndex + 1 < frameCount) {
         await waitForEncoder(encoder.flush());
       }
-      onProgress((frameIndex + 1) / FRAME_COUNT * 0.98);
+      onProgress((frameIndex + 1) / frameCount * 0.98);
       if ((frameIndex + 1) % MAX_QUEUED_FRAMES === 0) {
         // Yield to input/painting, so progress and cancellation stay responsive.
         await Promise.race([new Promise((resolve) => setTimeout(resolve, 0)), interrupted]);
@@ -208,7 +212,7 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
     }
 
     await waitForEncoder(encoder.flush());
-    if (encodedFrames !== FRAME_COUNT) {
+    if (encodedFrames !== frameCount) {
       throw new Error('O navegador não codificou todos os quadros da arte. Tente exportar novamente.');
     }
     muxer.finalize();

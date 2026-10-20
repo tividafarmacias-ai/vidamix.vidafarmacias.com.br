@@ -7,7 +7,7 @@ function nowSqlTimestamp() {
   return new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
 }
 
-function initializeSchema(database) {
+export function initializeSchema(database) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS app_meta (
       key TEXT PRIMARY KEY,
@@ -45,6 +45,23 @@ function initializeSchema(database) {
     CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
     CREATE INDEX IF NOT EXISTS idx_products_categoria ON products(categoria_produtos);
     CREATE INDEX IF NOT EXISTS idx_products_ean ON products(ean);
+
+    CREATE TABLE IF NOT EXISTS revista_campaigns (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      month TEXT NOT NULL,
+      import_hash TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS revista_items (
+      id INTEGER PRIMARY KEY,
+      campaign_id INTEGER NOT NULL REFERENCES revista_campaigns(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      ean TEXT NOT NULL,
+      name TEXT NOT NULL,
+      price_cents INTEGER NOT NULL CHECK(price_cents > 0),
+      UNIQUE(campaign_id, ean)
+    );
   `);
 }
 

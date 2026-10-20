@@ -3,7 +3,7 @@ export const PRODUCT_LIMIT = 5;
 export function addProduct(selection, product) {
   if (!product?.id || !product.imagem_local_url || selection.length >= PRODUCT_LIMIT
       || selection.some((item) => item.product.id === product.id)) return selection;
-  return [...selection, { product, price: '' }];
+  return [...selection, { product, originalPrice: '', price: '' }];
 }
 
 export function removeProduct(selection, id) {

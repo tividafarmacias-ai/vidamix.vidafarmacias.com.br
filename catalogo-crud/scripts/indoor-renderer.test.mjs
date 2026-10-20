@@ -29,7 +29,7 @@ function mockContext() {
     translate(x) { this.offsetX += x; },
     measureText(value) { return { width: Array.from(value).length * Number(this.font.match(/([\d.]+)px/)[1]) * 0.6 }; },
     fillText(text, x, y) {
-      calls.push({ type: 'text', text, x, y, width: this.measureText(text).width, font: this.font, offsetX: this.offsetX });
+      calls.push({ type: 'text', text, x, y, width: this.measureText(text).width, font: this.font, color: this.fillStyle, offsetX: this.offsetX });
     },
     drawImage(...args) { calls.push({ type: 'image', args, offsetX: this.offsetX }); },
     fillRect(...args) { calls.push({ type: 'fillRect', args }); },
@@ -39,7 +39,7 @@ function mockContext() {
     lineTo() {},
     quadraticCurveTo() {},
     closePath() {},
-    fill() {},
+    fill() { calls.push({ type: 'fill', color: this.fillStyle }); },
     clip() {},
     assertBalanced() { assert.equal(stack.length, 0); },
   };
@@ -58,25 +58,25 @@ function snapshot(overrides = {}) {
   };
 }
 
-test('Indoor uses Full HD and five products in a deterministic 15-second loop', () => {
-  assert.deepEqual([INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_DURATION, INDOOR_PRODUCT_COUNT], [1920, 1080, 15, 5]);
+test('Indoor uses Full HD and five products in a deterministic 40-second loop', () => {
+  assert.deepEqual([INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_DURATION, INDOOR_PRODUCT_COUNT], [1920, 1080, 40, 5]);
   for (let index = 0; index < 5; index += 1) {
-    for (const phase of [0, 1.5, 2.5]) {
-      const state = getCarouselState(index * 3 + phase);
+    for (const phase of [0, 4, 7.5]) {
+      const state = getCarouselState(index * 8 + phase);
       assert.equal(state.index, index);
       assert.equal(state.transition, false);
       assert.deepEqual(state.slides, [{ index, offsetX: 0, opacity: 1 }]);
-      assert.deepEqual(getCarouselState(index * 3 + phase), state);
+      assert.deepEqual(getCarouselState(index * 8 + phase), state);
     }
   }
-  assert.deepEqual(getCarouselState(15), getCarouselState(0));
-  assert.deepEqual(getCarouselState(45), getCarouselState(0));
+  assert.deepEqual(getCarouselState(40), getCarouselState(0));
+  assert.deepEqual(getCarouselState(120), getCarouselState(0));
   for (const invalid of [-10, NaN, Infinity, undefined]) assert.deepEqual(getCarouselState(invalid), getCarouselState(0));
 });
 
 test('each transition slides to the next product and the last slides back to the first', () => {
   for (let index = 0; index < 5; index += 1) {
-    const middle = getCarouselState(index * 3 + 2.825);
+    const middle = getCarouselState(index * 8 + 7.825);
     assert.equal(middle.transition, true);
     assert.equal(middle.nextIndex, (index + 1) % 5);
     assert.ok(Math.abs(middle.progress - 0.5) < 1e-12);
@@ -84,8 +84,8 @@ test('each transition slides to the next product and the last slides back to the
     assert.ok(Math.abs(middle.slides[0].offsetX + 640) < 1e-8);
     assert.ok(Math.abs(middle.slides[1].offsetX - 640) < 1e-8);
     assert.ok(Math.abs(middle.slides[1].offsetX - middle.slides[0].offsetX - 1280) < 1e-8);
-    const before = getCarouselState((index + 1) * 3 - 0.000001);
-    const after = getCarouselState((index + 1) * 3);
+    const before = getCarouselState((index + 1) * 8 - 0.000001);
+    const after = getCarouselState((index + 1) * 8);
     assert.ok(Math.abs(before.slides[1].offsetX - after.slides[0].offsetX) < 0.001);
     assert.equal(before.slides[1].index, after.slides[0].index);
   }
@@ -93,7 +93,7 @@ test('each transition slides to the next product and the last slides back to the
 
 test('renderer paints only the visible product, or two products during a transition', () => {
   const input = snapshot();
-  for (const [seconds, expectedProducts] of [[1, [0]], [6, [2]], [14.9, [4, 0]]]) {
+  for (const [seconds, expectedProducts] of [[1, [0]], [16, [2]], [39.9, [4, 0]]]) {
     const context = mockContext();
     const state = drawIndoorFrame(context, input, seconds);
     assert.deepEqual(state, getCarouselState(seconds));
@@ -115,7 +115,7 @@ test('background cover crops without distortion and product contain fits the saf
   assert.ok(Math.abs(sw / sh - dw / dh) < 1e-10);
   const [, x, y, width, height] = images[1].args;
   assert.equal(width / height, 40);
-  assert.ok(x >= 600 && y >= 120 && x + width <= 1140 && y + height <= 960);
+  assert.ok(x >= 576 && y >= 120 && x + width <= 996 && y + height <= 960);
   assert.deepEqual(context.calls.find((call) => call.type === 'clipRect').args, [576, 84, 1280, 912]);
   context.assertBalanced();
 });
@@ -129,13 +129,13 @@ test('long names, descriptions, manufacturer and prices remain inside the detail
   const context = mockContext();
   drawIndoorFrame(context, input, 0);
   const textCalls = context.calls.filter((call) => call.type === 'text');
-  assert.equal(textCalls.length, 7, 'one manufacturer, three title lines, two description lines, one price');
+  assert.equal(textCalls.length, 9, 'one manufacturer, three title lines, two description lines, offer badge, price label and value');
   assert.ok(textCalls.some((call) => call.text.endsWith('…')));
   for (const call of textCalls) {
     assert.ok(call.text.length < 100);
     assert.ok(call.width <= 572);
-    assert.ok(call.x >= 1224 && call.x + call.width <= 1796);
-    assert.ok(call.y >= 276 && call.y + Number(call.font.match(/([\d.]+)px/)[1]) <= 860);
+    assert.ok(call.x >= 1084 && call.x + call.width <= 1656);
+    assert.ok(call.y >= 150 && call.y + Number(call.font.match(/([\d.]+)px/)[1]) <= 970);
   }
   context.assertBalanced();
 });
@@ -150,7 +150,7 @@ test('price is optional and no preview controls or timing labels are painted', (
 });
 
 test('stationary and sliding offers are clipped clear of the actual templates campaign marks', () => {
-  for (const seconds of [0, 2.825, 5.825, 11.9, 14.9999]) {
+  for (const seconds of [0, 7.825, 15.825, 31.9, 39.9999]) {
     const context = mockContext();
     drawIndoorFrame(context, snapshot(), seconds);
     const clipIndex = context.calls.findIndex((call) => call.type === 'clipRect');
@@ -187,4 +187,53 @@ test('renderer restores all canvas state when drawing fails', () => {
   assert.equal(context.globalAlpha, 0.4);
   assert.equal(context.shadowBlur, 8);
   context.assertBalanced();
+});
+
+test('normal and promotional prices have separate space below long descriptions', () => {
+  const input = snapshot();
+  input.products[0].originalPrice = 'R$ 29,90';
+  input.products[0].product.nome = 'Produto com nome extenso '.repeat(20);
+  input.products[0].product.subtitulo = 'Descri??o da embalagem '.repeat(20);
+  const context = mockContext();
+  drawIndoorFrame(context, input, 0);
+  const texts = context.calls.filter(call => call.type === 'text');
+  const normal = texts.find(call => call.text === 'De R$ 29,90');
+  const promo = texts.find(call => call.text === 'R$ 19,90');
+  assert.ok(normal && promo);
+  assert.ok(texts.some(call => call.text === 'Por'));
+  const fontSize = call => Number(call.font.match(/([\d.]+)px/)[1]);
+  for (const description of texts.slice(0, 6)) {
+    assert.ok(description.y + fontSize(description) < normal.y - 18);
+  }
+  assert.ok(normal.y + fontSize(normal) < promo.y);
+  assert.ok(fontSize(promo) > fontSize(normal));
+  assert.ok(context.calls.some(call => call.type === 'fillRect' && call.args[1] === normal.y + 19 && call.args[3] === 2));
+});
+
+test('short descriptions keep the offer close and the promotional price dominates', () => {
+  const input = snapshot();
+  input.products[0].originalPrice = 'R$ 10,45';
+  input.products[0].price = 'R$ 10,00';
+  const context = mockContext();
+  drawIndoorFrame(context, input, 0);
+  const texts = context.calls.filter(call => call.type === 'text');
+  const subtitle = texts[2];
+  const badge = texts.find(call => call.text === 'OFERTA');
+  const price = texts.find(call => call.text === 'R$ 10,00');
+  assert.ok(badge.y - subtitle.y < 110, 'no large blank area between description and offer');
+  assert.ok(Number(price.font.match(/([\d.]+)px/)[1]) >= 112);
+  assert.ok(price.y + Number(price.font.match(/([\d.]+)px/)[1]) < 996);
+});
+
+test('background theme colors reach the price badge and both prices', () => {
+  for (const badgeTheme of [{ fill: 'rgb(0, 104, 168)', text: '#ffffff' }, { fill: 'rgb(250, 220, 30)', text: '#0b2b33' }]) {
+    const input = snapshot({ badgeTheme });
+    input.products[0].originalPrice = 'R$ 29,90';
+    const context = mockContext();
+    drawIndoorFrame(context, input, 0);
+    assert.ok(context.calls.some(call => call.type === 'fill' && call.color === badgeTheme.fill));
+    for (const text of ['De R$ 29,90', 'Por', 'R$ 19,90']) {
+      assert.equal(context.calls.find(call => call.text === text).color, badgeTheme.text);
+    }
+  }
 });

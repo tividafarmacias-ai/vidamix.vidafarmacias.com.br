@@ -89,7 +89,7 @@ export async function readJsonBody(request, { maxBytes = 1_000_000 } = {}) {
   }
 }
 
-export async function readMultipartFormData(request, { maxBytes = 12_000_000 } = {}) {
+export async function readMultipartFormData(request, { maxBytes = 12_000_000, tooLargeMessage = 'A imagem excede o limite de 12 MB.' } = {}) {
   const header = String(request.headers['content-type'] || '');
   const contentType = header.split(';', 1)[0].trim().toLowerCase();
   if (contentType !== 'multipart/form-data') {
@@ -104,7 +104,7 @@ export async function readMultipartFormData(request, { maxBytes = 12_000_000 } =
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > maxBytes) throw badRequest('A imagem excede o limite de 12 MB.');
+    if (size > maxBytes) throw badRequest(tooLargeMessage);
     chunks.push(chunk);
   }
 

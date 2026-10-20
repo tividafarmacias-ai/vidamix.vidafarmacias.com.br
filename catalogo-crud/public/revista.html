@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f8fc" />
+    <title>Revista | VidaMix Studio</title>
+    <script src="/js/theme.js"></script>
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="icon" type="image/png" href="/pwa-icons/icon-192.png" />
+    <link rel="stylesheet" href="/brand.css" />
+    <link rel="stylesheet" href="/revista.css" />
+    <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <script src="/js/pwa.js" defer></script>
+    <script type="module" src="/js/app-shell.js"></script>
+  </head>
+  <body>
+    <header class="site-header"><div class="site-header-inner">
+      <a class="revista-back" href="/">← Central de criação</a>
+      <a class="site-brand" href="/" aria-label="VidaMix Studio — Central"><img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" /></a>
+    </div></header>
+    <main class="revista-main">
+      <div class="revista-heading">
+        <div><p class="revista-kicker">Campanhas mensais</p><h1>Revista</h1><p>Organize os produtos e preços da sua próxima campanha.</p></div>
+        <a class="revista-button" href="/api/revista/template" download="modelo-revista.xlsx">↓ Baixar modelo XLSX</a>
+      </div>
+      <div class="revista-workflow">
+        <section class="revista-panel" aria-labelledby="import-title">
+          <form id="revista-import-form">
+            <label for="revista-name">Nome da campanha <small>(opcional)</small></label>
+            <input id="revista-name" maxlength="120" placeholder="Ex.: Ofertas de outubro" autocomplete="off" />
+            <label for="revista-file">Planilha preenchida</label>
+            <input id="revista-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required aria-describedby="revista-file-hint" />
+            <p class="revista-help" id="revista-file-hint">XLSX de até 2 MB e 2.000 produtos. Mantenha o EAN como texto para preservar zeros à esquerda. Os preços serão importados com apenas as duas primeiras casas decimais, sem arredondamento.</p>
+            <button class="revista-button" id="revista-validate" type="submit">Importar e conferir produtos</button>
+          </form>
+          <p id="revista-status" role="status" aria-live="polite">Selecione a planilha para começar.</p>
+        </section>
+        <section class="revista-panel revista-review" aria-labelledby="review-title">
+          <p class="revista-kicker">02 · Conferir e criar</p><h2 id="review-title">Conferência do catálogo</h2>
+          <p id="revista-review-empty" class="revista-empty">Os produtos encontrados e eventuais pendências aparecerão aqui após a importação.</p>
+          <div id="revista-report" hidden>
+            <p id="revista-summary" class="revista-summary"></p>
+            <div id="revista-errors-panel" class="revista-alert" hidden><h3>Linhas com erro — serão ignoradas</h3><p>Você pode criar a campanha com os itens válidos ou corrigir estas linhas e importar novamente.</p><ul id="revista-errors"></ul></div>
+            <div id="revista-missing-panel" class="revista-alert" hidden><h3>EANs não encontrados no catálogo</h3><p>Estes códigos não entrarão na campanha. Você pode continuar com os produtos encontrados ou cadastrar os ausentes e importar novamente.</p><div class="revista-table-wrap"><table><thead><tr><th>Linha</th><th>EAN</th></tr></thead><tbody id="revista-missing"></tbody></table></div><a href="/catalogo" target="_blank" rel="noopener">Abrir catálogo ↗</a></div>
+            <details id="revista-matched-panel"><summary>Produtos válidos para a campanha</summary><div class="revista-table-wrap"><table><thead><tr><th>EAN</th><th>Produto</th><th>Preço</th></tr></thead><tbody id="revista-matched"></tbody></table></div></details>
+            <p id="revista-create-hint" class="revista-help"></p>
+            <button id="revista-create" class="revista-button" type="button" disabled>Criar campanha</button>
+          </div>
+        </section>
+      </div>
+      <section class="revista-panel revista-campaigns" aria-labelledby="campaigns-title">
+        <div class="revista-section-heading"><div><p class="revista-kicker">Sua organização</p><h2 id="campaigns-title">Campanhas criadas</h2></div><button id="revista-refresh" class="revista-button secondary" type="button">Atualizar</button></div>
+        <p id="revista-list-status" role="status" aria-live="polite">Carregando campanhas…</p>
+        <div id="revista-campaigns" class="revista-campaign-list"></div>
+      </section>
+      <section id="revista-campaign-detail" class="revista-panel revista-campaigns" hidden aria-labelledby="revista-detail-title">
+        <h2 id="revista-detail-title" tabindex="-1"></h2><p id="revista-detail-month"></p>
+        <div class="revista-table-wrap"><table><thead><tr><th>EAN</th><th>Produto</th><th>Preço</th></tr></thead><tbody id="revista-detail-items"></tbody></table></div>
+      </section>
+    </main>
+    <script type="module" src="/js/features/revista/editor.js"></script>
+  </body>
+</html>

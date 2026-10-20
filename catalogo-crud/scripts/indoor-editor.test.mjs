@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
+import { getBackgroundBadgeTheme } from '../public/js/features/stories/background-theme.js';
 import * as model from '../public/js/features/indoor/model.js';
 import { bindPriceInput } from '../public/js/features/stories/price-input.js';
+import { loadArtworkSelection } from '../public/js/features/revista/artwork.js';
 
 const [markup, moduleSource] = await Promise.all([
   readFile(new URL('../public/indoor-h.html', import.meta.url), 'utf8'),
@@ -126,6 +128,7 @@ async function openEditor(t, options = {}) {
     'product-views': ['show-catalog', 'show-selection'], 'mobile-dock': ['mobile-back', 'mobile-next'],
   })) elements.get(`indoor-${parent}`).append(...children.map((id) => elements.get(`indoor-${id}`)));
   const window = new Element('window');
+  window.location = { search: options.search || '' };
   const media = new Element('media');
   media.matches = Boolean(options.mobile);
   window.matchMedia = () => media;
@@ -153,9 +156,9 @@ async function openEditor(t, options = {}) {
     }
   }
   const sandbox = vm.createContext({
-    ...model, bindPriceInput, document, window, Image: FakeImage,
-    AbortController, DOMException, URLSearchParams, Blob,
-    INDOOR_WIDTH: 1920, INDOOR_HEIGHT: 1080, INDOOR_DURATION: 15,
+    ...model, bindPriceInput, getBackgroundBadgeTheme, loadArtworkSelection, document, window, Image: FakeImage,
+    AbortController, AbortSignal, DOMException, URLSearchParams, Blob,
+    INDOOR_WIDTH: 1920, INDOOR_HEIGHT: 1080, INDOOR_DURATION: 40,
     drawIndoorFrame: (context, snapshot, seconds) => {
       paints.push({ context, snapshot, seconds });
       return { index: Math.min(4, Math.floor(seconds / 3)) };
@@ -175,6 +178,8 @@ async function openEditor(t, options = {}) {
       let body;
       if (parsed.pathname === '/api/products') {
         body = options.products ? await options.products(parsed.searchParams, signal) : productPage();
+      } else if (url === '/api/revista/active/products/1?campaignId=5') {
+        body = { product: products[0], priceCents: 3705 };
       } else if (url === '/api/indoor-backgrounds') {
         body = { items: options.backgrounds ? await options.backgrounds() : backgrounds };
       } else throw new Error(`Unexpected API URL: ${url}`);
@@ -209,6 +214,13 @@ async function openEditor(t, options = {}) {
 function selectFive(fixture) {
   for (let id = 1; id <= 5; id += 1) fixture.get('results').querySelector(`[data-product-id="${id}"]`).click();
 }
+
+test('Indoor starts with the selected magazine product and saved promotional price', async t => {
+  const f = await openEditor(t, { search: '?productId=1&campaignId=5' });
+  assert.equal(f.get('selection-count').textContent, '1 / 5');
+  assert.ok(f.get('selected').querySelectorAll('input').some(input => input.value === '37,05'));
+  assert.equal(f.get('continue').disabled, true, 'four more products are still required for the video');
+});
 
 async function openPreview(fixture) {
   selectFive(fixture);
@@ -251,7 +263,7 @@ test('Indoor requires exactly five products and a background before enabling pre
   assert.equal(f.get('scenes').children.length, 5);
   assert.deepEqual(Array.from(f.paints.at(-1).snapshot.products, (entry) => entry.product.id), [1, 2, 3, 4, 5]);
   f.get('scenes').children[4].click();
-  assert.equal(f.paints.at(-1).seconds, 12);
+  assert.equal(f.paints.at(-1).seconds, 32);
   f.get('play').click();
   assert.equal(f.frames.size, 1);
   f.document.hidden = true;
@@ -364,6 +376,7 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   await flush();
   assert.equal(f.exports.length, 1);
   assert.equal(f.exports[0].width, 1920);
+  assert.equal(f.exports[0].duration, 40);
   assert.equal(f.exports[0].height, 1080);
   assert.equal(f.get('download-link').hidden, false);
   assert.equal(f.get('download-link').clickCount, 1);
@@ -374,6 +387,9 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   const input = f.get('selected').querySelector('input');
   input.value = '1290';
   input.dispatch('input');
+  const promotional = f.get('selected').querySelectorAll('input')[1];
+  promotional.value = '990';
+  promotional.dispatch('input');
   assert.equal(input.value, '12,90');
   assert.equal(f.get('download').disabled, true);
   assert.equal(f.get('download-link').hidden, true);
@@ -382,7 +398,8 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   f.steps.find((node) => node.dataset.step === 'preview').click();
   await flush();
   assert.equal(f.get('download').disabled, false);
-  assert.equal(f.paints.at(-1).snapshot.products[0].price, 'R$ 12,90');
+  assert.equal(f.paints.at(-1).snapshot.products[0].originalPrice, 'R$ 12,90');
+  assert.equal(f.paints.at(-1).snapshot.products[0].price, 'R$ 9,90');
   assert.equal(f.exports[0].signal.aborted, false);
 });
 
@@ -453,5 +470,5 @@ test('leaving preview while images load cannot restore a stale exportable snapsh
   f.steps.find((node) => node.dataset.step === 'preview').click();
   await flush();
   assert.equal(f.get('download').disabled, false);
-  assert.equal(f.paints.at(-1).snapshot.products[0].price, 'R$ 9,99');
+  assert.equal(f.paints.at(-1).snapshot.products[0].originalPrice, 'R$ 9,99');
 });

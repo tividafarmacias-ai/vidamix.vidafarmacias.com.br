@@ -1,3 +1,5 @@
+import { getBackgroundBadgeTheme } from './background-theme.js';
+import { loadArtworkSelection } from '../revista/artwork.js';
 import {
   DEFAULT_FREE_TEXT_WIDTH,
   DESCRIPTION_CARD_PADDING,
@@ -45,16 +47,6 @@ async function requestJson(url, { signal } = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Não foi possível carregar os dados.');
   return payload;
-}
-
-function getPreselectedProductId() {
-  if (typeof window === 'undefined') return null;
-
-  const value = new URLSearchParams(window.location.search).get('productId');
-  if (!value || !/^[1-9]\d*$/.test(value)) return null;
-
-  const productId = Number(value);
-  return Number.isSafeInteger(productId) ? productId : null;
 }
 
 function setStatus(message, isError = false) {
@@ -170,6 +162,11 @@ function hasPrice(target = 'details') {
   return parsePrice(getPriceForDetailsTarget(target)) !== null;
 }
 
+function getOriginalPrice(target = 'details') {
+  if (!state.useOriginalPrice || (target === 'details-secondary' && !isTwoProductsMode())) return '';
+  return target === 'details-secondary' ? state.secondaryOriginalPrice : state.originalPrice;
+}
+
 function normalizeCompositionMode(value) {
   if (value === 'two') return 'two-products';
   return COMPOSITION_MODES.has(value) ? value : 'single';
@@ -235,7 +232,9 @@ function updateAvailability() {
   elements.download.disabled = !ready || exporting;
   elements.downloadVideo.disabled = !ready || exporting;
 
-  if (!state.selectedBackground) {
+  if (state.campaignSelectionError && !state.selectedProduct) {
+    setStatus(state.campaignSelectionError, true);
+  } else if (!state.selectedBackground) {
     setStatus('Carregando backgrounds disponíveis...');
   } else if (!state.backgroundImage || state.backgroundImageUrl !== state.selectedBackground.url) {
     setStatus('Carregando o fundo da arte...');
@@ -435,14 +434,15 @@ function getDetailsTextMetrics(
 
 function getDetailsPriceMetrics(availableWidth, priceHeight, target = 'details') {
   const displayedPrice = hasPrice(target) ? getPriceForDetailsTarget(target) : '—';
-  const currencyFontSize = priceHeight * 0.3;
+  const currencyLabel = getOriginalPrice(target) ? 'Por R$' : 'R$';
+  const currencyFontSize = priceHeight * (getOriginalPrice(target) ? 0.22 : 0.3);
   let priceFontSize = priceHeight * 0.56;
   const horizontalPadding = priceHeight * 0.3;
   const contentGap = priceHeight * 0.12;
 
   const measureContext = getDetailsMeasureContext();
   measureContext.font = `800 ${currencyFontSize}px Arial, sans-serif`;
-  const currencyWidth = measureContext.measureText('R$').width;
+  const currencyWidth = measureContext.measureText(currencyLabel).width;
   measureContext.font = `900 ${priceFontSize}px Arial, sans-serif`;
   let priceWidth = measureContext.measureText(displayedPrice).width;
   const maxPriceWidth = Math.max(
@@ -483,6 +483,7 @@ function getDetailsLayout(transform, target = 'details') {
   const subtitleFontSize = clamp(availableWidth * 0.042, 14, 42);
   const subtitleLineHeight = subtitleFontSize * 1.22;
   const priceHeight = includesPrice ? clamp(availableWidth * 0.18, 64, 176) : 0;
+  const originalPriceHeight = includesPrice && getOriginalPrice(target) ? priceHeight * 0.5 : 0;
   const priceGap = includesPrice ? clamp(availableWidth * 0.045, 16, 42) : 0;
   const detailGap = clamp(availableWidth * 0.012, 5, 12);
   const textMetrics = getDetailsTextMetrics(
@@ -522,8 +523,8 @@ function getDetailsLayout(transform, target = 'details') {
     ),
   );
   const descriptionX = transform.x + ((availableWidth - descriptionWidth) / 2);
-  const cardHeight = descriptionHeight + priceGap + priceHeight;
-  const priceY = includesPrice ? transform.y + descriptionHeight + priceGap : null;
+  const cardHeight = descriptionHeight + priceGap + originalPriceHeight + priceHeight;
+  const priceY = includesPrice ? transform.y + descriptionHeight + priceGap + originalPriceHeight : null;
 
   return {
     x: transform.x,
@@ -546,6 +547,7 @@ function getDetailsLayout(transform, target = 'details') {
     titleLines: textMetrics.titleLines,
     supportingLines: textMetrics.supportingLines,
     priceHeight,
+    originalPriceHeight,
     priceY,
     badgeX: includesPrice
       ? descriptionX + ((descriptionWidth - priceMetrics.badgeWidth) / 2)
@@ -908,60 +910,6 @@ function drawImageCover(context, image, x, y, width, height) {
   context.drawImage(image, x + (width - drawnWidth) / 2, y + (height - drawnHeight) / 2, drawnWidth, drawnHeight);
 }
 
-function getBackgroundBadgeTheme(image) {
-  const fallback = { fill: '#0e746c', text: '#ffffff' };
-  if (!image) return fallback;
-
-  try {
-    const sampleCanvas = document.createElement('canvas');
-    sampleCanvas.width = 72;
-    sampleCanvas.height = 128;
-    const sampleContext = sampleCanvas.getContext('2d', { willReadFrequently: true });
-    drawImageCover(sampleContext, image, 0, 0, sampleCanvas.width, sampleCanvas.height);
-    const { data } = sampleContext.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
-    const colors = new Map();
-
-    for (let index = 0; index < data.length; index += 16) {
-      const red = data[index];
-      const green = data[index + 1];
-      const blue = data[index + 2];
-      const alpha = data[index + 3];
-      if (alpha < 200) continue;
-
-      const maximum = Math.max(red, green, blue);
-      const minimum = Math.min(red, green, blue);
-      const saturation = maximum === 0 ? 0 : (maximum - minimum) / maximum;
-      const luminance = (red * 0.299) + (green * 0.587) + (blue * 0.114);
-      if (saturation < 0.08 && luminance > 238) continue;
-
-      const bucketRed = Math.round(red / 24) * 24;
-      const bucketGreen = Math.round(green / 24) * 24;
-      const bucketBlue = Math.round(blue / 24) * 24;
-      const key = `${bucketRed},${bucketGreen},${bucketBlue}`;
-      const weight = 1 + (saturation * 2) + (luminance > 36 && luminance < 230 ? 0.45 : 0);
-      const entry = colors.get(key) || { red: 0, green: 0, blue: 0, weight: 0 };
-      entry.red += red * weight;
-      entry.green += green * weight;
-      entry.blue += blue * weight;
-      entry.weight += weight;
-      colors.set(key, entry);
-    }
-
-    const dominant = [...colors.values()].sort((left, right) => right.weight - left.weight)[0];
-    if (!dominant) return fallback;
-
-    const red = Math.round(dominant.red / dominant.weight);
-    const green = Math.round(dominant.green / dominant.weight);
-    const blue = Math.round(dominant.blue / dominant.weight);
-    const luminance = (red * 0.299) + (green * 0.587) + (blue * 0.114);
-    return {
-      fill: `rgb(${red}, ${green}, ${blue})`,
-      text: luminance > 155 ? '#0b2b33' : '#ffffff',
-    };
-  } catch {
-    return fallback;
-  }
-}
 
 function wrapText(context, text, maxWidth, maxLines = Infinity) {
   const words = String(text || '')
@@ -1072,7 +1020,9 @@ function drawDetailsCard(context, product, price, target = 'details') {
   if (!layout.includesPrice) return;
 
   const displayedPrice = price || '—';
-  const currencyFontSize = layout.priceHeight * 0.3;
+  const originalPrice = getOriginalPrice(target);
+  const currencyLabel = originalPrice ? 'Por R$' : 'R$';
+  const currencyFontSize = layout.priceHeight * (originalPrice ? 0.22 : 0.3);
   let priceFontSize = layout.priceHeight * 0.56;
   const horizontalPadding = layout.priceHeight * 0.3;
   const contentGap = layout.priceHeight * 0.12;
@@ -1080,7 +1030,7 @@ function drawDetailsCard(context, product, price, target = 'details') {
 
   context.save();
   context.font = `800 ${currencyFontSize}px Arial, sans-serif`;
-  const currencyWidth = context.measureText('R$').width;
+  const currencyWidth = context.measureText(currencyLabel).width;
   context.font = `900 ${priceFontSize}px Arial, sans-serif`;
   let priceWidth = context.measureText(displayedPrice).width;
   const maxPriceWidth = maxBadgeWidth - (horizontalPadding * 2) - currencyWidth - contentGap;
@@ -1096,6 +1046,28 @@ function drawDetailsCard(context, product, price, target = 'details') {
   );
   const badgeX = descriptionX + ((descriptionWidth - badgeWidth) / 2);
   const badgeTheme = state.backgroundBadgeTheme || { fill: '#0e746c', text: '#ffffff' };
+  if (originalPrice) {
+    const text = `De R$ ${originalPrice}`;
+    let size = layout.priceHeight * 0.26;
+    context.font = `600 ${size}px Arial, sans-serif`;
+    const maxWidth = descriptionWidth - 16;
+    if (context.measureText(text).width > maxWidth) {
+      size *= maxWidth / context.measureText(text).width;
+      context.font = `600 ${size}px Arial, sans-serif`;
+    }
+    const width = context.measureText(text).width;
+    const x = descriptionX + (descriptionWidth - width) / 2;
+    const y = layout.priceY - layout.originalPriceHeight / 2;
+    context.fillStyle = '#ffffff';
+    drawRoundedRect(context, x - 8, y - layout.originalPriceHeight / 2, width + 16, layout.originalPriceHeight, 8);
+    context.fill();
+    context.fillStyle = '#49566b';
+    context.textAlign = 'left';
+    context.textBaseline = 'middle';
+    context.fillText(text, x, y);
+    const prefixWidth = context.measureText('De ').width;
+    context.fillRect(x + prefixWidth, y, width - prefixWidth, Math.max(1, size / 18));
+  }
   context.fillStyle = price ? badgeTheme.fill : '#c9d5d2';
   drawRoundedRect(context, badgeX, layout.priceY, badgeWidth, layout.priceHeight, layout.priceHeight * 0.28);
   context.fill();
@@ -1105,7 +1077,7 @@ function drawDetailsCard(context, product, price, target = 'details') {
   context.textAlign = 'left';
   context.font = `800 ${currencyFontSize}px Arial, sans-serif`;
   const currencyX = badgeX + horizontalPadding;
-  context.fillText('R$', currencyX, layout.priceY + (layout.priceHeight / 2));
+  context.fillText(currencyLabel, currencyX, layout.priceY + (layout.priceHeight / 2));
   context.font = `900 ${priceFontSize}px Arial, sans-serif`;
   context.fillText(
     displayedPrice,
@@ -1371,14 +1343,24 @@ function syncPriceValidation() {
 
 function syncPriceInputs() {
   const twoProducts = isTwoProductsMode();
-  elements.primaryPriceLabel.textContent = twoProducts ? 'Preço do produto 1' : 'Preço da oferta';
+  elements.useOriginalPrice.checked = state.useOriginalPrice;
+  elements.originalPriceFields.hidden = !state.useOriginalPrice;
+  elements.originalPrice.disabled = !state.useOriginalPrice;
+  elements.secondaryOriginalPriceField.hidden = !twoProducts;
+  elements.secondaryOriginalPrice.disabled = !state.useOriginalPrice || !twoProducts;
+  elements.originalPriceLabel.textContent = twoProducts ? 'De - produto 1' : isComboMode() ? 'De (preço normal do combo)' : 'De (preço normal)';
+  if (elements.originalPrice.value !== state.originalPrice) elements.originalPrice.value = state.originalPrice;
+  if (elements.secondaryOriginalPrice.value !== state.secondaryOriginalPrice) elements.secondaryOriginalPrice.value = state.secondaryOriginalPrice;
+  elements.primaryPriceLabel.textContent = state.useOriginalPrice
+    ? (twoProducts ? 'Por - produto 1' : 'Por (preço da oferta)')
+    : (twoProducts ? 'Preço do produto 1' : 'Preço da oferta');
   elements.secondaryPriceField.hidden = false;
   elements.secondaryPriceField.classList.toggle('is-disabled', !twoProducts);
   elements.secondaryPriceField.setAttribute('aria-disabled', String(!twoProducts));
   elements.price.required = true;
   elements.secondaryPrice.disabled = !twoProducts;
   elements.secondaryPrice.required = twoProducts;
-  elements.secondaryPriceLabel.textContent = 'Preço do produto 2';
+  elements.secondaryPriceLabel.textContent = state.useOriginalPrice ? 'Por - produto 2' : 'Preço do produto 2';
 
   if (elements.price.value !== state.price) elements.price.value = state.price;
   if (elements.secondaryPrice.value !== state.secondaryPrice) {
@@ -1785,8 +1767,10 @@ function setCompositionMode(value) {
   if (getCompositionProductLimit() === 1) {
     state.secondaryProduct = null;
     state.secondaryPrice = '';
+    state.secondaryOriginalPrice = '';
   } else if (nextMode === 'two-products' && previousMode !== 'two-products') {
     state.secondaryPrice = '';
+    state.secondaryOriginalPrice = '';
   }
   resetProductCompositionState();
   syncCompositionModeControls();
@@ -1835,21 +1819,26 @@ function removeProductFromComposition(position) {
     state.selectedProduct = null;
     state.secondaryProduct = null;
     state.price = '';
+    state.originalPrice = '';
     state.secondaryPrice = '';
+    state.secondaryOriginalPrice = '';
     message = 'Todos os produtos foram removidos da arte.';
   } else if (position === 'primary') {
     const promoted = Boolean(state.secondaryProduct);
     state.selectedProduct = state.secondaryProduct;
     // A combo has one shared price; separate offers keep the remaining product's price.
     state.price = promoted ? (isTwoProductsMode() ? state.secondaryPrice : state.price) : '';
+    state.originalPrice = promoted ? (isTwoProductsMode() ? state.secondaryOriginalPrice : state.originalPrice) : '';
     state.secondaryProduct = null;
     state.secondaryPrice = '';
+    state.secondaryOriginalPrice = '';
     message = promoted
       ? 'Produto 1 removido. O produto 2 agora ocupa a posição 1.'
       : 'Produto 1 removido da arte.';
   } else {
     state.secondaryProduct = null;
     state.secondaryPrice = '';
+    state.secondaryOriginalPrice = '';
     message = 'Produto 2 removido da arte.';
   }
 
@@ -1859,6 +1848,7 @@ function removeProductFromComposition(position) {
 }
 
 function selectProductForComposition(product) {
+  state.campaignSelectionError = '';
   if (product.id === state.selectedProduct?.id) {
     removeProductFromComposition('primary');
     return;
@@ -1875,6 +1865,7 @@ function selectProductForComposition(product) {
   } else {
     state.secondaryProduct = product;
     state.secondaryPrice = '';
+    state.secondaryOriginalPrice = '';
   }
 
   refreshProductSelection({ collapseWhenComplete: true });
@@ -1889,22 +1880,27 @@ function addProductToResults(product) {
 }
 
 async function preselectProductFromLocation() {
-  const productId = getPreselectedProductId();
-  if (!productId) return false;
-
   try {
-    const product = await requestJson(`/api/products/${productId}`);
-    const isExpectedProduct = Number.isSafeInteger(product?.id) && product.id === productId;
-    if (!isExpectedProduct) return false;
-
+    const selection = await loadArtworkSelection(window.location.search, requestJson);
+    if (!selection) return false;
+    const { product, price } = selection;
+    state.campaignSelectionError = '';
     state.selectedProduct = product;
     state.secondaryProduct = null;
+    if (price !== undefined) {
+      state.price = price;
+      syncPriceInputs();
+    }
     syncProductPanel({ collapseWhenComplete: true });
     resetProductCompositionState();
     addProductToResults(product);
     renderProducts();
     return true;
-  } catch {
+  } catch (error) {
+    if (new URLSearchParams(window.location.search).has('campaignId')) {
+      state.campaignSelectionError = error.message;
+      setStatus(error.message, true);
+    }
     // An invalid, missing, or inaccessible product keeps the editor in its regular empty state.
     return false;
   }
@@ -2804,7 +2800,15 @@ function bindEvents() {
   elements.clearSearch.addEventListener('click', clearProductSearch);
   elements.products.addEventListener('scroll', loadMoreProductsOnScroll, { passive: true });
 
-  [[elements.price, 'price'], [elements.secondaryPrice, 'secondaryPrice']].forEach(([input, key]) => {
+  elements.useOriginalPrice.addEventListener('change', () => {
+    state.useOriginalPrice = elements.useOriginalPrice.checked;
+    syncPriceInputs();
+    syncProductEditor();
+    schedulePreview();
+    updateAvailability();
+  });
+  [[elements.price, 'price'], [elements.secondaryPrice, 'secondaryPrice'],
+    [elements.originalPrice, 'originalPrice'], [elements.secondaryOriginalPrice, 'secondaryOriginalPrice']].forEach(([input, key]) => {
     bindPriceInput(input, (value) => {
       state[key] = value;
       syncPriceValidation();
@@ -2898,7 +2902,7 @@ function bindEvents() {
       resizeEditorByPercentage(state.activeEditor, value);
     });
   });
-  [elements.price, elements.secondaryPrice, elements.freeText].forEach((input) => {
+  [elements.price, elements.secondaryPrice, elements.originalPrice, elements.secondaryOriginalPrice, elements.freeText].forEach((input) => {
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && document.body.classList.contains('is-mobile-editor')) {
         event.preventDefault();

@@ -86,7 +86,7 @@ const OFFLINE_ASSETS = [
   '/fonts/poppins-latin-700-normal.woff2',
 ];
 const PAGE_PATHS = new Set([
-  '/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h',
+  '/', '/catalogo', '/revista', '/revista.html', '/artes/stories', '/artes/feed', '/artes/indoor-h',
   '/index.html', '/catalogo.html', '/stories.html', '/feed.html', '/indoor-h.html',
   OFFLINE_URL,
 ]);

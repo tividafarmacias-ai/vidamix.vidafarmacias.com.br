@@ -1,6 +1,6 @@
 export const INDOOR_WIDTH = 1920;
 export const INDOOR_HEIGHT = 1080;
-export const INDOOR_DURATION = 15;
+export const INDOOR_DURATION = 40;
 export const INDOOR_PRODUCT_COUNT = 5;
 
 const SLOT_DURATION = INDOOR_DURATION / INDOOR_PRODUCT_COUNT;
@@ -13,14 +13,14 @@ const SAFE_TOP = 84;
 const SAFE_BOTTOM = INDOOR_HEIGHT - 84;
 const SLIDE_WIDTH = SAFE_RIGHT - SAFE_LEFT;
 const FONT_FAMILY = 'Arial, Helvetica, sans-serif';
-const PRODUCT_BOX = { x: 600, y: 120, width: 540, height: 840 };
-const CARD = { x: 1180, y: 220, width: 660, height: 640 };
+const PRODUCT_BOX = { x: 576, y: 120, width: 420, height: 840 };
+const CARD = { x: 1040, width: 660 };
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-/** A deterministic, seamless 15-second loop. Each product owns a three-second slot. */
+/** A deterministic, seamless 40-second loop. Each product owns an eight-second slot. */
 export function getCarouselState(seconds) {
   const input = Number(seconds);
   const time = Number.isFinite(input) ? Math.max(0, input) % INDOOR_DURATION : 0;
@@ -107,18 +107,32 @@ function roundedRectangle(context, x, y, width, height, radius) {
   context.closePath();
 }
 
-function drawDetails(context, entry) {
+function drawDetails(context, entry, badgeTheme) {
   const product = entry.product || {};
   const contentX = CARD.x + 44;
   const contentWidth = CARD.width - 88;
 
   context.save();
   try {
+    // Size the panel to its actual copy so short offers do not leave a large gap.
+    const manufacturer = cleanText(product.fabricante);
+    const originalPrice = cleanText(entry.originalPrice);
+    const price = cleanText(entry.price);
+    context.font = `700 54px ${FONT_FAMILY}`;
+    const titleLines = wrapText(context, product.nome || 'Produto', contentWidth, 3);
+    context.font = `400 32px ${FONT_FAMILY}`;
+    const subtitleLines = wrapText(context, product.subtitulo, contentWidth, 2);
+    const descriptionHeight = (manufacturer ? 48 : 0) + titleLines.length * 62
+      + (subtitleLines.length ? 18 + subtitleLines.length * 40 : 0);
+    const priceHeight = price ? 322 : originalPrice ? 100 : 0;
+    const panelHeight = 44 + descriptionHeight + (priceHeight ? 32 + priceHeight : 0) + 24;
+    const panelY = (INDOOR_HEIGHT - panelHeight) / 2;
+
     context.shadowColor = 'rgba(14, 29, 56, 0.16)';
     context.shadowBlur = 28;
     context.shadowOffsetY = 10;
     context.fillStyle = '#ffffff';
-    roundedRectangle(context, CARD.x, CARD.y, CARD.width, CARD.height, 36);
+    roundedRectangle(context, CARD.x, panelY, CARD.width, panelHeight, 32);
     context.fill();
     context.shadowColor = 'transparent';
     context.shadowBlur = 0;
@@ -126,44 +140,65 @@ function drawDetails(context, entry) {
     context.textBaseline = 'top';
     context.textAlign = 'left';
 
-    let titleY = CARD.y + 56;
-    const manufacturer = cleanText(product.fabricante);
+    let titleY = panelY + 44;
     if (manufacturer) {
       context.font = `600 28px ${FONT_FAMILY}`;
       context.fillStyle = '#5b677d';
       context.fillText(ellipsize(context, manufacturer, contentWidth), contentX, titleY);
-      titleY += 56;
+      titleY += 48;
     }
 
-    context.font = `700 60px ${FONT_FAMILY}`;
+    context.font = `700 54px ${FONT_FAMILY}`;
     context.fillStyle = '#142c54';
-    const titleLines = wrapText(context, product.nome || 'Produto', contentWidth, 3);
-    titleLines.forEach((line, index) => context.fillText(line, contentX, titleY + index * 70));
+    titleLines.forEach((line, index) => context.fillText(line, contentX, titleY + index * 62));
 
-    const subtitleY = titleY + titleLines.length * 70 + 22;
-    context.font = `400 34px ${FONT_FAMILY}`;
+    const subtitleY = titleY + titleLines.length * 62 + 18;
+    context.font = `400 32px ${FONT_FAMILY}`;
     context.fillStyle = '#49566b';
-    const subtitleLines = wrapText(context, product.subtitulo, contentWidth, 2);
-    subtitleLines.forEach((line, index) => context.fillText(line, contentX, subtitleY + index * 44));
+    subtitleLines.forEach((line, index) => context.fillText(line, contentX, subtitleY + index * 40));
 
-    // The controller supplies an already formatted Brazilian price; blank means no price.
-    const price = cleanText(entry.price);
-    if (price) {
-      let fontSize = 112;
-      context.font = `700 ${fontSize}px ${FONT_FAMILY}`;
-      while (fontSize > 48 && context.measureText(price).width > contentWidth) {
-        fontSize -= 2;
-        context.font = `700 ${fontSize}px ${FONT_FAMILY}`;
+    if (originalPrice || price) {
+      const priceY = panelY + 44 + descriptionHeight + 32;
+      context.fillStyle = badgeTheme.fill;
+      roundedRectangle(context, CARD.x + 20, priceY, CARD.width - 40, priceHeight, 24);
+      context.fill();
+      if (price) {
+        context.fillStyle = '#ffe35b';
+        roundedRectangle(context, contentX, priceY + 22, 180, 44, 10);
+        context.fill();
+        context.font = `800 28px ${FONT_FAMILY}`;
+        context.fillStyle = '#762014';
+        context.fillText('OFERTA', contentX + 24, priceY + 30);
       }
-      context.fillStyle = '#cf2035';
-      context.fillText(ellipsize(context, price, contentWidth), contentX, CARD.y + CARD.height - 168);
+      if (originalPrice) {
+        context.font = '500 34px ' + FONT_FAMILY;
+        context.fillStyle = badgeTheme.text;
+        const label = ellipsize(context, 'De ' + originalPrice, contentWidth);
+        const normalY = priceY + (price ? 84 : 32);
+        context.fillText(label, contentX, normalY);
+        const labelWidth = context.measureText('De ').width;
+        context.fillRect(contentX + labelWidth, normalY + 19,
+          Math.max(0, context.measureText(label).width - labelWidth), 2);
+      }
+      if (price) {
+        context.font = '700 30px ' + FONT_FAMILY;
+        context.fillStyle = badgeTheme.text;
+        context.fillText('Por', contentX, priceY + 134);
+        let fontSize = 132;
+        context.font = '700 ' + fontSize + 'px ' + FONT_FAMILY;
+        while (fontSize > 40 && context.measureText(price).width > contentWidth) {
+          fontSize -= 2;
+          context.font = '700 ' + fontSize + 'px ' + FONT_FAMILY;
+        }
+        context.fillText(ellipsize(context, price, contentWidth), contentX, priceY + 174);
+      }
     }
   } finally {
     context.restore();
   }
 }
 
-function drawProduct(context, entry) {
+function drawProduct(context, entry, badgeTheme) {
   const size = imageSize(entry.image);
   if (size) {
     const scale = Math.min(PRODUCT_BOX.width / size.width, PRODUCT_BOX.height / size.height);
@@ -174,16 +209,16 @@ function drawProduct(context, entry) {
       PRODUCT_BOX.y + (PRODUCT_BOX.height - height) / 2,
       width, height);
   }
-  drawDetails(context, entry);
+  drawDetails(context, entry, badgeTheme);
 }
 
 /**
  * Paints directly into the supplied 1920×1080 canvas; no intermediate canvases or DOM.
- * products: exactly five { product: { nome, subtitulo, fabricante }, image, price } entries.
+ * products: exactly five { product: { nome, subtitulo, fabricante }, image, originalPrice, price } entries.
  * background and image must be loaded CanvasImageSources. Missing images are skipped.
  * Returns the carousel state used, so preview controls can follow the same timeline.
  */
-export function drawIndoorFrame(context, { background, products }, seconds) {
+export function drawIndoorFrame(context, { background, products, badgeTheme = { fill: '#0e746c', text: '#ffffff' } }, seconds) {
   if (!Array.isArray(products) || products.length !== INDOOR_PRODUCT_COUNT || products.some((entry) => !entry)) {
     throw new RangeError('O vídeo Indoor precisa de exatamente 5 produtos.');
   }
@@ -211,7 +246,7 @@ export function drawIndoorFrame(context, { background, products }, seconds) {
       context.save();
       try {
         context.translate(slide.offsetX, 0);
-        drawProduct(context, products[slide.index]);
+        drawProduct(context, products[slide.index], badgeTheme);
       } finally {
         context.restore();
       }

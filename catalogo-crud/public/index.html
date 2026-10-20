@@ -35,6 +35,7 @@
         <nav class="site-nav" aria-label="Navegação principal">
           <a href="/" aria-current="page">Central</a>
           <a href="/catalogo">Catálogo</a>
+          <a href="/revista">Revista</a>
           <a href="/artes/stories">Stories</a>
           <a href="/artes/feed">Feed</a>
           <a href="/artes/indoor-h">TV Indoor</a>
@@ -46,20 +47,12 @@
       <main class="studio-main" id="conteudo">
     
 
-        <section class="studio-hero" aria-labelledby="hero-title">
+        <section class="studio-hero" id="home-hero" aria-labelledby="hero-title">
           <div class="studio-hero-copy">
-            <span class="hero-chip">STORIES, FEED E TV INDOOR DISPONÍVEIS</span>
+            <span class="hero-chip" id="home-hero-chip">STORIES, FEED E TV INDOOR DISPONÍVEIS</span>
             <h1 id="hero-title"><span class="home-desktop-copy">Transforme o seu catálogo em campanhas visuais.</span><span class="home-mobile-copy">O que vamos criar hoje?</span></h1>
-            <p><span class="home-desktop-copy">Leve seus produtos às redes sociais e à TV da loja. Crie artes para Stories e Feed ou um carrossel animado com 5 ofertas para TV Indoor.</span><span class="home-mobile-copy">Escolha um formato e transforme seus produtos em ofertas.</span></p>
-            <div class="studio-hero-actions" data-tour="home-create">
-              <a class="studio-primary-action" href="/artes/stories"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 6h6m-3 4v6m-3-3h6M11 19h2"/></svg> Criar Story</a>
-              <a class="studio-primary-action" href="/artes/feed"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 12h8m-4-4v8"/></svg> Criar Feed</a>
-              <a class="studio-primary-action" href="/artes/indoor-h"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8m-4-4v4m-2-15 5 4-5 4z"/></svg> Criar vídeo para TV</a>
-              <button class="ean-launch-button" id="ean-overlay-open" type="button" data-tour="home-barcode">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 3H3v4m14-4h4v4M3 17v4h4m14-4v4h-4M7 7v10m4-10v10m3-10v10m3-10v10"/></svg>
-                <span class="home-desktop-copy">Código de barras</span><span class="home-mobile-copy">Ler com câmera</span>
-              </button>
-            </div>
+            <p id="home-hero-description"><span class="home-desktop-copy">Leve seus produtos às redes sociais e à TV da loja. Crie artes para Stories e Feed ou um carrossel animado com 5 ofertas para TV Indoor.</span><span class="home-mobile-copy">Escolha um formato e transforme seus produtos em ofertas.</span></p>
+            <a class="studio-primary-action hero-campaign-action" id="home-campaign-action" href="#revista-vigente" hidden>Explorar ofertas da revista <span aria-hidden="true">↓</span></a>
             <div class="studio-hero-help">
               <button class="pwa-install-button" type="button" data-pwa-install aria-describedby="pwa-install-help" hidden>Instalar aplicativo</button>
               <a class="studio-secondary-action" href="/catalogo">Explorar catálogo <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></a>
@@ -70,17 +63,31 @@
             </div>
             <p class="pwa-install-help" id="pwa-install-help" data-pwa-help role="status" hidden></p>
           </div>
-          <div class="hero-preview" aria-hidden="true">
-            <span class="hero-preview-caption">DO CATÁLOGO PARA O STORY</span>
-            <div class="hero-preview-halo"></div><div class="hero-story-card hero-story-card-back"></div>
-            <div class="hero-story-card"><span class="hero-story-label">OFERTA DA SEMANA</span><div class="hero-product-shape"><span></span></div><div class="hero-story-copy"><i></i><b></b></div><strong>R$ 29,90</strong></div>
-            <span class="hero-preview-format">1080 × 1920 <span>PNG · MP4</span></span>
+          <aside class="hero-campaign" id="home-campaign-cover" aria-label="Revista vigente" hidden>
+            <span class="hero-campaign-label">REVISTA DO MÊS</span>
+            <strong id="home-campaign-month"></strong>
+            <span id="home-campaign-year"></span>
+            <div class="hero-campaign-products" id="home-campaign-products" aria-hidden="true"></div>
+            <p id="home-campaign-count"></p>
+            <span class="hero-campaign-footer">Ofertas prontas para divulgar</span>
+          </aside>
+        </section>
+
+        <section class="home-create-section" aria-label="Formatos de criação">
+          <div class="studio-hero-actions home-create-actions" data-tour="home-create">
+            <a class="studio-primary-action" href="/artes/stories"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 6h6m-3 4v6m-3-3h6M11 19h2"/></svg> Criar Story</a>
+            <a class="studio-primary-action" href="/artes/feed"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 12h8m-4-4v8"/></svg> Criar Feed</a>
+            <a class="studio-primary-action" href="/artes/indoor-h"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8m-4-4v4m-2-15 5 4-5 4z"/></svg> Criar vídeo para TV</a>
+            <a class="studio-primary-action" href="/revista"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/></svg> Criar Revista</a>
+            <button class="ean-launch-button" id="ean-overlay-open" type="button" data-tour="home-barcode">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 3H3v4m14-4h4v4M3 17v4h4m14-4v4h-4M7 7v10m4-10v10m3-10v10m3-10v10"/></svg>
+              <span class="home-desktop-copy">Código de barras</span><span class="home-mobile-copy">Ler com câmera</span>
+            </button>
           </div>
         </section>
 
-        <section class="format-section" id="formatos" aria-labelledby="formatos-title">
+        <section class="format-section" id="formatos" aria-label="Formatos disponíveis">
           <div class="section-heading">
-            <div><p class="studio-kicker">Disponível agora</p><h2 id="formatos-title"><span class="home-desktop-copy">Tudo pronto para sua próxima campanha</span><span class="home-mobile-copy">Explore os formatos</span></h2></div>
             <p>Escolha o formato da sua campanha: redes sociais ou a televisão da loja.</p>
           </div>
 
@@ -102,14 +109,28 @@
             <article class="format-card format-card-indoor is-ready" aria-label="TV Indoor horizontal, disponível agora">
               <div class="format-card-topline"><span class="format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 22h8m-4-4v4m-2-14 5 3-5 3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="format-status is-available">Disponível agora</span></div>
               <div><h3>TV Indoor</h3><p>Ofertas em movimento para a televisão da sua loja.</p></div>
-              <ul class="format-features" aria-label="Recursos de TV Indoor"><li>5 produtos em sequência</li><li>Preços opcionais</li><li>Carrossel animado</li><li>MP4 de 15 s</li></ul>
+              <ul class="format-features" aria-label="Recursos de TV Indoor"><li>5 produtos em sequência</li><li>Preços De e Por opcionais</li><li>8 segundos por produto</li><li>MP4 de 40 s</li></ul>
               <div class="format-card-footer"><span>1920 × 1080 · 16:9</span><a href="/artes/indoor-h">Criar vídeo para TV <b aria-hidden="true">→</b></a></div>
             </article>
           </div>
         </section>
 
 
-    
+        <section class="home-revista" id="revista-vigente" aria-labelledby="home-revista-title">
+          <div class="section-heading">
+            <div><p class="studio-kicker">Ofertas do mês</p><h2 id="home-revista-title">Revista vigente</h2></div>
+            <a class="studio-secondary-action" href="/revista">Gerenciar campanhas <span aria-hidden="true">→</span></a>
+          </div>
+          <p class="home-revista-description" id="home-revista-description">Escolha um produto e crie sua arte com o preço da campanha já preenchido.</p>
+          <div class="home-revista-toolbar" id="home-revista-toolbar" hidden>
+            <label for="home-revista-search">Buscar nesta revista</label>
+            <input id="home-revista-search" type="search" placeholder="Nome, marca ou EAN" autocomplete="off" />
+          </div>
+          <p class="home-revista-status" id="home-revista-status" role="status" aria-live="polite">Carregando revista vigente…</p>
+          <button class="home-revista-more" id="home-revista-retry" type="button" hidden>Tentar novamente</button>
+          <div class="home-revista-grid" id="home-revista-products"></div>
+          <button class="home-revista-more" id="home-revista-more" type="button" hidden>Ver mais produtos</button>
+        </section>
       </main>
     </div>
 
@@ -147,6 +168,7 @@
       </section>
     </dialog>
     <script type="module" src="/home.js"></script>
+    <script type="module" src="/js/features/revista/home.js"></script>
     <script type="module" src="/js/features/tour/index.js"></script>
   </body>
 </html>

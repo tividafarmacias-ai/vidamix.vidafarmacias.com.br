@@ -119,6 +119,7 @@
 [data-theme="dark"] .studio-hero-actions > a:nth-child(2) { color: var(--azul); background: var(--color-blue-soft); border-color: var(--glass-line); }
 [data-theme="dark"] .studio-hero-actions > a:nth-child(3) { color: #ffabb9; background: var(--color-red-soft); border-color: #684351; }
 [data-theme="dark"] .studio-hero-actions > .ean-launch-button { color: var(--azul); background: var(--color-surface); border-color: var(--glass-line); }
+[data-theme="dark"] .studio-hero-actions.home-create-actions > .studio-primary-action { color: #fff; background: #205d9f; border-color: #3277bd; }
 [data-theme="dark"] .studio-hero-help .pwa-install-button { background: var(--color-surface); }
 [data-theme="dark"] .is-mobile-editor #story-mobile-panel-export .story-png-button { color: var(--azul); border-color: var(--glass-line); background: var(--color-blue-soft); }
 [data-theme="dark"] .tour-card[data-mode] { background: linear-gradient(180deg, #232329, transparent 200px), var(--glass-surface-strong); }

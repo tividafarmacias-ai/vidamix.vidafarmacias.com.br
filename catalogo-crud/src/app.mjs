@@ -5,6 +5,7 @@ import { isRequestAuthorized, sendUnauthorized } from './http/auth.mjs';
 import { defaultSecurityHeaders, sendError } from './http/response.mjs';
 import { serveFile } from './http/static-files.mjs';
 import { createProductService } from './modules/products/product-service.mjs';
+import { createRevistaService } from './modules/revista/revista-service.mjs';
 import { productImageUrl, resolveProductImage } from './modules/products/product-images.mjs';
 import {
   createStoryBackgroundService,
@@ -52,6 +53,7 @@ export function createApplication({ config, database, logger = console }) {
     urlPrefix: '/indoor-backgrounds',
   });
   const apiRouter = createApiRouter({
+    revistaService: createRevistaService({ database, imagesDirectory: config.imagesDirectory }),
     productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService,
   });
   const backgroundRoutes = [

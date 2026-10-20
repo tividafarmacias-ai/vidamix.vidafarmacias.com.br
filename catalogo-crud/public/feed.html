@@ -176,6 +176,21 @@
               <p>Digite o valor de destaque da oferta.</p>
             </div>
           </div>
+          <label class="story-promotion-toggle">
+            <input id="story-use-original-price" type="checkbox" role="switch" aria-controls="story-original-price-fields" />
+            <span class="story-promotion-switch" aria-hidden="true"></span>
+            <span>Usar preço De/Por <small>Opcional</small></span>
+          </label>
+          <div id="story-original-price-fields" class="story-price-fields" hidden>
+            <label class="story-price-field">
+              <span class="story-price-field-label" id="story-original-price-label">De (preço normal)</span>
+              <span class="story-price-input"><span>R$</span><input id="story-original-price" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" placeholder="0,00" maxlength="16" aria-labelledby="story-original-price-label" disabled /></span>
+            </label>
+            <label class="story-price-field" id="story-secondary-original-price-field" hidden>
+              <span class="story-price-field-label" id="story-secondary-original-price-label">De - produto 2</span>
+              <span class="story-price-input"><span>R$</span><input id="story-secondary-original-price" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" placeholder="0,00" maxlength="16" aria-labelledby="story-secondary-original-price-label" disabled /></span>
+            </label>
+          </div>
           <div class="story-price-fields">
             <label class="story-price-field">
               <span class="story-price-field-label" id="story-primary-price-label">Preço da oferta</span>

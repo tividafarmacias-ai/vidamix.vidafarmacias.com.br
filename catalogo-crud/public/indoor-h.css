@@ -50,6 +50,7 @@ h2[tabindex="-1"]:focus { outline: none; }
 .indoor-slot-empty p { margin: 0; font-size: .8rem; color: var(--color-muted); }
 .indoor-item-actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0; }
 .indoor-item-actions button { min-width: 40px; min-height: 36px; padding: 5px 9px; font-size: .72rem; color: var(--azul); border: 1px solid var(--glass-line); border-radius: 7px; background: var(--color-surface); }
+.indoor-prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
 .indoor-price { display: grid; gap: 4px; font-size: .65rem; color: var(--color-muted); }
 .indoor-price input { width: 100%; min-height: 38px; padding: 6px 9px; color: var(--color-ink); font-size: 16px; border: 1px solid var(--glass-line); border-radius: 7px; }
 #indoor-continue { width: 100%; }
@@ -57,7 +58,10 @@ h2[tabindex="-1"]:focus { outline: none; }
 .indoor-background-option { padding: 8px; color: var(--color-ink); text-align: left; border: 2px solid transparent; border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px var(--glass-line); }
 .indoor-background-option img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; }
 .indoor-background-option span { display: block; padding: 9px 3px; font-size: .8rem; }
-.indoor-background-option[aria-pressed="true"] { border-color: var(--azul); background: var(--color-blue-soft); }
+.indoor-background-option { position: relative; }
+.indoor-background-option[aria-pressed="true"] { border-color: #087443; outline: 3px solid #087443; outline-offset: 2px; background: var(--color-blue-soft); }
+.indoor-background-option[aria-pressed="true"]::after { content: '✓ Selecionado'; position: absolute; top: 14px; right: 14px; padding: 7px 12px; border-radius: 8px; background: #087443; color: #fff; font-size: .8rem; font-weight: 700; box-shadow: 0 2px 8px #0003; }
+.indoor-background-option:focus-visible { outline: 3px solid var(--azul); outline-offset: 5px; }
 .indoor-empty { grid-column: 1 / -1; padding: 24px; margin: 0; color: var(--color-muted); font-size: .85rem; text-align: center; border: 1px dashed var(--glass-selected-line); border-radius: 12px; }
 .indoor-footer { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-top: 24px; }
 .indoor-preview-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }

@@ -1,12 +1,52 @@
 import { readJsonBody, readMultipartFormData, sendError, sendJson, sendNoContent, sendRevalidatedJson } from '../http/response.mjs';
 import { createRouter } from '../http/router.mjs';
+import { defaultSecurityHeaders } from '../http/response.mjs';
+import { createRevistaTemplate, readRevistaWorkbook } from '../modules/revista/revista-service.mjs';
 
 function getRequestedProductId(productService, value) {
   return productService.productId(value);
 }
 
-export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService }) {
+export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, revistaService }) {
   const router = createRouter();
+
+  router.get('/api/revista/template', async ({ response }) => {
+    const buffer = await createRevistaTemplate();
+    response.writeHead(200, { ...defaultSecurityHeaders,
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="modelo-revista.xlsx"',
+      'Content-Length': buffer.length, 'Cache-Control': 'no-store' });
+    response.end(buffer);
+  });
+  router.get('/api/revista/campaigns', ({ response }) => sendJson(response, 200, { items: revistaService.list() }));
+  router.get('/api/revista/active', ({ response }) => sendJson(response, 200, { campaign: revistaService.active() }));
+  router.get('/api/revista/active/products/:id', ({ params, url, response }) => {
+    const campaign = revistaService.active();
+    const item = campaign?.id === Number(url.searchParams.get('campaignId'))
+      ? campaign.items.find(item => item.productId === Number(params.id) && item.available) : null;
+    const product = item ? productService.getProduct(item.productId) : null;
+    if (!product) return sendError(response, 404, 'Esta oferta não está mais disponível na revista vigente. Volte à Central para escolher uma oferta atual.');
+    sendJson(response, 200, { product, priceCents: item.priceCents, campaignName: campaign.name });
+  });
+  router.get('/api/revista/campaigns/:id', ({ params, response }) => {
+    const campaign = /^\d+$/.test(params.id) ? revistaService.get(Number(params.id)) : null;
+    if (!campaign) return sendError(response, 404, 'Campanha não encontrada.');
+    sendJson(response, 200, campaign);
+  });
+  router.delete('/api/revista/campaigns/:id', ({ params, response }) => {
+    const id = /^\d+$/.test(params.id) ? Number(params.id) : 0;
+    if (!id || !revistaService.remove(id)) return sendError(response, 404, 'Campanha não encontrada.');
+    sendJson(response, 200, { id, removed: true });
+  });
+  for (const action of ['validate', 'campaigns']) {
+    router.post(`/api/revista/${action}`, async ({ request, response }) => {
+      const { files, fields } = await readMultipartFormData(request, { maxBytes: 2_100_000, tooLargeMessage: 'A planilha deve ter até 2 MB.' });
+      const rows = await readRevistaWorkbook(files.find(file => file.fieldName === 'file'));
+      if (action === 'validate') return sendJson(response, 200, revistaService.validate(rows));
+      const result = revistaService.create(rows, fields.name);
+      sendJson(response, result.report ? 422 : result.existing ? 200 : 201, result);
+    });
+  }
 
   router.get('/api/health', ({ response }) => {
     sendJson(response, 200, { status: 'ok' });

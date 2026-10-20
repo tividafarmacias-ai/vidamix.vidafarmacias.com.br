@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <link rel="stylesheet" href="/pwa.css" />
     <script src="/js/pwa.js" defer></script>
-    <meta name="description" content="Crie um vídeo de 15 segundos com cinco produtos para a TV da sua loja." />
+    <meta name="description" content="Crie um vídeo de 40 segundos com cinco produtos para a TV da sua loja." />
     <title>TV Indoor | VidaMix Studio</title>
     <link rel="stylesheet" href="/brand.css" />
     <link rel="stylesheet" href="/indoor-h.css" />
@@ -26,12 +26,12 @@
     <script src="/js/pwa-launch.js"></script>
     <header class="site-header">
       <div class="site-header-inner">
-        <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação"><img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" /></a>
         <a class="indoor-back" href="/">← Central de criação</a>
+        <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação"><img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" /></a>
       </div>
     </header>
     <main class="indoor-main">
-      <div class="indoor-heading"><div><p class="indoor-kicker">Sua vitrine na TV</p><h1><span class="indoor-title-desktop">5 produtos. Um vídeo de 15 segundos.</span><span class="indoor-title-mobile">Vídeo para TV</span></h1><p>Monte a sequência de ofertas para a televisão da sua loja.</p></div><span class="indoor-format">1920 × 1080 · Horizontal · MP4</span></div>
+      <div class="indoor-heading"><div><p class="indoor-kicker">Sua vitrine na TV</p><h1><span class="indoor-title-desktop">5 produtos. Um vídeo de 40 segundos.</span><span class="indoor-title-mobile">Vídeo para TV</span></h1><p>Monte a sequência de ofertas para a televisão da sua loja.</p></div><span class="indoor-format">1920 × 1080 · Horizontal · MP4</span></div>
       <nav class="indoor-steps" aria-label="Etapas de criação">
         <button type="button" data-step="products" aria-current="step" aria-controls="indoor-products-panel" aria-label="Etapa 1: escolher 5 produtos"><span>1</span><b class="indoor-step-full">Escolher 5 produtos</b><b class="indoor-step-short">Produtos</b></button>
         <button type="button" data-step="background" aria-controls="indoor-background-panel" aria-label="Etapa 2: escolher fundo" disabled><span>2</span><b class="indoor-step-full">Escolher fundo</b><b class="indoor-step-short">Fundo</b></button>
@@ -55,7 +55,7 @@
           </div>
           <aside id="indoor-selection-panel" class="indoor-panel indoor-selection" aria-labelledby="indoor-selected-heading">
             <div class="indoor-panel-heading"><h2 id="indoor-selected-heading" tabindex="-1">Sequência do vídeo</h2><strong id="indoor-selection-count">0 / 5</strong></div>
-            <p class="indoor-help">Cada produto aparece por 3 segundos. Use as setas para mudar a ordem. Os preços são opcionais.</p>
+            <p class="indoor-help">Cada produto aparece por 8 segundos. Use as setas para mudar a ordem. Os preços são opcionais.</p>
             <ol id="indoor-selected" class="indoor-selected"></ol>
             <button id="indoor-continue" class="indoor-button" type="button" disabled>Continuar para o fundo →</button>
           </aside>
@@ -76,13 +76,13 @@
             <h2 id="indoor-preview-heading" tabindex="-1">Confira sua campanha</h2>
             <p class="indoor-help">Um produto por vez, com transição em carrossel e retorno ao primeiro para repetir na TV.</p>
             <div class="indoor-canvas-wrap"><canvas id="indoor-canvas" width="1920" height="1080" aria-label="Prévia do vídeo de cinco produtos para TV">Prévia do vídeo horizontal.</canvas><p id="indoor-preview-loading">Preparando as imagens…</p></div>
-            <div class="indoor-playback"><button id="indoor-play" class="indoor-button secondary" type="button" disabled>Reproduzir</button><label class="indoor-timeline" for="indoor-time">Posição do vídeo<input id="indoor-time" type="range" min="0" max="14.9666667" step="0.0333333" value="0" disabled /></label><output id="indoor-time-label" for="indoor-time">0,0 / 15 s</output></div>
+            <div class="indoor-playback"><button id="indoor-play" class="indoor-button secondary" type="button" disabled>Reproduzir</button><label class="indoor-timeline" for="indoor-time">Posição do vídeo<input id="indoor-time" type="range" min="0" max="39.9666667" step="0.0333333" value="0" disabled /></label><output id="indoor-time-label" for="indoor-time">0,0 / 40 s</output></div>
             <div id="indoor-scenes" class="indoor-scenes" role="group" aria-label="Ir para um produto do vídeo"></div>
           </div>
           <aside class="indoor-panel indoor-export" aria-labelledby="indoor-export-heading">
             <p class="indoor-kicker">Pronto para sua loja</p><h2 id="indoor-export-heading">Baixar vídeo para TV</h2>
-            <dl class="indoor-specs"><div><dt>Formato</dt><dd>1920 × 1080 · 16:9</dd></div><div><dt>Duração</dt><dd>15 segundos</dd></div><div><dt>Sequência</dt><dd>5 produtos · 3 s por produto</dd></div><div><dt>Arquivo</dt><dd>MP4 · sem áudio</dd></div></dl>
-            <button id="indoor-download" class="indoor-button" type="button" disabled>Baixar MP4 · 15 s</button>
+            <dl class="indoor-specs"><div><dt>Formato</dt><dd>1920 × 1080 · 16:9</dd></div><div><dt>Duração</dt><dd>40 segundos</dd></div><div><dt>Sequência</dt><dd>5 produtos · 8 s por produto</dd></div><div><dt>Arquivo</dt><dd>MP4 · sem áudio</dd></div></dl>
+            <button id="indoor-download" class="indoor-button" type="button" disabled>Baixar MP4 · 40 s</button>
             <p id="indoor-export-status" class="indoor-help" role="status" aria-live="polite">Confira a prévia antes de exportar.</p>
             <progress id="indoor-export-progress" max="100" value="0" aria-label="Progresso da exportação" hidden></progress>
             <button id="indoor-cancel-export" class="indoor-button secondary" type="button" hidden>Cancelar exportação</button>

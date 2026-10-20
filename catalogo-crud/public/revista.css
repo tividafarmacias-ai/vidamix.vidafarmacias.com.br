@@ -1,0 +1,53 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; min-width: 320px; color: var(--color-ink); background: var(--glass-page-background); }
+.revista-back { color: var(--azul); font-size: .85rem; font-weight: 600; text-decoration: none; }
+.revista-back:hover { color: var(--brand-blue-dark); text-decoration: underline; text-underline-offset: 3px; }
+.revista-main { width: min(1320px, 92%); margin: 32px auto 72px; }
+.revista-heading, .revista-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.revista-heading { margin-bottom: 28px; }
+.revista-heading p, .revista-help { color: var(--color-muted); line-height: 1.6; font-size: .85rem; }
+.revista-kicker { margin: 0 0 8px; color: var(--azul) !important; font-size: .7rem !important; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+h1 { margin: 0; font-size: 2.4rem; letter-spacing: -.04em; color: var(--brand-blue-dark); }
+h2 { margin: 0; color: var(--brand-blue-dark); font-size: 1.2rem; }
+h3 { margin: 0 0 8px; font-size: .9rem; }
+.revista-button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 18px; border: 1px solid transparent; border-radius: 11px; background: var(--azul); color: #fff; font: inherit; font-size: .84rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+.revista-button.secondary { color: var(--azul); background: var(--glass-surface-strong); border-color: var(--glass-line); }
+.revista-button:disabled { opacity: .5; cursor: not-allowed; }
+.revista-button:focus-visible, summary:focus-visible { outline: 3px solid var(--azul); outline-offset: 4px; }
+.revista-workflow { display: grid; grid-template-columns: minmax(320px, .9fr) minmax(0, 1.3fr); gap: 24px; align-items: start; }
+.revista-panel { min-width: 0; padding: 28px; border: 1px solid var(--glass-line); border-radius: 22px; background: var(--glass-surface); box-shadow: var(--glass-highlight), var(--glass-shadow); }
+.revista-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 22px 0; gap: 8px; }
+.revista-columns div { padding: 12px 8px; border-radius: 10px; background: var(--color-blue-soft); }
+.revista-columns strong { display: block; font-size: .77rem; color: var(--azul); }
+.revista-columns span { display: block; margin-top: 5px; font-size: .7rem; color: var(--color-muted); }
+form label { display: block; margin: 18px 0 7px; font-size: .84rem; font-weight: 600; }
+form small { font-weight: 400; color: var(--color-muted); }
+form input { width: 100%; min-height: 46px; padding: 11px 12px; border: 1px solid var(--glass-line); border-radius: 10px; background: var(--color-surface, #fff); color: var(--color-ink); font: inherit; font-size: 16px; }
+form input[type=file] { border-style: dashed; font-size: .82rem; padding: 18px 10px; }
+form input::file-selector-button { padding: 8px; margin-right: 8px; border: 0; border-radius: 5px; background: var(--color-blue-soft); color: var(--azul); cursor: pointer; }
+form .revista-button { width: 100%; margin-top: 10px; }
+#revista-status, #revista-list-status { font-size: .82rem; line-height: 1.6; color: var(--color-muted); }
+.is-error { color: #b72335 !important; }
+.revista-empty { padding: 42px 18px; margin: 20px 0 0; text-align: center; border: 1px dashed var(--glass-line); border-radius: 14px; line-height: 1.8; color: var(--color-muted); font-size: .87rem; }
+.revista-summary { padding: 15px; border-radius: 10px; background: var(--color-blue-soft); color: var(--azul); font-weight: 600; line-height: 1.7; font-size: .86rem; }
+.revista-alert { margin: 16px 0; padding: 18px; border: 1px solid #e7aab3; border-radius: 12px; }
+.revista-alert h3 { color: #b72335; }
+.revista-alert p, .revista-alert li, .revista-alert a { font-size: .82rem; line-height: 1.7; }
+.revista-alert ul { padding-left: 20px; max-height: 220px; overflow: auto; }
+summary { padding: 12px 0; cursor: pointer; color: var(--azul); font-size: .85rem; font-weight: 600; }
+.revista-table-wrap { max-height: 340px; overflow: auto; margin: 10px 0; border: 1px solid var(--glass-line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: .8rem; }
+td, th { padding: 11px 13px; border-bottom: 1px solid var(--glass-line); }
+th { position: sticky; top: 0; background: var(--color-surface, #fff); color: var(--color-muted); font-size: .72rem; }
+td:first-child, td:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.revista-campaigns { margin-top: 24px; }
+.revista-campaign-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.revista-campaign { padding: 18px; border: 1px solid var(--glass-line); border-radius: 14px; }
+.revista-campaign h3 { overflow-wrap: anywhere; color: var(--brand-blue-dark); }
+.revista-campaign p { color: var(--color-muted); font-size: .8rem; }
+.revista-campaign-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.revista-campaign-actions .revista-button { flex: 1 1 110px; min-height: 40px; padding: 9px 12px; font-size: .76rem; }
+.revista-button.danger { color: #b72335; border-color: #e7aab3; background: var(--color-red-soft); }
+.revista-button.danger:hover:not(:disabled) { color: #fff; border-color: #b72335; background: #b72335; }
+@media (max-width: 900px) { .revista-workflow { grid-template-columns: minmax(0, 1fr); } .revista-main { width: calc(100% - 28px); margin-top: 20px; } .revista-panel { padding: 20px; } .revista-heading { align-items: start; flex-direction: column; gap: 8px; } .revista-heading .revista-button { width: 100%; } h1 { font-size: 2rem; } }
