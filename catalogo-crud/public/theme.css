@@ -162,12 +162,7 @@
   [data-theme="dark"] .is-mobile-editor .story-workspace { background: var(--color-page); }
   [data-theme="dark"] .is-mobile-editor .story-mobile-dialog-surface { background: var(--glass-surface); }
   [data-theme="dark"] .studio-hero { background: none; }
-  .site-header-inner { gap: 10px; }
-  .site-header .site-brand { min-width: 0; }
-  .stories-header-actions .app-theme-toggle { flex: 0 0 44px; }
 }
 @media (max-width: 420px) {
-  .is-mobile-editor .story-mobile-context { display: none; }
-  .is-mobile-editor .stories-topbar { grid-template-columns: minmax(0, 1fr) auto; }
   .site-header .app-screen-name { font-size: 10px; }
 }

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnvFile } from 'node:process';
 
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectDirectory = path.resolve(sourceDirectory, '..');
@@ -17,32 +18,24 @@ function resolveConfiguredPath(value, fallback) {
     : path.resolve(projectDirectory, configuredValue);
 }
 
-function getBoolean(value, fallback) {
+function getBoolean(value, fallback, name) {
   if (value === undefined || value === null || value === '') return fallback;
 
   const normalized = String(value).trim().toLowerCase();
   if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
   if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
-  throw new Error('APP_AUTH_ENABLED deve ser true ou false.');
+  throw new Error(`${name} deve ser true ou false.`);
 }
 
-function getAuthConfig(env) {
-  const enabled = getBoolean(env.APP_AUTH_ENABLED, false);
-  const username = String(env.APP_AUTH_USERNAME || '').trim();
-  const password = String(env.APP_AUTH_PASSWORD || '');
+export function loadProjectEnvironment() {
+  try { loadEnvFile(path.join(projectDirectory, '.env')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+}
 
-  if (enabled && (!username || !password)) {
-    throw new Error(
-      'Defina APP_AUTH_USERNAME e APP_AUTH_PASSWORD quando APP_AUTH_ENABLED=true.',
-    );
+export function validateLoginConfig(config) {
+  if (!config.mysql.host || !config.mysql.user || !config.mysql.database || !config.mysql.password) {
+    throw new Error('Configure DB_HOST, DB_USER, DB_PASSWORD e DB_NAME no .env para habilitar o login.');
   }
-
-  return Object.freeze({
-    enabled,
-    username,
-    password,
-    realm: 'VidaMix Studio',
-  });
 }
 
 /**
@@ -59,6 +52,19 @@ export function loadConfig(env = process.env) {
     env.CATALOG_DATABASE_PATH,
     path.join(storageDirectory, 'catalogo.sqlite'),
   );
+  const mysqlPort = Number(env.DB_PORT || 3306);
+  if (!Number.isInteger(mysqlPort) || mysqlPort < 1 || mysqlPort > 65535) {
+    throw new Error('DB_PORT deve ser uma porta MySQL válida.');
+  }
+  let origin = '';
+  if (env.APP_ORIGIN) {
+    const parsed = new URL(env.APP_ORIGIN);
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password
+      || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+      throw new Error('APP_ORIGIN deve conter apenas a origem HTTP/HTTPS da aplicação.');
+    }
+    origin = parsed.origin;
+  }
 
   return Object.freeze({
     projectDirectory,
@@ -92,6 +98,19 @@ export function loadConfig(env = process.env) {
       path.join(projectDirectory, '..', 'imagens-produtos'),
     ),
     port: getPort(env.PORT || env.CATALOGO_PORT),
-    auth: getAuthConfig(env),
+    mysql: Object.freeze({
+      host: String(env.DB_HOST || '').trim(),
+      port: mysqlPort,
+      user: String(env.DB_USER || '').trim(),
+      password: String(env.DB_PASSWORD || ''),
+      database: String(env.DB_NAME || '').trim(),
+      ...(getBoolean(env.DB_SSL, false, 'DB_SSL') ? { ssl: { rejectUnauthorized: true } } : {}),
+    }),
+    auth: Object.freeze({
+      origin,
+      secureCookies: getBoolean(env.AUTH_COOKIE_SECURE, environment === 'production', 'AUTH_COOKIE_SECURE'),
+      trustProxy: getBoolean(env.AUTH_TRUST_PROXY, false, 'AUTH_TRUST_PROXY'),
+      sessionDurationMs: 8 * 60 * 60 * 1000,
+    }),
   });
 }

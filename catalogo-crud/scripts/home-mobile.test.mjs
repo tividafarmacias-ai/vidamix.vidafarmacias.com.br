@@ -95,7 +95,7 @@ function openHome({ touch = true, mobile = false, lookup = async () => response(
     requestAnimationFrame: (callback) => frames.push(callback),
     setTimeout: (callback, duration) => { timers.set(++timerId, { callback, duration }); return timerId; },
     clearTimeout: (id) => timers.delete(id),
-    fetch: (url, options) => { requests.push({ url, ...options }); return lookup(url, options); },
+    authFetch: (url, options) => { requests.push({ url, ...options }); return lookup(url, options); },
   });
   vm.runInContext(script.replace(/^import .+;\r?\n/gm, ''), sandbox, { filename: 'home.js' });
   const get = (id) => elements.get(`ean-${id}`);

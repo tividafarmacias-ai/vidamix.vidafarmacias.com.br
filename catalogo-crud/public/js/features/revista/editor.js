@@ -1,3 +1,5 @@
+import { authFetch } from '../../auth-session.js';
+
 const byId = id => document.getElementById(`revista-${id}`);
 const money = cents => Number.isSafeInteger(cents) ? (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
 let report = null;
@@ -21,7 +23,7 @@ function setBusy(value) {
   byId('import-form').setAttribute('aria-busy', String(value));
 }
 async function request(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(60000) });
+  const response = await authFetch(url, { ...options, signal: AbortSignal.timeout(60000) });
   const data = await response.json();
   if (!response.ok && !data.report) throw new Error(data.error || 'Não foi possível concluir. Tente novamente.');
   return data;

@@ -4,6 +4,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { getBackgroundBadgeTheme } from '../public/js/features/stories/background-theme.js';
 import * as model from '../public/js/features/indoor/model.js';
+import * as renderer from '../public/js/features/indoor/renderer.js';
 import { bindPriceInput } from '../public/js/features/stories/price-input.js';
 import { loadArtworkSelection } from '../public/js/features/revista/artwork.js';
 
@@ -158,10 +159,10 @@ async function openEditor(t, options = {}) {
   const sandbox = vm.createContext({
     ...model, bindPriceInput, getBackgroundBadgeTheme, loadArtworkSelection, document, window, Image: FakeImage,
     AbortController, AbortSignal, DOMException, URLSearchParams, Blob,
-    INDOOR_WIDTH: 1920, INDOOR_HEIGHT: 1080, INDOOR_DURATION: 40,
+    ...renderer,
     drawIndoorFrame: (context, snapshot, seconds) => {
       paints.push({ context, snapshot, seconds });
-      return { index: Math.min(4, Math.floor(seconds / 3)) };
+      return renderer.getCarouselState(seconds, { hasWallpaper: Boolean(snapshot.wallpaper) });
     },
     performance: { now: () => 0 },
     requestAnimationFrame: (callback) => { const id = nextId++; frames.set(id, callback); return id; },
@@ -172,7 +173,7 @@ async function openEditor(t, options = {}) {
       createObjectURL: (blob) => { const url = `blob:indoor-${createdUrls.length}`; createdUrls.push({ url, blob }); return url; },
       revokeObjectURL: (url) => revokedUrls.push(url),
     },
-    fetch: async (url, { signal }) => {
+    authFetch: async (url, { signal }) => {
       requests.push({ url, signal });
       const parsed = new URL(url, 'https://local.invalid');
       let body;
@@ -190,7 +191,7 @@ async function openEditor(t, options = {}) {
         exports.push({ ...configuration, width: configuration.canvas.width, height: configuration.canvas.height });
         if (options.exportVideo) return options.exportVideo(configuration);
         configuration.renderFrame(0);
-        configuration.renderFrame(449 / 30);
+        configuration.renderFrame(configuration.duration - 1 / 30);
         configuration.onProgress(1);
         return new Blob(['MP4 test artifact'], { type: 'video/mp4' });
       },
@@ -471,4 +472,76 @@ test('leaving preview while images load cannot restore a stale exportable snapsh
   await flush();
   assert.equal(f.get('download').disabled, false);
   assert.equal(f.paints.at(-1).snapshot.products[0].originalPrice, 'R$ 9,99');
+});
+
+const campaign = {
+  ...backgrounds[0], wallpaper_url: '/indoor-backgrounds/campanha-wallpaper.webp?v=1',
+  wallpaper_preview_url: '/indoor-backgrounds/campanha-wallpaper.webp?v=1&variant=render-v1',
+};
+
+test('campaign wallpaper is loaded into preview and export with matching scene offsets and duration', async t => {
+  const f = await openEditor(t, { backgrounds: () => [campaign] });
+  await openPreview(f);
+  assert.ok(f.imageRequests.includes(campaign.wallpaper_preview_url));
+  assert.equal(f.imageRequests.length, 7);
+  assert.equal(f.paints.at(-1).snapshot.wallpaper.url, campaign.wallpaper_preview_url);
+  assert.equal(f.get('scenes').children.length, 6);
+  assert.equal(f.get('scenes').children[0].getAttribute('aria-pressed'), 'true');
+  assert.equal(f.get('duration').textContent, '43 segundos');
+  assert.equal(Number(f.get('time').max), 43 - 1 / 30);
+  assert.equal(f.get('time-label').textContent, '0,0 / 43 s');
+  for (let index = 0; index < 5; index++) {
+    const scene = f.get('scenes').children[index + 1];
+    scene.click();
+    assert.equal(f.paints.at(-1).seconds, 3 + index * 8);
+    assert.equal(scene.getAttribute('aria-pressed'), 'true');
+    assert.equal(f.get('scenes').children[0].getAttribute('aria-pressed'), 'false');
+  }
+  f.get('scenes').children[0].click();
+  assert.equal(f.paints.at(-1).seconds, 0);
+  f.get('time').value = '100';
+  f.get('time').dispatch('input');
+  assert.equal(f.paints.at(-1).seconds, 43 - 1 / 30);
+  f.get('download').click();
+  await flush();
+  assert.equal(f.exports[0].duration, 43);
+  assert.equal(f.paints.at(-1).snapshot.wallpaper.url, campaign.wallpaper_preview_url);
+  assert.equal(f.paints.at(-1).seconds, 43 - 1 / 30);
+});
+
+test('a broken wallpaper blocks export and retries only that image', async t => {
+  let failing = true;
+  const f = await openEditor(t, {
+    backgrounds: () => [campaign],
+    imageLoad(image, url) {
+      if (failing && url === campaign.wallpaper_preview_url) image.onerror?.();
+      else image.onload?.();
+    },
+  });
+  await openPreview(f);
+  assert.equal(f.get('download').disabled, true);
+  assert.equal(f.get('retry-preview').hidden, false);
+  assert.equal(f.paints.length, 0);
+  failing = false;
+  f.get('retry-preview').click();
+  await flush();
+  assert.equal(f.get('download').disabled, false);
+  assert.equal(f.imageRequests.length, 8);
+  assert.equal(f.imageRequests.at(-1), campaign.wallpaper_preview_url);
+});
+
+test('refreshing a replaced wallpaper invalidates the selected campaign and previous download', async t => {
+  let items = [campaign];
+  const f = await openEditor(t, { backgrounds: () => items });
+  await openPreview(f);
+  f.get('download').click();
+  await flush();
+  f.steps.find(node => node.dataset.step === 'background').click();
+  items = [{ ...campaign, wallpaper_url: '/indoor-backgrounds/campanha-wallpaper.webp?v=2' }];
+  f.get('reload-backgrounds').click();
+  await flush();
+  assert.equal(f.get('open-preview').disabled, true);
+  assert.equal(f.get('download').disabled, true);
+  assert.equal(f.get('download-link').hidden, true);
+  assert.equal(f.revokedUrls.length, 1);
 });

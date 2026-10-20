@@ -1,37 +1,66 @@
 export const INDOOR_WIDTH = 1920;
 export const INDOOR_HEIGHT = 1080;
-export const INDOOR_DURATION = 40;
 export const INDOOR_PRODUCT_COUNT = 5;
+export const INDOOR_PRODUCT_DURATION = 8;
+export const INDOOR_INTRO_DURATION = 3;
+export const INDOOR_DURATION = INDOOR_INTRO_DURATION + INDOOR_PRODUCT_COUNT * INDOOR_PRODUCT_DURATION;
 
-const SLOT_DURATION = INDOOR_DURATION / INDOOR_PRODUCT_COUNT;
 const TRANSITION_DURATION = 0.35;
-// The supplied TV templates place their campaign marks in the left 28% or less.
-// Reserve 30% throughout the animation, including the wider contraceptive banner.
-const SAFE_LEFT = 576;
-const SAFE_RIGHT = INDOOR_WIDTH - 64;
-const SAFE_TOP = 84;
-const SAFE_BOTTOM = INDOOR_HEIGHT - 84;
+const REVEAL_DURATION = 0.9;
+const LOOP_RETURN_DURATION = 0.8;
+// Keep animated content inside the reference template's white offer area.
+// The campaign title occupies the top 250 px; balloons flank the offer.
+const SAFE_LEFT = 324;
+const SAFE_RIGHT = 1604;
+const SAFE_TOP = 270;
+const SAFE_BOTTOM = 1032;
 const SLIDE_WIDTH = SAFE_RIGHT - SAFE_LEFT;
 const FONT_FAMILY = 'Arial, Helvetica, sans-serif';
-const PRODUCT_BOX = { x: 576, y: 120, width: 420, height: 840 };
-const CARD = { x: 1040, width: 660 };
+const PRODUCT_BOX = { x: 340, y: 274, width: 540, height: 750 };
+const CARD = { x: 924, y: 332, width: 662 };
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-/** A deterministic, seamless 40-second loop. Each product owns an eight-second slot. */
-export function getCarouselState(seconds) {
+function ease(value) {
+  const progress = clamp(value, 0, 1);
+  return progress * progress * (3 - 2 * progress);
+}
+
+export function getIndoorDuration(hasWallpaper = false) {
+  return hasWallpaper ? INDOOR_DURATION : INDOOR_PRODUCT_COUNT * INDOOR_PRODUCT_DURATION;
+}
+
+/** One timeline for preview, scene navigation and frame-by-frame MP4 rendering. */
+export function getCarouselState(seconds, { hasWallpaper = false } = {}) {
   const input = Number(seconds);
-  const time = Number.isFinite(input) ? Math.max(0, input) % INDOOR_DURATION : 0;
-  const index = Math.floor(time / SLOT_DURATION);
+  const time = Number.isFinite(input) ? Math.max(0, input) % getIndoorDuration(hasWallpaper) : 0;
+  const intro = hasWallpaper ? INDOOR_INTRO_DURATION : 0;
+  if (time < intro) {
+    const progress = clamp((time - (intro - REVEAL_DURATION)) / REVEAL_DURATION, 0, 1);
+    return {
+      phase: progress > 0 ? 'reveal' : 'intro', time, index: -1, nextIndex: 0,
+      progress, transition: progress > 0,
+      slides: progress > 0 ? [{ index: 0, offsetX: 0, opacity: 1 }] : [],
+    };
+  }
+  const offerTime = time - intro;
+  const index = Math.floor(offerTime / INDOOR_PRODUCT_DURATION);
   const nextIndex = (index + 1) % INDOOR_PRODUCT_COUNT;
-  const localTime = time - index * SLOT_DURATION;
-  const progress = clamp((localTime - (SLOT_DURATION - TRANSITION_DURATION)) / TRANSITION_DURATION, 0, 1);
-  const eased = progress * progress * (3 - 2 * progress);
+  const localTime = offerTime - index * INDOOR_PRODUCT_DURATION;
+  if (hasWallpaper && index === INDOOR_PRODUCT_COUNT - 1) {
+    const progress = clamp((localTime - (INDOOR_PRODUCT_DURATION - LOOP_RETURN_DURATION)) / LOOP_RETURN_DURATION, 0, 1);
+    return {
+      phase: progress > 0 ? 'return' : 'products', time, index, nextIndex: -1,
+      progress, transition: progress > 0, slides: [{ index, offsetX: 0, opacity: 1 }],
+    };
+  }
+  const progress = clamp((localTime - (INDOOR_PRODUCT_DURATION - TRANSITION_DURATION)) / TRANSITION_DURATION, 0, 1);
+  const eased = ease(progress);
   const slides = [{ index, offsetX: eased === 0 ? 0 : -SLIDE_WIDTH * eased, opacity: 1 }];
   if (progress > 0) slides.push({ index: nextIndex, offsetX: SLIDE_WIDTH * (1 - eased), opacity: 1 });
-  return { index, nextIndex, progress, transition: progress > 0, slides };
+  return { phase: 'products', time, index, nextIndex, progress, transition: progress > 0, slides };
 }
 
 function imageSize(image) {
@@ -43,17 +72,46 @@ function imageSize(image) {
     : null;
 }
 
-function drawBackground(context, background) {
+function drawBackground(context, background, zoom = 1) {
   context.fillStyle = '#edf3fa';
   context.fillRect(0, 0, INDOOR_WIDTH, INDOOR_HEIGHT);
   const size = imageSize(background);
   if (!size) return;
-  const scale = Math.max(INDOOR_WIDTH / size.width, INDOOR_HEIGHT / size.height);
+  const scale = Math.max(INDOOR_WIDTH / size.width, INDOOR_HEIGHT / size.height) * zoom;
   const sourceWidth = INDOOR_WIDTH / scale;
   const sourceHeight = INDOOR_HEIGHT / scale;
   context.drawImage(background,
     (size.width - sourceWidth) / 2, (size.height - sourceHeight) / 2, sourceWidth, sourceHeight,
     0, 0, INDOOR_WIDTH, INDOOR_HEIGHT);
+}
+
+function drawWallpaperReveal(context, wallpaper, progress) {
+  const movement = ease(progress);
+  // Two diagonal halves of the actual wallpaper slide apart like curtains.
+  // Clip after translation so the image and its mask move together.
+  for (const direction of [-1, 1]) {
+    context.save();
+    try {
+      context.translate(direction * 1240 * movement, direction * 70 * movement);
+      context.beginPath();
+      if (direction === -1) {
+        context.moveTo(0, 0);
+        context.lineTo(722, 0);
+        context.lineTo(1202, INDOOR_HEIGHT);
+        context.lineTo(0, INDOOR_HEIGHT);
+      } else {
+        context.moveTo(720, 0);
+        context.lineTo(INDOOR_WIDTH, 0);
+        context.lineTo(INDOOR_WIDTH, INDOOR_HEIGHT);
+        context.lineTo(1200, INDOOR_HEIGHT);
+      }
+      context.closePath();
+      context.clip();
+      drawBackground(context, wallpaper, 1.025);
+    } finally {
+      context.restore();
+    }
+  }
 }
 
 function cleanText(value) {
@@ -114,23 +172,29 @@ function drawDetails(context, entry, badgeTheme) {
 
   context.save();
   try {
-    // Size the panel to its actual copy so short offers do not leave a large gap.
     const manufacturer = cleanText(product.fabricante);
     const originalPrice = cleanText(entry.originalPrice);
     const price = cleanText(entry.price);
-    context.font = `700 54px ${FONT_FAMILY}`;
-    const titleLines = wrapText(context, product.nome || 'Produto', contentWidth, 3);
+    // Shrink long copy within the description card; reserve a separate price area.
+    let titleSize = 60;
+    let titleLines;
+    let descriptionHeight;
     context.font = `400 32px ${FONT_FAMILY}`;
     const subtitleLines = wrapText(context, product.subtitulo, contentWidth, 2);
-    const descriptionHeight = (manufacturer ? 48 : 0) + titleLines.length * 62
-      + (subtitleLines.length ? 18 + subtitleLines.length * 40 : 0);
-    const priceHeight = price ? 322 : originalPrice ? 100 : 0;
-    const panelHeight = 44 + descriptionHeight + (priceHeight ? 32 + priceHeight : 0) + 24;
-    const panelY = (INDOOR_HEIGHT - panelHeight) / 2;
+    do {
+      context.font = `700 ${titleSize}px ${FONT_FAMILY}`;
+      titleLines = wrapText(context, product.nome || 'Produto', contentWidth, 3);
+      descriptionHeight = (manufacturer ? 50 : 0) + titleLines.length * titleSize * 1.16
+        + (subtitleLines.length ? 18 + subtitleLines.length * 38 : 0);
+      if (descriptionHeight <= 290 || titleSize <= 44) break;
+      titleSize -= 2;
+    } while (true);
+    const panelHeight = Math.max(322, descriptionHeight + 80);
+    const panelY = CARD.y;
 
-    context.shadowColor = 'rgba(14, 29, 56, 0.16)';
-    context.shadowBlur = 28;
-    context.shadowOffsetY = 10;
+    context.shadowColor = 'rgba(0, 0, 0, 0.16)';
+    context.shadowBlur = 12;
+    context.shadowOffsetY = 4;
     context.fillStyle = '#ffffff';
     roundedRectangle(context, CARD.x, panelY, CARD.width, panelHeight, 32);
     context.fill();
@@ -140,57 +204,49 @@ function drawDetails(context, entry, badgeTheme) {
     context.textBaseline = 'top';
     context.textAlign = 'left';
 
-    let titleY = panelY + 44;
+    let titleY = panelY + 48;
     if (manufacturer) {
       context.font = `600 28px ${FONT_FAMILY}`;
       context.fillStyle = '#5b677d';
       context.fillText(ellipsize(context, manufacturer, contentWidth), contentX, titleY);
-      titleY += 48;
+      titleY += 50;
     }
 
-    context.font = `700 54px ${FONT_FAMILY}`;
+    context.font = `700 ${titleSize}px ${FONT_FAMILY}`;
     context.fillStyle = '#142c54';
-    titleLines.forEach((line, index) => context.fillText(line, contentX, titleY + index * 62));
+    titleLines.forEach((line, index) => context.fillText(line, contentX, titleY + index * titleSize * 1.16));
 
-    const subtitleY = titleY + titleLines.length * 62 + 18;
+    const subtitleY = titleY + titleLines.length * titleSize * 1.16 + 18;
     context.font = `400 32px ${FONT_FAMILY}`;
     context.fillStyle = '#49566b';
-    subtitleLines.forEach((line, index) => context.fillText(line, contentX, subtitleY + index * 40));
+    subtitleLines.forEach((line, index) => context.fillText(line, contentX, subtitleY + index * 38));
 
     if (originalPrice || price) {
-      const priceY = panelY + 44 + descriptionHeight + 32;
-      context.fillStyle = badgeTheme.fill;
-      roundedRectangle(context, CARD.x + 20, priceY, CARD.width - 40, priceHeight, 24);
-      context.fill();
-      if (price) {
-        context.fillStyle = '#ffe35b';
-        roundedRectangle(context, contentX, priceY + 22, 180, 44, 10);
-        context.fill();
-        context.font = `800 28px ${FONT_FAMILY}`;
-        context.fillStyle = '#762014';
-        context.fillText('OFERTA', contentX + 24, priceY + 30);
-      }
+      let priceY = panelY + panelHeight + 34;
       if (originalPrice) {
-        context.font = '500 34px ' + FONT_FAMILY;
-        context.fillStyle = badgeTheme.text;
+        context.font = `600 48px ${FONT_FAMILY}`;
+        context.fillStyle = '#080808';
         const label = ellipsize(context, 'De ' + originalPrice, contentWidth);
-        const normalY = priceY + (price ? 84 : 32);
-        context.fillText(label, contentX, normalY);
+        context.fillText(label, contentX, priceY);
         const labelWidth = context.measureText('De ').width;
-        context.fillRect(contentX + labelWidth, normalY + 19,
-          Math.max(0, context.measureText(label).width - labelWidth), 2);
+        context.fillRect(contentX + labelWidth, priceY + 28,
+          Math.max(0, context.measureText(label).width - labelWidth), 3);
+        priceY += 60;
       }
       if (price) {
-        context.font = '700 30px ' + FONT_FAMILY;
-        context.fillStyle = badgeTheme.text;
-        context.fillText('Por', contentX, priceY + 134);
-        let fontSize = 132;
-        context.font = '700 ' + fontSize + 'px ' + FONT_FAMILY;
+        context.font = `600 48px ${FONT_FAMILY}`;
+        context.fillStyle = '#080808';
+        context.fillText('por', contentX, priceY);
+        priceY += 60;
+        let fontSize = Math.min(170, Math.floor((1020 - priceY) / 1.15));
+        context.font = `900 ${fontSize}px ${FONT_FAMILY}`;
         while (fontSize > 40 && context.measureText(price).width > contentWidth) {
           fontSize -= 2;
-          context.font = '700 ' + fontSize + 'px ' + FONT_FAMILY;
+          context.font = `900 ${fontSize}px ${FONT_FAMILY}`;
         }
-        context.fillText(ellipsize(context, price, contentWidth), contentX, priceY + 174);
+        // The theme's dark text is safer than a bright campaign color on white.
+        context.fillStyle = badgeTheme.text === '#ffffff' ? badgeTheme.fill : '#142c54';
+        context.fillText(ellipsize(context, price, contentWidth), contentX, priceY);
       }
     }
   } finally {
@@ -218,11 +274,11 @@ function drawProduct(context, entry, badgeTheme) {
  * background and image must be loaded CanvasImageSources. Missing images are skipped.
  * Returns the carousel state used, so preview controls can follow the same timeline.
  */
-export function drawIndoorFrame(context, { background, products, badgeTheme = { fill: '#0e746c', text: '#ffffff' } }, seconds) {
+export function drawIndoorFrame(context, { background, wallpaper, products, badgeTheme = { fill: '#2768dc', text: '#ffffff' } }, seconds) {
   if (!Array.isArray(products) || products.length !== INDOOR_PRODUCT_COUNT || products.some((entry) => !entry)) {
     throw new RangeError('O vídeo Indoor precisa de exatamente 5 produtos.');
   }
-  const state = getCarouselState(seconds);
+  const state = getCarouselState(seconds, { hasWallpaper: Boolean(imageSize(wallpaper)) });
   context.save();
   try {
     context.setTransform(1, 0, 0, 1, 0, 0);
@@ -235,21 +291,35 @@ export function drawIndoorFrame(context, { background, products, badgeTheme = { 
     context.shadowOffsetY = 0;
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
+    if (state.phase === 'intro') {
+      drawBackground(context, wallpaper, 1 + 0.025 * ease(state.time / (INDOOR_INTRO_DURATION - REVEAL_DURATION)));
+      return state;
+    }
     drawBackground(context, background);
 
-    // Clip every moving layer so logos at the left remain unobstructed at all times.
-    // The horizontal travel matches this viewport, keeping consecutive slides adjacent.
-    context.beginPath();
-    context.rect(SAFE_LEFT, SAFE_TOP, SLIDE_WIDTH, SAFE_BOTTOM - SAFE_TOP);
-    context.clip();
-    for (const slide of state.slides) {
-      context.save();
-      try {
-        context.translate(slide.offsetX, 0);
-        drawProduct(context, products[slide.index], badgeTheme);
-      } finally {
-        context.restore();
+    context.save();
+    try {
+      context.beginPath();
+      context.rect(SAFE_LEFT, SAFE_TOP, SLIDE_WIDTH, SAFE_BOTTOM - SAFE_TOP);
+      context.clip();
+      for (const slide of state.slides) {
+        context.save();
+        try {
+          context.translate(slide.offsetX, 0);
+          drawProduct(context, products[slide.index], badgeTheme);
+        } finally {
+          context.restore();
+        }
       }
+    } finally {
+      context.restore();
+    }
+    if (state.phase === 'reveal') drawWallpaperReveal(context, wallpaper, state.progress);
+    if (state.phase === 'return') {
+      // Finish on the exact opening image for a continuous loop on the TV.
+      const progress = ease(state.progress);
+      context.globalAlpha = progress;
+      drawBackground(context, wallpaper, 1 + 0.025 * (1 - progress));
     }
   } finally {
     context.restore();

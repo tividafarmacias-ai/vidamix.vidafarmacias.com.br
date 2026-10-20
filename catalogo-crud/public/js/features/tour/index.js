@@ -1,10 +1,14 @@
 import { TOUR_VERSION, getTour } from './steps.js';
 import { createTourStorage, TOUR_STORAGE_KEY } from './storage.js';
+import { getSession, sessionReady } from '../../auth-session.js';
 
 const page = document.body.dataset.tourPage;
-const currentTour = () => getTour(page, { mobile: window.matchMedia('(max-width: 900px)').matches });
+const currentTour = () => getTour(page, { mobile: window.matchMedia('(max-width: 900px)').matches, role: getSession()?.user.role });
 let tour = currentTour();
-if (tour && typeof HTMLDialogElement !== 'undefined') initTour();
+sessionReady.then((session) => {
+  tour = currentTour();
+  if (session && tour && typeof HTMLDialogElement !== 'undefined') initTour();
+});
 
 function initTour() {
   const storage = createTourStorage(TOUR_VERSION);

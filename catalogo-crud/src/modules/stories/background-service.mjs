@@ -15,6 +15,7 @@ function storyBackgroundLabel(backgroundFile, format) {
     : format === 'feed' ? /(?:[_\s-]+feed)$/i : /(?:[_\s-]+stories?)$/i;
   const name = path.basename(backgroundFile, path.extname(backgroundFile))
     .replace(/^gabarito\s+/i, '')
+    .replace(/--[a-f0-9-]{16,}$/i, '')
     .replace(formatSuffix, '')
     .replace(/_/g, ' ')
     .replace(/\s+-\s+$/g, '')
@@ -44,28 +45,70 @@ export function isSupportedStoryBackground(filePath) {
     && storyBackgroundExtensions.has(path.extname(decodedPath).toLowerCase());
 }
 
+export function isWallpaperBackground(filePath) {
+  return isSupportedStoryBackground(filePath)
+    && /-wallpaper\.[^.]+$/i.test(filePath);
+}
+
+function wallpaperFilename(backgroundFile) {
+  const extension = path.extname(backgroundFile);
+  return `${backgroundFile.slice(0, -extension.length)}-wallpaper${extension}`;
+}
+
+async function createBackgroundEntry({ directory, fileName, format, urlPrefix }) {
+  try {
+    const info = await fs.stat(path.join(directory, fileName));
+    const version = fileVersion(info);
+    return {
+      id: fileName,
+      arquivo: fileName,
+      nome: storyBackgroundLabel(fileName, format),
+      url: `${makeStoryBackgroundUrl(fileName, urlPrefix)}?v=${version}`,
+      thumbnail_url: `${makeStoryBackgroundUrl(fileName, urlPrefix)}?v=${version}&variant=thumb-v1`,
+      preview_url: `${makeStoryBackgroundUrl(fileName, urlPrefix)}?v=${version}&variant=render-v1`,
+    };
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 export function createStoryBackgroundService({ storyBackgroundsDirectory, format = 'stories', urlPrefix = '/story-backgrounds' }) {
   async function listStoryBackgrounds() {
     if (!existsSync(storyBackgroundsDirectory)) return [];
 
     const entries = await fs.readdir(storyBackgroundsDirectory, { withFileTypes: true });
-    const backgrounds = await Promise.all(entries
-      .filter((entry) => entry.isFile() && isSupportedStoryBackground(entry.name))
-      .map(async (entry) => {
-        try {
-          const info = await fs.stat(path.join(storyBackgroundsDirectory, entry.name));
-          return {
-            arquivo: entry.name,
-            nome: storyBackgroundLabel(entry.name, format),
-            url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}`,
-            thumbnail_url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}&variant=thumb-v1`,
-            preview_url: `${makeStoryBackgroundUrl(entry.name, urlPrefix)}?v=${fileVersion(info)}&variant=render-v1`,
-          };
-        } catch (error) {
-          if (error.code === 'ENOENT') return null;
-          throw error;
-        }
+    const fileEntries = entries
+      .filter((entry) => entry.isFile() && isSupportedStoryBackground(entry.name) && !isWallpaperBackground(entry.name));
+    const backgrounds = await Promise.all(fileEntries.map((entry) => createBackgroundEntry({
+      directory: storyBackgroundsDirectory,
+      fileName: entry.name,
+      format,
+      urlPrefix,
+    })));
+
+    if (format === 'indoor-h') {
+      await Promise.all(backgrounds.map(async (background) => {
+        if (!background) return;
+        const stem = path.basename(background.arquivo, path.extname(background.arquivo));
+        const wallpaper = entries.find((entry) => entry.isFile()
+          && path.basename(entry.name, path.extname(entry.name)) === `${stem}-wallpaper`
+          && isWallpaperBackground(entry.name))?.name;
+        if (!wallpaper) return;
+        const wallpaperEntry = await createBackgroundEntry({
+          directory: storyBackgroundsDirectory,
+          fileName: wallpaper,
+          format,
+          urlPrefix,
+        });
+        if (!wallpaperEntry) return;
+        background.wallpaper_arquivo = wallpaperEntry.arquivo;
+        background.wallpaper_url = wallpaperEntry.url;
+        background.wallpaper_thumbnail_url = wallpaperEntry.thumbnail_url;
+        background.wallpaper_preview_url = wallpaperEntry.preview_url;
       }));
+    }
+
     return backgrounds.filter(Boolean)
       .sort((first, second) => first.nome.localeCompare(second.nome, 'pt-BR'));
   }

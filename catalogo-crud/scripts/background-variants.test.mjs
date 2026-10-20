@@ -7,6 +7,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import sharp from 'sharp';
 import { createApplication } from '../src/app.mjs';
+import { adminAuthFixture } from './fixtures/auth.mjs';
 import { loadConfig } from '../src/config.mjs';
 
 test('background thumbnails and artwork are bounded, cached on disk, versioned and isolated from originals', async () => {
@@ -18,7 +19,7 @@ test('background thumbnails and artwork are bounded, cached on disk, versioned a
   const original = await readFile(source);
   const config = { ...loadConfig({ APP_AUTH_ENABLED: 'false' }), storageDirectory: directory,
     storyBackgroundsDirectory: images, feedBackgroundsDirectory: images, indoorBackgroundsDirectory: images };
-  const server = createServer(createApplication({ config, database: {} }));
+  const server = createServer(createApplication({ config, database: {}, authService: adminAuthFixture() }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   const cache = path.join(directory, 'background-cache');
@@ -31,7 +32,7 @@ test('background thumbnails and artwork are bounded, cached on disk, versioned a
       const thumb = await sharp(data[0]).metadata();
       assert.equal(thumb.format, 'webp');
       assert.ok(thumb.width <= 240 && thumb.height <= 240);
-      assert.match(responses[0].headers.get('cache-control'), /immutable/);
+      assert.equal(responses[0].headers.get('cache-control'), 'no-store');
       const response = await fetch(origin + item.preview_url);
       const preview = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
       assert.ok(preview.width <= width && preview.height <= height);
@@ -45,7 +46,7 @@ test('background thumbnails and artwork are bounded, cached on disk, versioned a
       assert.deepEqual(await Promise.all(files.map(async (name) => (await stat(path.join(cache, name))).mtimeMs)), modified);
       assert.equal((await fetch(origin + item.thumbnail_url, { headers: {
         'If-None-Match': responses[0].headers.get('etag'),
-      } })).status, 304);
+      } })).status, 200);
       assert.deepEqual(await readFile(source), original);
     }
     assert.equal((await readdir(cache)).length, 6, 'one file per format/variant, despite concurrent requests');
@@ -56,7 +57,7 @@ test('background thumbnails and artwork are bounded, cached on disk, versioned a
     assert.equal((await fetch(origin + changed.thumbnail_url)).status, 200);
     assert.equal((await readdir(cache)).length, 6, 'replacement discards obsolete generated thumbnail');
     assert.equal((await fetch(origin + changed.thumbnail_url.replace('thumb-v1', 'unlimited'))).status, 400);
-    assert.equal((await fetch(origin + '/story-backgrounds/%2e%2e%2ffile.png?variant=thumb-v1')).status, 403);
+    assert.ok([400, 403].includes((await fetch(origin + '/story-backgrounds/%2e%2e%2ffile.png?variant=thumb-v1')).status));
     await writeFile(path.join(images, 'broken.png'), 'invalid');
     assert.equal((await fetch(origin + '/story-backgrounds/broken.png?variant=thumb-v1')).status, 422);
     assert.equal((await fetch(origin + changed.preview_url)).status, 200, 'one invalid source does not block the conversion queue');

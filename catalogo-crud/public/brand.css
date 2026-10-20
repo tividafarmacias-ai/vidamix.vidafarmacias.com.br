@@ -79,7 +79,7 @@
   font-family: "Poppins", Arial, Helvetica, sans-serif;
 }
 
-body { line-height: 1.5; }
+body { margin: 0; line-height: 1.5; }
 button, input, select, textarea { font: inherit; }
 a { color: inherit; }
 a:focus-visible, button:focus-visible, input:focus-visible,
@@ -90,23 +90,6 @@ select:focus-visible, textarea:focus-visible {
 button:disabled { cursor: not-allowed; }
 ::selection { color: var(--brand-blue-dark); background: #d3e7fb; }
 
-.site-header {
-  background: var(--glass-surface);
-  color: var(--azul);
-  border-bottom: 1px solid var(--glass-line);
-  box-shadow: var(--glass-highlight), 0 4px 18px rgba(49, 84, 122, .04);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-}
-.site-header-inner {
-  display: flex;
-  width: min(1440px, 90%);
-  min-height: 72px;
-  margin: 0 auto;
-  gap: 24px;
-  align-items: center;
-  justify-content: space-between;
-}
 .site-brand {
   display: inline-flex;
   gap: 12px;
@@ -123,22 +106,6 @@ button:disabled { cursor: not-allowed; }
 }
 .site-brand strong { display: block; font-size: 17px; line-height: 1.2; }
 .site-brand small { display: block; margin-top: 3px; color: var(--color-muted); font-size: 11px; }
-.site-nav { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-.site-nav a {
-  display: inline-flex;
-  min-height: 38px;
-  padding: 8px 12px;
-  align-items: center;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  color: var(--color-muted);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
-}
-.site-nav a:hover { color: var(--azul); background: var(--glass-surface-strong); }
-.site-nav a[aria-current="page"] { color: var(--brand-blue-dark); border-color: var(--glass-selected-line); background: var(--glass-selected); box-shadow: var(--glass-highlight); }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   :root {
@@ -156,12 +123,6 @@ button:disabled { cursor: not-allowed; }
     --glass-selected: linear-gradient(135deg, #e5f2ff, #f2f7ff);
     --glass-blur: none;
   }
-}
-
-@media (max-width: 640px) {
-  .site-header-inner { width: calc(100% - 32px); padding: 14px 0; gap: 12px; flex-wrap: wrap; }
-  .site-nav { width: 100%; }
-  .site-nav a { justify-content: center; flex: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -31,13 +31,16 @@
   </head>
   <body class="stories-page" data-tour-page="stories">
     <script src="/js/pwa-launch.js"></script>
-    <header class="stories-topbar">
-      <a class="stories-back-link" href="/" aria-label="Voltar à central de criação">
-        <span aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 5-7 7 7 7M3 12h18" /></svg></span>
-        <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
-      </a>
+    <header class="site-header" data-app-header>
+      <div class="site-header-inner">
+        <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
+          <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
+        </a>
+      </div>
+    </header>
 
-      <div class="story-mobile-only story-mobile-context">
+    <section class="stories-topbar" aria-label="Ferramentas da arte">
+      <div class="story-mobile-context">
         <h1>Stories</h1><span>9:16 · Vertical</span>
       </div>
 
@@ -61,7 +64,7 @@
           </button>
         </div>
       </div>
-    </header>
+    </section>
 
 <main class="stories-shell">
       <aside class="story-control-sidebar story-control-sidebar-left" aria-label="Cenário e produto">

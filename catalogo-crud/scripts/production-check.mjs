@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { loadConfig } from '../src/config.mjs';
+import { loadConfig, loadProjectEnvironment, validateLoginConfig } from '../src/config.mjs';
 import { storyBackgroundExtensions } from '../src/modules/stories/background-service.mjs';
 
 const issues = [];
@@ -59,7 +59,9 @@ async function checkWritableDatabaseParent(databasePath) {
 
 let config;
 try {
+  loadProjectEnvironment();
   config = loadConfig(process.env);
+  validateLoginConfig(config);
 } catch (error) {
   console.error(`Configuração inválida: ${error.message}`);
   process.exit(1);

@@ -101,7 +101,7 @@ test('invalid or blocked storage never prevents the app or toggle from working',
 });
 
 test('all pages bootstrap the theme before styles and load overrides last, including offline', async () => {
-  for (const page of ['index', 'catalogo', 'stories', 'feed', 'indoor-h', 'offline']) {
+  for (const page of ['index', 'catalogo', 'revista', 'backgrounds', 'stories', 'feed', 'indoor-h', 'offline']) {
     const html = await readFile(new URL(`../public/${page}.html`, import.meta.url), 'utf8');
     const bootstrap = html.indexOf('<script src="/js/theme.js"></script>');
     assert.ok(bootstrap > 0 && bootstrap < html.indexOf('rel="stylesheet"'), page);

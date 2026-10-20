@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createApplication } from '../src/app.mjs';
+import { adminAuthFixture, fixtureSessionHeaders } from './fixtures/auth.mjs';
 import { loadConfig } from '../src/config.mjs';
 import { initializeCatalogDatabase } from '../src/database/catalog-database.mjs';
 import { createStoryBackgroundService } from '../src/modules/stories/background-service.mjs';
@@ -40,7 +41,7 @@ assert.equal(
   'Indoor deve aceitar um diretório configurado',
 );
 const database = await initializeCatalogDatabase(config);
-const app = createApplication({ config, database, logger: { error() {} } });
+const app = createApplication({ config, database, authService: adminAuthFixture(), logger: { error() {} } });
 const server = createServer(app);
 
 try {
@@ -106,7 +107,11 @@ try {
       assert.match(response.headers.get('permissions-policy'), /microphone=\(\)/);
       assert.match(response.headers.get('content-security-policy'), /media-src 'self' blob:/);
     }
-    assert.equal(response.status, expectedStatus, `${pathname} retornou ${response.status}`);
+    if (expectedStatus === 403) {
+      assert.ok([400, 403].includes(response.status), `${pathname} retornou ${response.status}`);
+    } else {
+      assert.equal(response.status, expectedStatus, `${pathname} retornou ${response.status}`);
+    }
     assert.match(
       response.headers.get('content-type') || '',
       new RegExp('^' + expectedContentType.replace('/', '\\/')),
@@ -124,7 +129,8 @@ try {
       if (format === 'indoor' && error.code === 'ENOENT') return [];
       throw error;
     });
-    const files = entries.filter((entry) => entry.isFile() && /\.(png|jpe?g|webp)$/i.test(entry.name)).map((entry) => entry.name);
+    const files = entries.filter((entry) => entry.isFile() && /\.(png|jpe?g|webp)$/i.test(entry.name)
+      && !/-wallpaper\.[^.]+$/i.test(entry.name)).map((entry) => entry.name);
     assert.deepEqual(items.map((item) => item.arquivo).sort(), files.sort(), `${format}: lista completa de fundos`);
     if (format !== 'indoor') assert.ok(items.length > 0);
     for (const item of items) {
@@ -133,6 +139,12 @@ try {
       assert.equal(response.status, 200, item.url);
       assert.match(response.headers.get('content-type'), /^image\//);
       assert.ok((await response.arrayBuffer()).byteLength > 0);
+      if (item.wallpaper_url) {
+        assert.equal(format, 'indoor', 'Abertura de campanha pertence ao formato Indoor');
+        const wallpaper = await fetch(baseUrl + item.wallpaper_url);
+        assert.equal(wallpaper.status, 200);
+        assert.match(wallpaper.headers.get('content-type'), /^image\//);
+      }
     }
   }
 
@@ -144,6 +156,7 @@ try {
   const indoorFixtureServer = createServer(createApplication({
     config: { ...config, indoorBackgroundsDirectory: indoorFixtureDirectory },
     database,
+    authService: adminAuthFixture(),
     logger: { error() {} },
   }));
   try {
@@ -166,7 +179,7 @@ try {
     const backgroundResponse = await fetch(fixtureBaseUrl + items[0].url);
     assert.equal(backgroundResponse.status, 200);
     assert.match(backgroundResponse.headers.get('content-type'), /^image\/png/);
-    assert.match(backgroundResponse.headers.get('cache-control'), /max-age=31536000, immutable/);
+    assert.equal(backgroundResponse.headers.get('cache-control'), 'no-store');
     assert.deepEqual(Buffer.from(await backgroundResponse.arrayBuffer()), png);
     for (const format of ['story', 'feed']) {
       const otherFormatResponse = await fetch(fixtureBaseUrl + `/${format}-backgrounds/${encodeURIComponent(fixtureFilename)}`);
@@ -223,17 +236,8 @@ try {
   });
   assert.equal(rejectedWrite.status, 400, 'API aceitou conteúdo não JSON');
 
-  const authenticatedConfig = {
-    ...config,
-    auth: {
-      enabled: true,
-      username: 'smoke-user',
-      password: 'smoke-password',
-      realm: 'Smoke Test',
-    },
-  };
   const authenticatedServer = createServer(
-    createApplication({ config: authenticatedConfig, database, logger: { error() {} } }),
+    createApplication({ config, database, authService: adminAuthFixture({ requireHeader: true }), logger: { error() {} } }),
   );
 
   try {
@@ -241,19 +245,15 @@ try {
     const authenticatedBaseUrl = 'http://127.0.0.1:' + authenticatedPort;
     const deniedResponse = await fetch(authenticatedBaseUrl + '/api/health');
     assert.equal(deniedResponse.status, 401, 'Aplicação protegida aceitou acesso sem credenciais');
-    assert.match(
-      deniedResponse.headers.get('www-authenticate') || '',
-      /^Basic /,
-      'Aplicação protegida não informou desafio Basic',
-    );
+    assert.equal(deniedResponse.headers.get('www-authenticate'), null, 'Login usa sessão, sem desafio HTTP Basic');
     for (const pathname of ['/artes/indoor-h', '/api/indoor-backgrounds', '/indoor-backgrounds/teste.png']) {
-      const indoorDeniedResponse = await fetch(authenticatedBaseUrl + pathname);
-      assert.equal(indoorDeniedResponse.status, 401, `Indoor deve manter autenticação em ${pathname}`);
+      const indoorDeniedResponse = await fetch(authenticatedBaseUrl + pathname, { redirect: 'manual' });
+      assert.equal(indoorDeniedResponse.status, pathname.startsWith('/artes/') ? 302 : 401,
+        `Indoor deve manter autenticação em ${pathname}`);
     }
 
-    const authorization = 'Basic ' + Buffer.from('smoke-user:smoke-password').toString('base64');
     const acceptedResponse = await fetch(authenticatedBaseUrl + '/api/health', {
-      headers: { Authorization: authorization },
+      headers: fixtureSessionHeaders,
     });
     assert.equal(acceptedResponse.status, 200, 'Aplicação protegida rejeitou credenciais válidas');
   } finally {

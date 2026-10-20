@@ -10,16 +10,13 @@
     -webkit-text-size-adjust: 100%;
   }
   .is-mobile-editor .stories-topbar {
-    position: relative; flex: none; min-height: calc(60px + env(safe-area-inset-top, 0px));
-    padding: env(safe-area-inset-top, 0px) max(10px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px));
-    grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px;
+    position: relative; flex: none; min-height: 56px;
+    padding: 4px max(12px, env(safe-area-inset-right, 0px)) 4px max(12px, env(safe-area-inset-left, 0px));
+    grid-template-columns: minmax(0, 1fr) auto; gap: 8px;
     color: #285780; border-bottom: 1px solid #dfe7f1; background: #fff;
     box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
   }
-  .is-mobile-editor .stories-back-link { display: flex; width: fit-content; max-width: 100%; min-height: 44px; gap: 4px; font-size: 0; color: #285780; align-items: center; }
-  .is-mobile-editor .stories-back-link .site-brand-logo { width: 124px; max-width: calc(100% - 36px); height: auto; }
-  .is-mobile-editor .stories-back-link > span { display: grid; width: 32px; height: 40px; flex: none; background: transparent; }
-  .is-mobile-editor .story-mobile-context { display: grid; gap: 2px; text-align: right; }
+  .is-mobile-editor .story-mobile-context { display: grid; gap: 2px; text-align: left; }
   .is-mobile-editor .story-mobile-context h1 { margin: 0; color: #173f68; font-size: 15px; font-weight: 800; line-height: 1.2; }
   .is-mobile-editor .story-mobile-context > span { color: #667b91; font-size: 10px; font-weight: 600; white-space: nowrap; }
   .is-mobile-editor .stories-format { display: none; }
@@ -182,7 +179,6 @@
   .is-mobile-editor.story-mobile-keyboard-open .story-mobile-dialog-header p { display: none; }
 }
 @media (max-width: 370px) {
-  .is-mobile-editor .stories-back-link .site-brand-logo { width: 108px; }
   .is-mobile-editor .story-mobile-context > span { display: none; }
   .is-mobile-editor .story-mobile-panels { padding-inline: 14px; }
   .is-mobile-editor .story-product-results { grid-template-columns: minmax(0, 1fr); }
@@ -190,7 +186,7 @@
   .is-mobile-editor .story-product-option-copy strong { -webkit-line-clamp: 2; }
 }
 @media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
-  .is-mobile-editor .stories-topbar { min-height: calc(48px + env(safe-area-inset-top, 0px)); }
+  .is-mobile-editor .stories-topbar { min-height: 48px; padding-block: 2px; }
   .is-mobile-editor .story-workspace { padding-top: 8px; }
   .is-mobile-editor .story-mobile-dialog-surface { width: min(100%, 600px); }
 }

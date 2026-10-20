@@ -1,7 +1,8 @@
 import { getBackgroundBadgeTheme } from '../stories/background-theme.js';
+import { authFetch } from '../../auth-session.js';
 import { loadArtworkSelection } from '../revista/artwork.js';
 import { PRODUCT_LIMIT, addProduct, removeProduct, moveProduct, canContinue } from './model.js';
-import { INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_DURATION, drawIndoorFrame } from './renderer.js';
+import { INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_INTRO_DURATION, INDOOR_PRODUCT_DURATION, getIndoorDuration, drawIndoorFrame } from './renderer.js';
 import { bindPriceInput } from '../stories/price-input.js';
 
 const byId = (id) => document.getElementById(`indoor-${id}`);
@@ -11,6 +12,7 @@ const ui = Object.fromEntries([
   'play', 'time', 'time-label', 'scenes', 'download', 'export-status', 'export-progress',
   'cancel-export', 'download-link', 'retry-preview', 'product-views', 'show-catalog', 'show-selection',
   'catalog', 'selection-panel', 'mobile-count', 'mobile-dock', 'mobile-hint', 'mobile-back', 'mobile-next',
+  'duration', 'sequence',
 ].map((id) => [id, byId(id)]));
 const stepButtons = [...document.querySelectorAll('[data-step]')];
 const backButtons = [...document.querySelectorAll('[data-go]')];
@@ -114,6 +116,14 @@ function selectionStatus() {
 function syncControls() {
   const busy = Boolean(state.exportController);
   const complete = canContinue(state.selection);
+  const hasWallpaper = Boolean(state.background?.wallpaper_url);
+  const duration = getIndoorDuration(hasWallpaper);
+  ui.time.max = String(duration - 1 / 30);
+  ui.duration.textContent = `${duration} segundos`;
+  ui.sequence.textContent = hasWallpaper
+    ? 'Abertura de 3 s + 5 produtos · 8 s por produto'
+    : '5 produtos · 8 s por produto · sem wallpaper';
+  ui.download.textContent = `Baixar MP4 · ${duration} s`;
   for (const node of stepButtons) {
     node.disabled = busy || (node.dataset.step !== 'products' && !complete)
       || (node.dataset.step === 'preview' && !state.background);
@@ -249,7 +259,7 @@ function renderResults() {
 }
 
 async function fetchJson(url, signal) {
-  const response = await fetch(url, { signal });
+  const response = await authFetch(url, { signal });
   if (!response.ok) throw new Error(response.status === 401 ? 'Sua sessão expirou. Atualize a página para entrar novamente.'
     : 'Não foi possível carregar os dados. Tente novamente.');
   return response.json();
@@ -303,7 +313,8 @@ function renderBackgrounds() {
       status('Fundo selecionado. Continue para conferir o vídeo.');
     }, 'indoor-background-option');
     card.setAttribute('aria-pressed', String(state.background?.url === background.url));
-    card.append(thumbnail(background.thumbnail_url || background.url), element('span', '', background.nome));
+    card.append(thumbnail(background.thumbnail_url || background.url), element('span', '', background.nome),
+      element('small', '', background.wallpaper_url ? 'Com abertura da campanha · 43 s' : 'Sem wallpaper · 40 s'));
     ui.backgrounds.append(card);
   }
   if (!state.backgrounds.length) ui.backgrounds.append(element('p', 'indoor-empty', state.backgroundsLoading
@@ -323,7 +334,9 @@ async function loadBackgrounds() {
     const response = await fetchJson('/api/indoor-backgrounds', controller.signal);
     state.backgrounds = response.items.map((item) => ({ ...item, url: item.preview_url || item.url }));
     state.backgroundsLoaded = true;
-    if (state.background && !state.backgrounds.some((item) => item.url === state.background.url)) {
+    if (state.background && !state.backgrounds.some((item) => item.url === state.background.url
+      && item.wallpaper_url === state.background.wallpaper_url
+      && item.wallpaper_preview_url === state.background.wallpaper_preview_url)) {
       state.background = null;
       invalidatePreview();
     }
@@ -364,8 +377,8 @@ function paint() {
   if (!state.snapshot) return;
   const carousel = drawIndoorFrame(context, state.snapshot, state.seconds);
   ui.time.value = String(state.seconds);
-  ui['time-label'].textContent = `${state.seconds.toFixed(1).replace('.', ',')} / ${INDOOR_DURATION} s`;
-  [...ui.scenes.children].forEach((node, index) => node.setAttribute('aria-pressed', String(index === carousel.index)));
+  ui['time-label'].textContent = `${state.seconds.toFixed(1).replace('.', ',')} / ${getIndoorDuration(Boolean(state.snapshot.wallpaper))} s`;
+  [...ui.scenes.children].forEach((node) => node.setAttribute('aria-pressed', String(Number(node.dataset.productIndex) === carousel.index)));
 }
 
 function pause() {
@@ -381,7 +394,7 @@ function play() {
   const origin = performance.now() - state.seconds * 1000;
   function tick(now) {
     if (!state.playing) return;
-    state.seconds = ((now - origin) / 1000) % INDOOR_DURATION;
+    state.seconds = ((now - origin) / 1000) % getIndoorDuration(Boolean(state.snapshot.wallpaper));
     paint();
     state.frame = requestAnimationFrame(tick);
   }
@@ -397,22 +410,42 @@ async function preparePreview() {
   ui.scenes.replaceChildren();
   const selected = state.selection.map((entry) => ({ product: { ...entry.product }, originalPrice: entry.originalPrice ? `R$ ${entry.originalPrice}` : '', price: entry.price ? `R$ ${entry.price}` : '' }));
   const backgroundUrl = state.background.url;
-  const needed = new Set([backgroundUrl, ...selected.map((entry) => entry.product.imagem_local_url)]);
+  const wallpaperUrl = state.background.wallpaper_preview_url || state.background.wallpaper_url;
+  const wallpaperThumbnail = state.background.wallpaper_thumbnail_url || wallpaperUrl;
+  const needed = new Set([backgroundUrl, wallpaperUrl, ...selected.map((entry) => entry.product.imagem_local_url)]);
   for (const url of images.keys()) if (!needed.has(url)) images.delete(url);
   try {
     if (!context) throw new Error('Este navegador não conseguiu abrir a prévia. Tente novamente no Chrome ou Edge.');
-    const [background, ...loaded] = await Promise.all([loadImage(backgroundUrl), ...selected.map((entry) => loadImage(entry.product.imagem_local_url))]);
+    const [background, wallpaper, ...loaded] = await Promise.all([
+      loadImage(backgroundUrl),
+      wallpaperUrl ? loadImage(wallpaperUrl) : null,
+      ...selected.map((entry) => loadImage(entry.product.imagem_local_url)),
+    ]);
     if (state.previewVersion !== version || state.step !== 'preview') return;
-    state.snapshot = { background, badgeTheme: getBackgroundBadgeTheme(background, { width: 128, height: 72 }), products: selected.map((entry, index) => ({ ...entry, image: loaded[index] })) };
+    state.snapshot = { background, wallpaper, badgeTheme: getBackgroundBadgeTheme(background, { width: 128, height: 72 }), products: selected.map((entry, index) => ({ ...entry, image: loaded[index] })) };
     state.seconds = 0;
-    selected.forEach((entry, index) => {
-      const node = button('', () => {
+    const intro = wallpaper ? INDOOR_INTRO_DURATION : 0;
+    if (wallpaper) {
+      const opening = button('', () => {
         pause();
-        state.seconds = index * INDOOR_DURATION / PRODUCT_LIMIT;
+        state.seconds = 0;
         paint();
       });
+      opening.dataset.productIndex = '-1';
+      opening.setAttribute('aria-label', 'Ver abertura da campanha');
+      opening.append(thumbnail(wallpaperThumbnail), element('span', '', `Abertura · 0–${intro} s`));
+      ui.scenes.append(opening);
+    }
+    selected.forEach((entry, index) => {
+      const start = intro + index * INDOOR_PRODUCT_DURATION;
+      const node = button('', () => {
+        pause();
+        state.seconds = start;
+        paint();
+      });
+      node.dataset.productIndex = String(index);
       node.setAttribute('aria-label', `Ver produto ${index + 1}: ${entry.product.nome}`);
-      node.append(thumbnail(entry.product.imagem_local_url), element('span', '', `${index + 1} · ${index * 3}–${(index + 1) * 3} s`));
+      node.append(thumbnail(entry.product.imagem_local_url), element('span', '', `${index + 1} · ${start}–${start + INDOOR_PRODUCT_DURATION} s`));
       ui.scenes.append(node);
     });
     paint();
@@ -471,7 +504,7 @@ async function download() {
     const exportContext = canvas.getContext('2d');
     if (!exportContext) throw new Error('Não foi possível preparar o vídeo neste navegador.');
     const blob = await exportStoryVideo({
-      canvas, signal: controller.signal, duration: INDOOR_DURATION,
+      canvas, signal: controller.signal, duration: getIndoorDuration(Boolean(snapshot.wallpaper)),
       renderFrame: (seconds) => drawIndoorFrame(exportContext, snapshot, seconds),
       onProgress: (fraction) => {
         const percentage = Math.round(fraction * 100);
@@ -548,7 +581,7 @@ ui['load-more'].addEventListener('click', () => void loadProducts(state.page > 0
 ui.play.addEventListener('click', () => state.playing ? pause() : play());
 ui.time.addEventListener('input', () => {
   pause();
-  state.seconds = Math.min(INDOOR_DURATION - 1 / 30, Math.max(0, Number(ui.time.value) || 0));
+  state.seconds = Math.min(getIndoorDuration(Boolean(state.snapshot?.wallpaper)) - 1 / 30, Math.max(0, Number(ui.time.value) || 0));
   paint();
 });
 ui.download.addEventListener('click', () => void download());
@@ -572,7 +605,7 @@ async function initializeProducts() {
   if (!window.location?.search) return;
   try {
     const selection = await loadArtworkSelection(window.location.search, async url => {
-      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      const response = await authFetch(url, { signal: AbortSignal.timeout(15000) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Não foi possível carregar a oferta.');
       return data;

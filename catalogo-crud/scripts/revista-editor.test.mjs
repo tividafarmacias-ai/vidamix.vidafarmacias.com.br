@@ -24,7 +24,7 @@ function fixture(report) {
     createDocumentFragment: () => Object.assign(new Element(), { fragment: true }),
   };
   const sandbox = vm.createContext({ document, FormData, AbortSignal,
-    fetch: async (url, options) => {
+    authFetch: async (url, options) => {
       calls.push({ url, options });
       const data = url.endsWith('/validate') ? report : options?.method === 'POST'
         ? { campaign: { id: 1, name: 'Revista 10/2026', month: '10/2026', items: report.items }, skippedCount: report.total - report.items.length }
@@ -32,7 +32,7 @@ function fixture(report) {
       return { ok: true, json: async () => data };
     },
   });
-  vm.runInContext(source, sandbox);
+  vm.runInContext(source.replace(/^import .+;\r?\n/gm, ''), sandbox);
   const get = id => elements.get(`revista-${id}`);
   get('file').files = [new File(['test'], 'campanha.xlsx')];
   return { get, calls };

@@ -163,7 +163,17 @@ function mobileArtworkTour(format) {
   };
 }
 
-export function getTour(page, { mobile = false } = {}) {
+const customerCatalogue = {
+  ...tours.catalogue,
+  steps: tours.catalogue.steps.map((step) => {
+    if (step.id === 'results') return { ...step, description: 'Os resultados aparecem nos cartões abaixo. Use as setas para mudar de página e abra Detalhes para consultar os dados do produto.' };
+    if (step.id === 'actions') return { ...step, title: 'Crie sua próxima arte', description: 'Criar Story e Criar Feed levam ao editor do formato escolhido. Nos cartões dos produtos, esses atalhos já levam o item para a arte. Para vídeos de TV Indoor, use o menu de navegação. O catálogo está disponível para consulta.' };
+    return step;
+  }),
+};
+
+export function getTour(page, { mobile = false, role = 'admin' } = {}) {
+  if (page === 'catalogue' && role !== 'admin') return customerCatalogue;
   if (!mobile) return tours[page];
   if (page === 'home') return mobileHome;
   if (page === 'stories' || page === 'feed') return mobileArtworkTour(page);

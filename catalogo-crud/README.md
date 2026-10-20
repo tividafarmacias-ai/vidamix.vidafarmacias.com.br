@@ -9,11 +9,49 @@ Para medir usuários simultâneos na hospedagem, consulte
 [Testes de carga](docs/load-testing.md). O roteiro usa `scripts/load-test.js`
 com k6 em uma máquina externa e inclui catálogo, Stories, Feed e imagens.
 
+## Login e permissões
+
+O acesso à aplicação exige login em `/login`, usando o e-mail e a senha já
+cadastrados na tabela MySQL `cliente`. O Studio consulta essa tabela sem alterar
+cadastros ou senhas. A conta precisa ter `ativo = 1`, `deleted = 0` ou `NULL`,
+e `role` igual a `admin` ou `cliente`; outros perfis são bloqueados. E-mails
+duplicados, depois de remover espaços nas extremidades e ignorar maiúsculas,
+não permitem login até serem corrigidos na base de origem.
+
+| Perfil | Permissões |
+| --- | --- |
+| `admin` | Todas as telas e funcionalidades, incluindo gestão do catálogo, revistas e backgrounds |
+| `cliente` | Criar artes de Stories e Feed, criar vídeos de TV Indoor e consultar o catálogo, sem adicionar, editar ou excluir produtos |
+
+Após entrar, o administrador abre a central e o cliente abre `/catalogo`.
+O cliente que acessar `/` também é redirecionado ao catálogo. As permissões são
+verificadas no servidor para páginas, aliases `.html` e API; ocultar os botões
+na interface não é a única proteção.
+
+As senhas legadas MD5-crypt (`$1$`) são verificadas de forma compatível, e bcrypt
+(`$2a$`, `$2b$`, `$2y$`) também é aceito. Senhas em texto puro ou formatos
+desconhecidos não autenticam. Não há migração automática das senhas no MySQL.
+As sessões duram oito horas e ficam no SQLite da aplicação, por padrão
+`data/catalogo.sqlite`. O cookie é `HttpOnly` e `SameSite=Lax`, com `Secure`
+por padrão em produção. **Sair** revoga a sessão no servidor; alteração de
+senha, inativação, exclusão lógica ou perfil inválido revogam a sessão na
+próxima requisição. As operações de escrita exigem proteção CSRF, e tentativas
+de login são limitadas por conta e endereço de origem.
+
+O login é obrigatório em todos os ambientes. `APP_AUTH_ENABLED` não tem efeito
+e a antiga autenticação HTTP Basic foi removida. Para conectividade pública,
+use `GET /login`; `/api/health` exige uma sessão válida.
+
 ## Identidade visual
 
 
 A identidade compartilhada está em `public/brand.css`: Poppins, azul `#084F98`,
 vermelho `#F21E26`, superfícies claras e tokens de bordas, cantos e sombras.
+O cabeçalho das telas internas, inclusive a página offline, usa `data-app-header`.
+`public/js/app-shell.js` centraliza os destinos, a indicação da página atual e
+o menu compacto; `public/app-shell.css` define logo, altura e espaçamentos.
+O login reutiliza os estilos e o botão de tema, sem a navegação autenticada.
+Stories e Feed mantêm suas ferramentas e exportações na barra abaixo do cabeçalho.
 As páginas carregam essa base antes dos estilos de cada tela; o tour também
 usa os mesmos tokens. A fonte é servida localmente por `public/fonts/`, com sua
 licença SIL, sem depender do Google Fonts em tempo de execução.
@@ -49,10 +87,9 @@ internos, recargas ou retorno pelo histórico. A apresentação leva cerca de 1,
 respeita movimento reduzido e pode ser encerrada por toque ou teclado.
 Para visualizar no navegador, abra `/?abertura=1`. A animação é exibida dentro
 do app; a tela nativa anterior à página continua sendo controlada pelo sistema.
-O manifesto e os ícones de instalação aceitam GET/HEAD sem autenticação, para
-que a descoberta do ícone não dependa da sessão HTTP Basic do navegador.
-As páginas, a API e os demais recursos também não exigem login por padrão.
-HTTP Basic só é aplicado se `APP_AUTH_ENABLED=true` for configurado explicitamente.
+O manifesto, os ícones e os recursos públicos da tela de login aceitam GET/HEAD
+sem autenticação. As páginas internas e a API exigem sessão; abrir o aplicativo
+sem sessão leva ao login. Após autenticar, cada perfil recebe sua navegação.
 O manifesto `.webmanifest` permanece disponível para compatibilidade, com o
 mesmo conteúdo do `.json` (verificado pelos testes).
 
@@ -175,12 +212,17 @@ para obter as novas URLs; mantenha os PNG até validar os arquivos convertidos.
 
 | Endereço | Uso |
 | --- | --- |
-| `/` | Central do VidaMix Studio e formatos disponíveis |
-| `/catalogo` | Gestão de produtos |
+| `/login` | Entrada com e-mail e senha |
+| `/` | Central do administrador; redireciona clientes ao catálogo |
+| `/catalogo` | Gestão para administradores; consulta para clientes |
 | `/artes/stories` | Editor de artes para Stories |
 | `/artes/feed` | Editor de artes para Feed vertical (4:5) |
 | `/artes/indoor-h` | Carrossel de cinco produtos para TV Indoor horizontal (16:9) |
-| `/api/*` | API JSON interna |
+| `/revista` | Gestão de revistas, exclusiva do administrador |
+| `/backgrounds` | Gestão de backgrounds, exclusiva do administrador |
+| `/api/auth/session` | Sessão atual e token CSRF |
+| `/api/auth/login` e `/api/auth/logout` | Entrada e saída via POST |
+| `/api/*` | API JSON interna, protegida conforme o perfil |
 
 Os caminhos antigos de arquivos continuam funcionando como compatibilidade, mas
 novas telas devem ser registradas por rota semântica.
@@ -212,35 +254,41 @@ formatos, incluindo geometria, dimensões do MP4, controles das páginas e fundo
 
 Abra **TV Indoor** na central ou acesse `/artes/indoor-h`. O editor cria um
 carrossel horizontal de **1920 × 1080 pixels**, com **cinco produtos** em um
-vídeo MP4 de **15 segundos**, sem áudio. Cada produto ocupa um intervalo de
-três segundos, com transições horizontais suaves; a última transição volta ao
-primeiro produto para permitir a reprodução em repetição na televisão.
+vídeo MP4 de **43 segundos**, sem áudio, quando a campanha tem wallpaper.
+Os primeiros três segundos apresentam o wallpaper com zoom suave e uma abertura
+diagonal que revela a primeira oferta. Cada produto ocupa um intervalo de oito
+segundos, com transições horizontais suaves. O final retorna ao wallpaper para
+repetir o vídeo na televisão. Fundos antigos sem wallpaper mantêm o carrossel de
+40 segundos, com retorno ao primeiro produto.
 
 1. Busque e selecione cinco produtos diferentes do catálogo, todos com imagem
    local disponível. A seleção mostra quantos produtos faltam para continuar.
 2. Reordene os produtos na sequência desejada e informe os preços de cada
    oferta, se quiser. Os preços são opcionais e acompanham o produto quando
    sua posição muda. Remova um item para substituí-lo por outro.
-3. Continue para escolher um fundo e conferir a prévia animada. Revise a ordem,
-   a descrição dos produtos e os preços antes da exportação.
+3. Continue para escolher uma campanha e conferir a prévia animada. Os atalhos
+   permitem revisar a abertura e cada produto, com os respectivos intervalos.
+   Confira a descrição dos produtos e os preços antes da exportação.
 4. Clique em **Baixar MP4** e acompanhe a geração do arquivo. O vídeo é criado
    no navegador; mantenha a página aberta até a conclusão. Depois, transfira
    o arquivo para a televisão ou para o sistema de exibição da loja.
 
 Os fundos ficam em `catalogo-crud/camas-indoor-h/` (a pasta `camas-indoor-h`
-dentro da aplicação). Copie para ela as imagens **PNG, JPG, JPEG ou WebP**,
-preferencialmente em 1920 × 1080, e atualize a página. Se a pasta estiver vazia,
-o editor informa que é necessário adicionar os fundos antes de exportar.
+dentro da aplicação). Use `/backgrounds` para cadastrar o background e o
+wallpaper juntos, em **PNG, JPG, JPEG ou WebP**, preferencialmente em 1920 × 1080.
+O background recebe as ofertas e o wallpaper abre o vídeo. Se a pasta estiver
+vazia, o editor informa que é necessário adicionar os fundos antes de exportar.
 A lista é carregada por `/api/indoor-backgrounds`, e os arquivos são servidos
 em `/indoor-backgrounds/`. Use `INDOOR_BACKGROUNDS_ROOT` para configurar outra
 pasta, inclusive um diretório persistente na hospedagem.
 
 O fundo preenche a tela sem deformação; proporções diferentes podem sofrer
-recorte central. Produtos mantêm suas proporções e textos longos são limitados
-ao espaço disponível. Os nove fundos fornecidos concentram as marcas da campanha
-à esquerda; por isso, a composição reserva os primeiros 30% da largura (576 pixels),
-inclusive durante as transições, com margens de 84 pixels no topo e na base.
-A exportação
+recorte central. O layout segue a referência de Aniversário de Loja: produto
+grande à esquerda, cartão de descrição à direita e preço promocional destacado
+abaixo, com preço normal riscado quando informado. Produtos mantêm suas proporções
+e textos longos se ajustam ao espaço disponível. A área animada fica entre
+x=324–1604 e y=270–1032, preservando o título superior e os balões laterais.
+Outros backgrounds devem reservar essa mesma área para as ofertas. A exportação
 gera MP4/H.264 a 30 quadros por segundo usando WebCodecs no próprio navegador.
 É necessário **HTTPS ou localhost** e codificação H.264 disponível, como em
 Chrome ou Edge compatíveis. O editor verifica o suporte antes de exportar.
@@ -358,18 +406,39 @@ incremente-o quando uma mudança relevante justificar apresentar o tour novament
 
 ## Executar
 
+Na pasta `catalogo-crud`, instale as dependências com `npm.cmd ci`. Se ainda
+não houver `.env`, copie `.env.example` para `.env` e preencha os dados MySQL.
+Preserve o `.env` existente quando ele já estiver configurado.
+
+| Variável | Uso e padrão |
+| --- | --- |
+| `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexão à base que contém `cliente`; obrigatórias |
+| `DB_PORT` | Porta MySQL; padrão `3306` |
+| `DB_SSL` | `true` habilita TLS com validação do certificado; padrão `false` |
+| `APP_ORIGIN` | Origem pública opcional, como `https://studio.exemplo.com`, sem caminho, query ou fragmento |
+| `AUTH_COOKIE_SECURE` | Padrão `true` quando `NODE_ENV=production`; `false` nos demais ambientes |
+| `AUTH_TRUST_PROXY` | Padrão `false`; habilitar somente atrás de proxy confiável que controle os cabeçalhos encaminhados |
+
+O servidor carrega automaticamente `catalogo-crud/.env` com `process.loadEnvFile`;
+variáveis já definidas pelo ambiente do processo ou pelo painel da hospedagem
+têm prioridade. O servidor valida a conexão e as colunas de `cliente` antes de
+iniciar. A conexão MySQL atualmente configurada não oferece TLS; mantenha
+`DB_SSL=false` enquanto isso não mudar no servidor do banco.
+
 ```powershell
 npm.cmd run start
 ```
 
-Abra `http://localhost:3333`. Para desenvolvimento com reinício automático:
+Abra `http://localhost:3333/login`. Para desenvolvimento com reinício automático:
 
 ```powershell
 npm.cmd run dev
 ```
 
 Consulte `src/config.mjs` para a porta e os diretórios de origem. Defina as
-variáveis no ambiente do processo ou no painel de variáveis da hospedagem.
+variáveis no `.env`, no ambiente do processo ou no painel da hospedagem.
+O SQLite continua responsável pelo catálogo e pelas sessões, e precisa ser
+gravável; o MySQL é a fonte dos usuários.
 
 ## Verificar
 
@@ -389,8 +458,11 @@ e a aparência do vídeo também devem ser conferidas em um navegador compatíve
 
 O projeto está preparado para ser executado no Plesk com Node.js 22.13+.
 Antes de publicar, mantenha o SQLite, o catálogo de importação e as imagens em
-um caminho persistente fora da aplicação, configure `APP_AUTH_ENABLED=false` e
-execute npm.cmd run check:production.
+um caminho persistente, configure as variáveis de acesso MySQL e execute
+`npm.cmd run check:production` com `NODE_ENV=production` no ambiente.
+Configure o **Document Root** como `catalogo-crud/web-root`, que contém apenas
+`.gitkeep`. Todas as requisições, inclusive arquivos `.html`, precisam passar
+pelo Node; apontar o Document Root para `public` permite contornar o login.
 
 O procedimento completo, com caminhos, variáveis e rollback, está em
 [docs/deployment-plesk.md](docs/deployment-plesk.md).
@@ -406,6 +478,7 @@ src/
   routes/                rotas de página e API
 
 public/
+  login.html             entrada com e-mail e senha
   index.html             central de criação
   catalogo.html          catálogo
   stories.html           editor de Stories
@@ -416,6 +489,8 @@ public/
 
 docs/                    decisões e convenções de arquitetura
 scripts/                 verificações locais
+web-root/                Document Root vazio para o Plesk
+.env.example             exemplo de configuração sem credenciais reais
 ```
 
 Leia [a arquitetura detalhada](docs/architecture.md) antes de criar um novo

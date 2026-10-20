@@ -1,4 +1,5 @@
 import { campaignArtworkUrl } from './artwork.js';
+import { authFetch } from '../../auth-session.js';
 
 const byId = id => document.getElementById(`home-${id}`);
 const money = cents => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -81,7 +82,7 @@ async function loadCampaign() {
   byId('revista-retry').hidden = true;
   byId('revista-status').textContent = 'Carregando revista vigente…';
   try {
-    const response = await fetch('/api/revista/active', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+    const response = await authFetch('/api/revista/active', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error();
     ({ campaign } = await response.json());
     if (!campaign) {

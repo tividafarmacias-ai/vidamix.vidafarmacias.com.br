@@ -7,6 +7,7 @@ import ExcelJS from 'exceljs';
 import { initializeSchema } from '../src/database/catalog-database.mjs';
 import { createRevistaService, createRevistaTemplate, readRevistaWorkbook } from '../src/modules/revista/revista-service.mjs';
 import { createApplication } from '../src/app.mjs';
+import { adminAuthFixture } from './fixtures/auth.mjs';
 import { loadConfig } from '../src/config.mjs';
 
 function databaseFixture(t) {
@@ -179,7 +180,7 @@ test('active offer API supplies saved prices and rejects stale campaigns and una
   const old = service.create(rows).campaign;
   const current = service.create([{ ...rows[0], priceCents: 3499 }]).campaign;
   const config = loadConfig({ NODE_ENV: 'test', APP_AUTH_ENABLED: 'false' });
-  const server = createServer(createApplication({ config, database }));
+  const server = createServer(createApplication({ config, database, authService: adminAuthFixture() }));
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => { server.closeAllConnections(); server.close(); });
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -216,7 +217,7 @@ test('rejects corrupt files, wrong columns, extra tabs and excessive row counts'
 test('HTTP flow downloads template, validates upload, saves and reloads campaign', async t => {
   const { database } = databaseFixture(t);
   const config = loadConfig({ NODE_ENV: 'test', APP_AUTH_ENABLED: 'false' });
-  const server = createServer(createApplication({ config, database }));
+  const server = createServer(createApplication({ config, database, authService: adminAuthFixture() }));
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
   try {

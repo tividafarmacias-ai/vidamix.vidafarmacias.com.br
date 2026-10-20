@@ -1,3 +1,6 @@
+import { sessionReady, logout } from './auth-session.js';
+
+const indoorDestination = { screen: 'indoor', href: '/artes/indoor-h', label: 'TV Indoor', icon: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8m-4-4v4m-2-14 6 4-6 4z"/>' };
 const destinations = [
   { screen: 'home', href: '/', label: 'Início', icon: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>' },
   { screen: 'catalogue', href: '/catalogo', label: 'Catálogo', icon: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>' },
@@ -6,16 +9,117 @@ const destinations = [
   { screen: 'revista', href: '/revista', label: 'Revista', icon: '<path d="M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>' },
 ];
 
+const headerDestinations = [
+  { screen: 'home', href: '/', label: 'Central' },
+  ...destinations.filter(({ screen }) => screen === 'catalogue' || screen === 'revista'),
+  { screen: 'backgrounds', href: '/backgrounds', label: 'Backgrounds' },
+  ...destinations.filter(({ screen }) => screen === 'stories' || screen === 'feed'),
+  indoorDestination,
+];
+
+export function getHeaderDestinations(role) {
+  if (role === 'admin') return headerDestinations;
+  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['catalogue', 'stories', 'feed', 'indoor'].includes(screen));
+  return [];
+}
+
 export function getAppScreen(pathname) {
   const path = pathname.replace(/\/+$/, '') || '/';
   return ({
     '/': 'home', '/index.html': 'home',
     '/catalogo': 'catalogue', '/catalogo.html': 'catalogue',
     '/revista': 'revista', '/revista.html': 'revista',
+    '/backgrounds': 'backgrounds', '/backgrounds.html': 'backgrounds',
     '/artes/stories': 'stories', '/stories.html': 'stories',
     '/artes/feed': 'feed', '/feed.html': 'feed',
     '/artes/indoor-h': 'indoor', '/indoor-h.html': 'indoor',
   })[path] || null;
+}
+
+export function initAppHeader(win, doc, screen, session = null) {
+  const header = doc.querySelector('[data-app-header]');
+  if (!header || header.dataset.initialized) return;
+  header.dataset.initialized = 'true';
+  const inner = header.querySelector('.site-header-inner');
+  const name = doc.createElement('span');
+  name.className = 'app-screen-name';
+  name.textContent = screen === 'offline' ? 'Sem conexão'
+    : headerDestinations.find((destination) => destination.screen === screen)?.label || 'VidaMix Studio';
+  inner.append(name);
+
+  const nav = doc.createElement('nav');
+  nav.id = 'site-navigation';
+  nav.className = 'site-nav';
+  nav.setAttribute('aria-label', 'Navegação principal');
+  const brand = header.querySelector('.site-brand');
+  if (brand) {
+    brand.href = session?.user.role === 'admin' ? '/' : session ? '/catalogo' : '/login';
+    brand.setAttribute('aria-label', 'VidaMix Studio');
+  }
+  for (const destination of getHeaderDestinations(session?.user.role)) {
+    const link = doc.createElement('a');
+    link.href = destination.href;
+    link.textContent = destination.label;
+    if (destination.screen === screen) link.setAttribute('aria-current', 'page');
+    nav.append(link);
+  }
+  if (session) {
+    const account = doc.createElement('span');
+    account.className = 'site-account';
+    account.textContent = `${session.user.name || 'Minha conta'} · ${session.user.role === 'admin' ? 'Administrador' : 'Cliente'}`;
+    account.title = account.textContent;
+    const exit = doc.createElement('button');
+    exit.type = 'button';
+    exit.className = 'site-logout';
+    exit.textContent = 'Sair';
+    exit.addEventListener('click', async () => {
+      exit.disabled = true;
+      exit.textContent = 'Saindo…';
+      try { await logout(); }
+      catch (error) {
+        exit.disabled = false;
+        exit.textContent = 'Tentar sair novamente';
+        account.textContent = error.message;
+        account.setAttribute('role', 'alert');
+      }
+    });
+    nav.append(account, exit);
+  } else {
+    const login = doc.createElement('a');
+    login.href = '/login';
+    login.textContent = 'Entrar';
+    nav.append(login);
+  }
+
+  const toggle = doc.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'site-menu-toggle';
+  toggle.setAttribute('aria-controls', nav.id);
+  toggle.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  inner.append(toggle, nav);
+
+  const compact = win.matchMedia('(max-width: 1100px)');
+  const setOpen = (open) => {
+    const expanded = compact.matches && open;
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', expanded ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
+    nav.hidden = compact.matches && !expanded;
+  };
+  toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+  doc.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || toggle.getAttribute('aria-expanded') !== 'true') return;
+    setOpen(false);
+    toggle.focus();
+  });
+  doc.addEventListener('click', (event) => {
+    if (!header.contains(event.target) || nav.contains(event.target)) setOpen(false);
+  });
+  doc.addEventListener('focusin', (event) => {
+    if (!header.contains(event.target)) setOpen(false);
+  });
+  compact.addEventListener('change', () => setOpen(false));
+  win.addEventListener('pageshow', () => setOpen(false));
+  setOpen(false);
 }
 
 export function hasSoftwareKeyboard({ editable, layoutHeight, visibleHeight, scale = 1 }) {
@@ -62,7 +166,7 @@ export function initNavigationFeedback(win, doc) {
   if (doc.readyState === 'interactive' || doc.readyState === 'loading') show();
 }
 
-export function initAppShell(win = window, doc = document) {
+export function initAppShell(win = window, doc = document, options = {}) {
   const root = doc.documentElement;
   const screen = doc.body.classList.contains('offline-page') ? 'offline' : getAppScreen(win.location.pathname);
   const standalone = win.matchMedia('(display-mode: standalone)');
@@ -71,26 +175,40 @@ export function initAppShell(win = window, doc = document) {
   updateDisplayMode();
   standalone.addEventListener('change', updateDisplayMode);
   root.dataset.appScreen = screen || '';
-
-  // Browsing screens share destinations. Editors keep their own step navigation.
-  if (screen === 'home' || screen === 'catalogue' || screen === 'revista') {
-    const nav = doc.createElement('nav');
-    nav.className = 'app-tabbar';
-    nav.setAttribute('aria-label', 'Navegação do aplicativo');
-    for (const destination of destinations) {
-      const link = doc.createElement('a');
-      link.href = destination.href;
-      link.innerHTML = `<span class="app-tab-icon"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${destination.icon}</svg></span><span>${destination.label}</span>`;
-      if (screen === destination.screen) link.setAttribute('aria-current', 'page');
-      nav.append(link);
+  const ready = screen === 'offline' ? Promise.resolve(null) : Object.hasOwn(options, 'session') ? Promise.resolve(options.session) : sessionReady;
+  const navigationReady = ready.then((session) => {
+    initAppHeader(win, doc, screen, session);
+    if (!session && screen !== 'offline') {
+      const message = doc.createElement('section');
+      message.className = 'app-session-error';
+      message.setAttribute('role', 'alert');
+      const text = doc.createElement('p');
+      text.textContent = 'Não foi possível verificar seu acesso. Entre novamente ou recarregue a página.';
+      const login = doc.createElement('a');
+      login.href = '/login';
+      login.textContent = 'Ir para o login';
+      message.append(text, login);
+      doc.body.append(message);
+      return;
     }
-    doc.body.append(nav);
-    doc.body.classList.add('has-app-tabbar');
-    const name = doc.createElement('span');
-    name.className = 'app-screen-name';
-    name.textContent = screen === 'home' ? 'VidaMix Studio' : screen === 'revista' ? 'Revista' : 'Catálogo';
-    doc.querySelector('.site-header-inner')?.append(name);
-  }
+    // Browsing screens share destinations. Editors keep their own step navigation.
+    if (session && ['home', 'catalogue', 'revista'].includes(screen)) {
+      const nav = doc.createElement('nav');
+      nav.className = 'app-tabbar';
+      nav.setAttribute('aria-label', 'Navegação do aplicativo');
+      const tabs = session.user.role === 'admin' ? destinations : [...destinations.filter(({ screen: key }) => ['catalogue', 'stories', 'feed'].includes(key)), indoorDestination];
+      nav.style.setProperty('--app-tab-count', tabs.length);
+      for (const destination of tabs) {
+        const link = doc.createElement('a');
+        link.href = destination.href;
+        link.innerHTML = `<span class="app-tab-icon"><svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${destination.icon}</svg></span><span>${destination.label}</span>`;
+        if (screen === destination.screen) link.setAttribute('aria-current', 'page');
+        nav.append(link);
+      }
+      doc.body.append(nav);
+      doc.body.classList.add('has-app-tabbar');
+    }
+  });
 
   let baselineHeight = 0;
   let baselineWidth = 0;
@@ -125,6 +243,7 @@ export function initAppShell(win = window, doc = document) {
   doc.addEventListener('focusout', () => win.requestAnimationFrame(updateViewport));
   mobile.addEventListener('change', updateViewport);
   initNavigationFeedback(win, doc);
+  return navigationReady;
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') initAppShell();

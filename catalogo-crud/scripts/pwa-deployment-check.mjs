@@ -20,7 +20,7 @@ export async function checkPwaDeployment(baseUrl) {
     const url = new URL(pathname, base);
     if (url.origin !== base.origin) throw new Error(`Recurso fora da origem da aplicação: ${pathname}`);
     checked.push(url.pathname + url.search);
-    return fetch(url, { redirect: 'error', signal: AbortSignal.timeout(10000) });
+    return fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(10000) });
   };
 
   let manifestPath = '/manifest.json?v=2';
@@ -38,7 +38,10 @@ export async function checkPwaDeployment(baseUrl) {
       if (new URL(manifestPath, base).pathname !== '/manifest.json') {
         issues.push('HTML antigo: publique as páginas que usam /manifest.json.');
       }
-    } else if (page.status === 401) {
+    } else if (page.status === 401 || (page.status === 302 && (() => {
+      const destination = new URL(page.headers.get('location') || '/', base);
+      return destination.origin === base.origin && destination.pathname === '/login';
+    })())) {
       warnings.push('HTML protegido por senha; conferidos os arquivos públicos de instalação.');
     } else issues.push(`Página inicial: HTTP ${page.status}.`);
   } catch (error) { issues.push(`Página inicial: ${error.message}`); }

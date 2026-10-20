@@ -1,5 +1,6 @@
 import { normalizeEan, isValidEan } from './js/features/barcode/code.js';
 import { createCameraScanner } from './js/features/barcode/camera.js';
+import { authFetch } from './js/auth-session.js';
 
 const eanOverlay = document.querySelector('#ean-scanner-overlay');
 const eanOpenButton = document.querySelector('#ean-overlay-open');
@@ -123,7 +124,7 @@ async function openArtworkForEan(ean) {
   setEanStatus('Localizando produto…');
 
   try {
-    const response = await fetch(`/api/products/by-ean/${encodeURIComponent(ean)}`, {
+    const response = await authFetch(`/api/products/by-ean/${encodeURIComponent(ean)}`, {
       headers: { Accept: 'application/json' },
       signal: controller.signal,
     });

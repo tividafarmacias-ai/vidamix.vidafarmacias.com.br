@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { before, after, test } from 'node:test';
 import vm from 'node:vm';
 import { createApplication } from '../src/app.mjs';
+import { adminAuthFixture, fixtureSessionHeaders } from './fixtures/auth.mjs';
 import { loadConfig } from '../src/config.mjs';
 import { checkPwaDeployment } from './pwa-deployment-check.mjs';
 
@@ -13,8 +14,8 @@ const clientSource = await readFile(new URL('../public/js/pwa.js', import.meta.u
 const servers = [];
 let origin;
 
-async function startServer(appConfig, simulateApache = false) {
-  const app = createApplication({ config: appConfig, database: {} });
+async function startServer(appConfig, simulateApache = false, authService = adminAuthFixture()) {
+  const app = createApplication({ config: appConfig, database: {}, authService });
   const server = createServer((request, response) => {
     // Plesk/Apache can own /icons/ and serve unknown extensions without a MIME type.
     if (simulateApache && request.url.startsWith('/icons/')) {
@@ -41,18 +42,27 @@ after(async () => {
   })));
 });
 
-test('production starts without credentials and serves pages and API without a login challenge', async () => {
+test('production without an authentication service fails closed and never enables legacy Basic access', async () => {
   const production = loadConfig({ NODE_ENV: 'production' });
-  assert.equal(production.auth.enabled, false);
-  const publicOrigin = await startServer(production);
-  for (const route of ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h', '/api/health', '/sw.js']) {
-    const response = await fetch(publicOrigin + route);
-    assert.equal(response.status, 200, route);
+  const protectedOrigin = await startServer(production, false, null);
+  for (const route of ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h']) {
+    const response = await fetch(protectedOrigin + route, { redirect: 'manual' });
+    assert.equal(response.status, 302, route);
+    assert.match(response.headers.get('location'), /^\/login(?:\?|$)/);
     assert.equal(response.headers.get('www-authenticate'), null, route);
   }
-  assert.equal(loadConfig({ NODE_ENV: 'production', APP_AUTH_ENABLED: 'false',
-    APP_AUTH_USERNAME: 'old-user', APP_AUTH_PASSWORD: 'old-password' }).auth.enabled, false);
-  assert.throws(() => loadConfig({ NODE_ENV: 'production', APP_AUTH_ENABLED: 'true' }), /APP_AUTH_USERNAME/);
+  for (const route of ['/api/health', '/api/auth/session']) {
+    assert.equal((await fetch(protectedOrigin + route)).status, 401, route);
+  }
+  for (const route of ['/login', '/sw.js']) {
+    assert.equal((await fetch(protectedOrigin + route)).status, 200, route);
+  }
+  const legacy = await startServer(loadConfig({ NODE_ENV: 'production', APP_AUTH_ENABLED: 'false',
+    APP_AUTH_USERNAME: 'old-user', APP_AUTH_PASSWORD: 'old-password' }), false, null);
+  const response = await fetch(legacy + '/api/health', {
+    headers: { Authorization: `Basic ${Buffer.from('old-user:old-password').toString('base64')}` },
+  });
+  assert.equal(response.status, 401);
 });
 
 test('todas as entradas oferecem o manifesto e a marca; ícones têm dimensões reais', async () => {
@@ -94,12 +104,11 @@ test('todas as entradas oferecem o manifesto e a marca; ícones têm dimensões 
 });
 
 test('metadados e ícones aceitam GET/HEAD sem senha; páginas e API continuam protegidas', async () => {
-  const protectedOrigin = await startServer({ ...config,
-    auth: { enabled: true, username: 'pwa-test', password: 'test-only', realm: 'PWA' },
-  });
-  const headers = { Authorization: `Basic ${Buffer.from('pwa-test:test-only').toString('base64')}` };
-  for (const route of ['/', '/catalogo', '/artes/stories', '/api/health', '/sw.js', '/offline.html', '/js/pwa.js']) {
-    assert.equal((await fetch(protectedOrigin + route)).status, 401, route);
+  const protectedOrigin = await startServer(config, false, adminAuthFixture({ requireHeader: true }));
+  const headers = fixtureSessionHeaders;
+  for (const route of ['/', '/catalogo', '/artes/stories', '/api/health']) {
+    assert.equal((await fetch(protectedOrigin + route, { redirect: 'manual' })).status,
+      route.startsWith('/api/') ? 401 : 302, route);
     assert.equal((await fetch(protectedOrigin + route, { headers })).status, 200, route);
   }
   for (const route of ['/manifest.json?v=2', '/manifest.webmanifest', '/apple-touch-icon.png?v=2',
@@ -114,8 +123,11 @@ test('metadados e ícones aceitam GET/HEAD sem senha; páginas e API continuam p
     }
     assert.equal((await fetch(protectedOrigin + route, { method: 'POST' })).status, 401);
   }
-  for (const route of ['/pwa-icons/private.json', '/pwa-icons/%2e%2e%2findex.html', '/manifest.json/extra']) {
-    assert.equal((await fetch(protectedOrigin + route)).status, 401, route);
+  for (const route of ['/sw.js', '/offline.html', '/js/pwa.js']) {
+    assert.equal((await fetch(protectedOrigin + route)).status, 200, route);
+  }
+  for (const route of ['/pwa-icons/%2e%2e%2findex.html', '/manifest.json/extra']) {
+    assert.notEqual((await fetch(protectedOrigin + route, { redirect: 'manual' })).status, 200, route);
   }
   const report = await checkPwaDeployment(protectedOrigin);
   assert.deepEqual(report.issues, []);
@@ -161,12 +173,13 @@ function workerHarness() {
   vm.runInNewContext(workerSource, {
     URL, Response, caches,
     Request: class extends Request {
-      constructor(url, options) { super(new URL(url, origin), options); }
+      constructor(url, options) { super(new URL(typeof url === 'object' ? url.url : url, origin), options); }
     },
     fetch: (request) => state.fetch(request),
     self: {
       location: { origin },
       addEventListener: (type, handler) => handlers.set(type, handler),
+      skipWaiting: async () => { state.replacedLegacyWorker = true; },
       clients: { claim: async () => { state.claimed = true; } },
     },
   });
@@ -191,6 +204,7 @@ test('service worker instala recursos existentes e oferece fallback offline nas 
   await worker.lifecycle('install');
   await worker.lifecycle('activate');
   assert.ok(worker.claimed);
+  assert.ok(worker.replacedLegacyWorker, 'legacy workers must stop serving cached protected images');
   assert.ok(worker.stores.has('another-app-cache'));
   assert.ok(!worker.stores.has('vidamix-offline-old'));
   worker.fetch = async () => { throw new TypeError('offline'); };
@@ -203,7 +217,7 @@ test('service worker instala recursos existentes e oferece fallback offline nas 
   }
 });
 
-test('worker mantém respostas online e erros de autenticação; não intercepta APIs, gravações ou imagens de produtos', async () => {
+test('worker mantém respostas online e erros de autenticação; não intercepta APIs ou gravações', async () => {
   const worker = workerHarness();
   await worker.lifecycle('install');
   for (const status of [200, 401, 403, 500]) {
@@ -212,89 +226,47 @@ test('worker mantém respostas online e erros de autenticação; não intercepta
     assert.equal(response.status, status);
     assert.equal(await response.text(), `server-${status}`);
   }
-  for (const path of ['/api/products', '/assets/imagens/product.png', '/story-backgrounds/a.png', 'https://example.com/']) {
+  for (const path of ['/api/products', 'https://example.com/']) {
     assert.equal(worker.request(path), null);
   }
   assert.equal(worker.request('/catalogo', { method: 'POST' }), null);
   for (const cache of worker.stores.values()) assert.ok(!cache.has(origin + '/catalogo'));
 });
 
-test('versioned images persist across navigation, coalesce downloads and fetch only new versions', async () => {
+test('protected images, thumbnails and render variants always reach the server, including versioned URLs', async () => {
   const worker = workerHarness();
-  let downloads = 0;
-  worker.fetch = async () => {
-    downloads++;
-    return new Response(`image-${downloads}`, { headers: {
-      'Content-Type': 'image/webp', 'Content-Length': '7',
-      'Cache-Control': 'private, max-age=31536000, immutable',
-    } });
+  await worker.lifecycle('install');
+  const requests = [];
+  worker.fetch = async request => {
+    requests.push(request);
+    return new Response('authenticated image', { headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'no-store' } });
   };
-  const request = (path) => worker.request(path, { mode: 'cors' });
-  const url = '/story-backgrounds/a.webp?v=1';
-  const pair = await Promise.all([request(url), request(url)]);
-  assert.equal(downloads, 1);
-  assert.equal(await pair[0].text(), await pair[1].text());
-  await request(url);
-  assert.equal(downloads, 1);
-  await request('/story-backgrounds/b.webp?v=1');
-  await request(url);
-  assert.equal(downloads, 2, 'adding a background preserves the existing download');
-  await request('/story-backgrounds/a.webp?v=2');
-  assert.equal(downloads, 3);
-  const cache = worker.stores.get('vidamix-images-v1');
-  assert.ok(!cache.has(origin + url), 'obsolete version is evicted');
-  await request('/assets/imagens/product.webp?v=1');
-  worker.fetch = async () => { throw new Error('offline'); };
-  assert.equal((await request('/assets/imagens/product.webp?v=1')).status, 200);
-  await worker.lifecycle('activate');
-  assert.ok(worker.stores.has('vidamix-images-v1'), 'shell updates preserve images');
-});
-
-test('background thumbnail and render variants coexist in persistent cache', async () => {
-  const worker = workerHarness();
-  let downloads = 0;
-  worker.fetch = async () => {
-    downloads++;
-    return new Response('image', { headers: { 'Content-Type': 'image/webp',
-      'Content-Length': '5', 'Cache-Control': 'private, max-age=31536000, immutable' } });
-  };
-  const request = (variant, version = 1) => worker.request(`/story-backgrounds/a.webp?v=${version}&variant=${variant}`, { mode: 'cors' });
-  await request('thumb-v1');
-  await request('render-v1');
-  await request('thumb-v1');
-  await request('render-v1');
-  assert.equal(downloads, 2);
-  assert.equal(worker.stores.get('vidamix-images-v1').size, 2);
-  await request('thumb-v1', 2);
-  await request('render-v1');
-  assert.equal(downloads, 3);
-  assert.equal(worker.stores.get('vidamix-images-v1').size, 2);
-});
-
-test('image cache rejects errors and unversioned responses, bounds storage and tolerates write failures', async () => {
-  const worker = workerHarness();
-  let downloads = 0;
-  let status = 401;
-  worker.fetch = async () => {
-    downloads++;
-    return new Response('image', { status, headers: {
-      'Content-Type': 'image/webp', 'Content-Length': String(12 * 1024 * 1024),
-      'Cache-Control': 'private, max-age=31536000, immutable',
-    } });
-  };
-  const request = (path) => worker.request(path, { mode: 'cors' });
-  const url = '/feed-backgrounds/a.webp?v=1';
-  for (status of [401, 403, 404, 500]) {
-    assert.equal((await request(url)).status, status);
-    assert.equal((await request(url)).status, status);
+  for (const pathname of ['/assets/imagens/product.webp?v=1', '/story-backgrounds/a.png?v=1',
+    '/feed-backgrounds/a.webp?v=1&variant=thumb-v1', '/indoor-backgrounds/a.webp?v=1&variant=render-v1',
+    '/assets/imagens/product.png']) {
+    assert.equal((await worker.request(pathname, { mode: 'cors' })).status, 200, pathname);
+    assert.equal(requests.at(-1).cache, 'no-store', 'old browser image caches cannot bypass session checks');
+    assert.equal(requests.at(-1).url, origin + pathname);
+    for (const cache of worker.stores.values()) assert.ok(!cache.has(origin + pathname));
   }
-  assert.equal(downloads, 8);
-  status = 200;
-  for (let i = 0; i < 10; i++) await request(`/indoor-backgrounds/${i}.webp?v=1`);
-  assert.equal(worker.stores.get('vidamix-images-v1').size, 8, '96 MiB limit');
-  worker.stores.get('vidamix-images-v1').set = () => { throw new Error('quota'); };
-  assert.equal((await request(url)).status, 200, 'storage failure does not break an image');
-  assert.equal(worker.request('/story-backgrounds/a.webp'), null);
+  for (const status of [401, 403]) {
+    worker.fetch = async () => new Response('denied', { status });
+    assert.equal((await worker.request('/assets/imagens/product.webp?v=1', { mode: 'cors' })).status, status);
+  }
+  worker.fetch = async () => { throw new Error('offline'); };
+  await assert.rejects(worker.request('/assets/imagens/product.webp?v=1', { mode: 'cors' }), /offline/);
+});
+
+test('activation clears every legacy image cache while preserving unrelated application caches', async () => {
+  const worker = workerHarness();
+  worker.stores.set('vidamix-images-v1', new Map([[origin + '/assets/imagens/product.webp?v=1', new Response('private')]]));
+  worker.stores.set('vidamix-images-old', new Map());
+  await worker.lifecycle('install');
+  await worker.lifecycle('activate');
+  assert.ok(!worker.stores.has('vidamix-images-v1'));
+  assert.ok(!worker.stores.has('vidamix-images-old'));
+  assert.ok(worker.stores.has('another-app-cache'));
+  assert.ok([...worker.stores.keys()].some(name => name.startsWith('vidamix-offline-')));
 });
 
 function clientHarness({ apple = false, standalone = false, secure = true } = {}) {

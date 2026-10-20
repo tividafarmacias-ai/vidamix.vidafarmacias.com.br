@@ -15,7 +15,7 @@ function element() {
   const classes = new Set();
   const properties = new Map();
   const attributes = new Map();
-  return {
+  return Object.assign(new EventHost(), {
     children: [], dataset: {},
     classList: {
       add(name) { classes.add(name); },
@@ -28,18 +28,25 @@ function element() {
     },
     setAttribute(name, value) { attributes.set(name, value); },
     getAttribute(name) { return attributes.get(name); },
-    append(child) { this.children.push(child); },
+    append(...children) { this.children.push(...children); },
     matches() { return false; },
-  };
+    contains(node) { return node === this || this.children.some((child) => child.contains?.(node)); },
+    focus() {},
+  });
 }
 
-function fixture({ pathname = '/catalogo', iosStandalone = false, visualViewport = true } = {}) {
+function fixture({ pathname = '/catalogo', iosStandalone = false, visualViewport = true, withHeader = false, session = { user: { id: 1, name: 'Usuário', role: 'admin' } } } = {}) {
   const win = new EventHost();
   const doc = new EventHost();
   const viewport = visualViewport ? Object.assign(new EventHost(), { height: 844, offsetTop: 0, scale: 1 }) : null;
   const standalone = Object.assign(new EventHost(), { matches: false });
   const mobile = Object.assign(new EventHost(), { matches: true });
   const header = element();
+  const inner = element();
+  const brand = element();
+  header.append(inner);
+  inner.append(brand);
+  header.querySelector = (selector) => selector === '.site-header-inner' ? inner : selector === '.site-brand' ? brand : null;
   Object.assign(win, {
     innerHeight: 844, innerWidth: 390, visualViewport: viewport,
     location: { pathname }, navigator: { standalone: iosStandalone },
@@ -48,15 +55,16 @@ function fixture({ pathname = '/catalogo', iosStandalone = false, visualViewport
   });
   Object.assign(doc, {
     documentElement: Object.assign(element(), { clientHeight: 844, clientWidth: 390 }),
-    body: element(), createElement: element, querySelector: () => header,
+    body: element(), createElement: element, querySelector: (selector) => withHeader && selector === '[data-app-header]' ? header : null,
   });
+  if (pathname === '/offline.html') doc.body.classList.add('offline-page');
   doc.activeElement = doc.body;
   const input = Object.assign(element(), { matches: () => true });
-  initAppShell(win, doc);
+  const ready = initAppShell(win, doc, { session });
   const focus = () => { doc.activeElement = input; doc.emit('focusin'); };
   const blur = () => { doc.activeElement = doc.body; doc.emit('focusout'); };
   const keyboardOpen = () => doc.documentElement.classList.contains('app-keyboard-open');
-  return { win, doc, viewport, standalone, mobile, input, header, focus, blur, keyboardOpen };
+  return { win, doc, viewport, standalone, mobile, input, header, inner, brand, ready, focus, blur, keyboardOpen };
 }
 
 test('iOS viewport panning keeps the keyboard state until input loses focus', () => {
@@ -125,14 +133,16 @@ test('pinch zoom, readonly controls and desktop resizing do not hide navigation'
   assert.equal(hasSoftwareKeyboard({ editable: false, layoutHeight: 844, visibleHeight: 400 }), false);
 });
 
-test('browsing navigation resolves route aliases, while editors keep their own navigation', () => {
+test('browsing navigation resolves route aliases, while editors keep their own navigation', async () => {
   const expected = new Map([
     ['/', 'home'], ['/index.html', 'home'], ['/catalogo/', 'catalogue'], ['/catalogo.html', 'catalogue'],
+    ['/revista', 'revista'], ['/revista.html', 'revista'], ['/backgrounds/', 'backgrounds'], ['/backgrounds.html', 'backgrounds'],
     ['/artes/stories', 'stories'], ['/stories.html', 'stories'], ['/artes/feed/', 'feed'], ['/feed.html', 'feed'],
     ['/artes/indoor-h', 'indoor'], ['/indoor-h.html', 'indoor'], ['/missing', null],
   ]);
   for (const [path, screen] of expected) assert.equal(getAppScreen(path), screen);
   const catalogue = fixture();
+  await catalogue.ready;
   const nav = catalogue.doc.body.children[0];
   assert.equal(nav.children.length, 5);
   assert.equal(nav.children.find(link => link.href === '/revista').href, '/revista');
@@ -141,8 +151,46 @@ test('browsing navigation resolves route aliases, while editors keep their own n
   assert.equal(nav.children[1].href, '/catalogo');
   for (const pathname of ['/artes/stories', '/artes/feed', '/artes/indoor-h']) {
     const editor = fixture({ pathname });
+    await editor.ready;
     assert.equal(editor.doc.body.children.length, 0);
     assert.equal(editor.doc.body.classList.contains('has-app-tabbar'), false);
+  }
+});
+
+test('customer navigation waits for the session, includes TV Indoor and omits administrative destinations', async () => {
+  let resolveSession;
+  const session = new Promise((resolve) => { resolveSession = resolve; });
+  const f = fixture({ withHeader: true, session });
+  assert.equal(f.inner.children.length, 1, 'no private navigation while access is unknown');
+  assert.equal(f.doc.body.children.length, 0);
+  resolveSession({ user: { id: 9, name: '<Conta cliente>', role: 'cliente' } });
+  await f.ready;
+  const nav = f.inner.children.find(({ className }) => className === 'site-nav');
+  assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
+  assert.equal(nav.children.find(({ className }) => className === 'site-account').textContent, '<Conta cliente> · Cliente');
+  assert.equal(nav.children.find(({ className }) => className === 'site-logout').textContent, 'Sair');
+  assert.equal(f.brand.href, '/catalogo');
+  assert.equal(nav.hidden, true, 'mobile menu starts collapsed');
+  const toggle = f.inner.children.find(({ className }) => className === 'site-menu-toggle');
+  toggle.emit('click');
+  assert.equal(nav.hidden, false);
+  f.doc.emit('keydown', { key: 'Escape' });
+  assert.equal(nav.hidden, true);
+  const tabs = f.doc.body.children.find(({ className }) => className === 'app-tabbar');
+  assert.equal(tabs.children.length, 4);
+  assert.equal(tabs.children.at(-1).href, '/artes/indoor-h');
+});
+
+test('failed sessions and offline screens show only the login destination', async () => {
+  for (const pathname of ['/catalogo', '/offline.html']) {
+    const f = fixture({ pathname, withHeader: true, session: null });
+    await f.ready;
+    const nav = f.inner.children.find(({ className }) => className === 'site-nav');
+    assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/login']);
+    assert.equal(f.doc.body.classList.contains('has-app-tabbar'), false);
+    assert.equal(f.brand.href, '/login');
+    const error = f.doc.body.children.find(({ className }) => className === 'app-session-error');
+    assert.equal(Boolean(error), pathname !== '/offline.html');
   }
 });
 

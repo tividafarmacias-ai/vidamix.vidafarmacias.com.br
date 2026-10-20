@@ -1,0 +1,70 @@
+.backgrounds-page { min-height: 100vh; color: var(--color-ink); background: var(--glass-page-background, #f5f8fc); }
+.backgrounds-back { color: var(--color-muted); font-size: 12px; font-weight: 600; text-decoration: none; }
+.backgrounds-back:hover { color: var(--azul); }
+.backgrounds-main { width: min(1240px, calc(100% - 40px)); margin: 0 auto; padding: 44px 0 72px; }
+.backgrounds-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.backgrounds-kicker { margin: 0 0 7px; color: var(--brand-red-dark, #c52d3e); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.backgrounds-heading h1 { margin: 0; color: var(--color-ink); font-size: clamp(30px, 4vw, 52px); letter-spacing: -.055em; line-height: 1.05; }
+.backgrounds-heading > div > p:last-child { max-width: 590px; margin: 14px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.65; }
+.backgrounds-secondary-action { color: var(--azul); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.background-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; padding: 6px; border: 1px solid var(--glass-line); border-radius: 18px; background: var(--glass-surface-strong); box-shadow: var(--glass-highlight); }
+.background-tabs button { min-height: 58px; padding: 10px 16px; border: 0; border-radius: 13px; color: var(--color-muted); background: transparent; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; text-align: left; }
+.background-tabs button:hover { color: var(--color-ink); background: var(--color-blue-soft); }
+.background-tabs button[aria-selected="true"] { color: #fff; background: #205d9f; box-shadow: 0 7px 15px #205d9f28; }
+.background-tabs button span { display: block; margin-top: 3px; color: inherit; opacity: .7; font-size: 10px; font-weight: 500; }
+.backgrounds-layout { display: grid; grid-template-columns: minmax(280px, 350px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.background-upload-panel, .background-library-panel { border: 1px solid var(--glass-line); border-radius: 22px; background: var(--glass-surface); box-shadow: var(--glass-shadow); }
+.background-upload-panel { position: sticky; top: 20px; padding: 22px; }
+.background-library-panel { min-height: 450px; padding: 22px; }
+.background-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.background-panel-heading h2 { margin: 0; color: var(--color-ink); font-size: 20px; letter-spacing: -.035em; }
+.background-format-badge, .background-count { padding: 6px 9px; border-radius: 9px; color: var(--azul); background: var(--color-blue-soft); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.background-count { color: var(--color-muted); background: var(--color-page); }
+.background-panel-help { margin: 10px 0 20px; color: var(--color-muted); font-size: 12px; line-height: 1.55; }
+.background-form { display: grid; gap: 14px; }
+.background-field, .background-file-field { display: grid; gap: 7px; color: var(--color-ink); font-size: 11px; font-weight: 700; }
+.background-field small { color: var(--color-muted); font-weight: 500; }
+.background-field input { width: 100%; min-height: 46px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--glass-line); border-radius: 12px; color: var(--color-ink); background: var(--color-surface); font: inherit; font-weight: 500; }
+.background-file-field { padding: 14px; border: 1px dashed var(--glass-line); border-radius: 14px; background: var(--color-page); }
+.background-file-field input[type="file"] { width: 100%; color: var(--color-muted); font-size: 11px; }
+.background-file-field strong { overflow: hidden; color: var(--color-ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.background-file-field small { color: var(--color-muted); font-size: 10px; font-weight: 500; line-height: 1.4; }
+.background-indoor-note { margin: -2px 0 0; padding: 10px 12px; border-radius: 11px; color: var(--color-muted); background: var(--color-blue-soft); font-size: 10px; line-height: 1.5; }
+.background-primary-button, .background-remove-button { min-height: 44px; border: 0; border-radius: 12px; cursor: pointer; font: inherit; font-weight: 700; }
+.background-primary-button { color: #fff; background: #205d9f; }
+.background-primary-button:hover { background: #2c70b8; }
+.background-primary-button:disabled { cursor: wait; opacity: .6; }
+.background-status { min-height: 16px; margin: 0; color: var(--color-muted); font-size: 11px; line-height: 1.45; }
+.background-status.is-error { color: var(--danger, #b42335); }
+.library-heading { margin-bottom: 10px; }
+.background-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.background-card { overflow: hidden; border: 1px solid var(--glass-line); border-radius: 17px; background: var(--color-page); }
+.background-previews { display: grid; aspect-ratio: 4 / 3; background: #dce6f1; }
+.background-previews.has-wallpaper { grid-template-columns: 1fr 1fr; }
+.background-preview { position: relative; min-width: 0; margin: 0; overflow: hidden; border-right: 1px solid #ffffff88; }
+.background-preview:last-child { border-right: 0; }
+.background-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.background-preview figcaption { position: absolute; right: 7px; bottom: 7px; left: 7px; padding: 4px 6px; border-radius: 5px; color: #fff; background: #071b2ccc; font-size: 9px; font-weight: 700; text-align: center; }
+.background-card-content { display: grid; gap: 5px; padding: 13px; }
+.background-card-content h3 { overflow: hidden; margin: 0; color: var(--color-ink); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.background-card-content p { margin: 0 0 5px; color: var(--color-muted); font-size: 10px; }
+.background-remove-button { min-height: 36px; color: var(--danger, #b42335); border: 1px solid currentColor; background: transparent; font-size: 11px; }
+.background-remove-button:hover { color: #fff; background: var(--danger, #b42335); }
+.background-toast { position: fixed; right: 22px; bottom: 22px; z-index: 10; max-width: min(360px, calc(100% - 44px)); padding: 13px 16px; border: 1px solid var(--glass-line); border-radius: 13px; color: var(--color-ink); background: var(--glass-surface-strong); box-shadow: var(--glass-shadow); font-size: 12px; font-weight: 600; }
+.background-toast.is-error { color: var(--danger, #b42335); }
+
+@media (max-width: 820px) {
+  .backgrounds-main { width: min(100% - 28px, 640px); padding-top: 28px; }
+  .backgrounds-heading { display: block; }
+  .backgrounds-secondary-action { display: inline-block; margin-top: 15px; }
+  .backgrounds-layout { grid-template-columns: 1fr; }
+  .background-upload-panel { position: static; }
+}
+
+@media (max-width: 520px) {
+  .background-tabs { grid-template-columns: 1fr; }
+  .background-tabs button { min-height: 48px; }
+  .background-tabs button span { display: inline; margin-left: 5px; }
+  .backgrounds-main { width: min(100% - 22px, 640px); }
+  .background-upload-panel, .background-library-panel { padding: 16px; border-radius: 18px; }
+}

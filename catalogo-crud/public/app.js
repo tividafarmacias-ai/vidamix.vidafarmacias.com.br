@@ -1,4 +1,7 @@
+import { authFetch, sessionReady } from './js/auth-session.js';
+
 const state = {
+  canManage: false,
   page: 1,
   pageSize: 48,
   query: '',
@@ -45,7 +48,7 @@ let selectedImagePreviewUrl = null;
 
 async function requestJson(url, options = {}) {
   const { headers, ...requestOptions } = options;
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     ...requestOptions,
     headers: { Accept: 'application/json', ...headers },
   });
@@ -325,14 +328,15 @@ function previewSelectedImage() {
 }
 
 function openDialog(product = null) {
+  if (!product && !state.canManage) return;
   state.editingId = product?.id ?? null;
   resetForm();
 
   if (product) {
     elements.dialogKicker.textContent = `Produto #${product.id}`;
-    elements.dialogTitle.textContent = 'Editar produto';
+    elements.dialogTitle.textContent = state.canManage ? 'Editar produto' : 'Detalhes do produto';
     elements.saveButton.textContent = 'Salvar alterações';
-    elements.deleteButton.hidden = false;
+    elements.deleteButton.hidden = !state.canManage;
 
     [
       'nome', 'subtitulo', 'caracteres', 'grupo', 'principio_ativo', 'ms', 'fabricante',
@@ -350,7 +354,7 @@ function openDialog(product = null) {
   renderDialogImage(product);
   elements.dialog.showModal();
   // Opening product details should not immediately cover the mobile screen with a keyboard.
-  if (window.matchMedia('(max-width: 900px)').matches) {
+  if (!state.canManage || window.matchMedia('(max-width: 900px)').matches) {
     document.querySelector('#close-dialog-button').focus({ preventScroll: true });
   } else {
     elements.form.elements.namedItem('nome').focus();
@@ -385,6 +389,7 @@ function payloadFromForm() {
 }
 
 async function uploadProductImage(productId, file) {
+  if (!state.canManage) throw new Error('Seu acesso ao catálogo permite apenas consulta.');
   const formData = new FormData();
   formData.append('image', file, file.name);
   return requestJson(`/api/products/${productId}/image`, {
@@ -395,6 +400,7 @@ async function uploadProductImage(productId, file) {
 
 async function saveProduct(event) {
   event.preventDefault();
+  if (!state.canManage) return;
   const name = String(formValue('nome')).trim();
   if (!name) {
     showToast('Informe o nome do produto.', true);
@@ -436,6 +442,7 @@ async function saveProduct(event) {
 }
 
 async function deleteCurrentProduct() {
+  if (!state.canManage) return;
   if (!Number.isInteger(state.editingId)) return;
   const productName = String(formValue('nome') || 'este produto');
   if (!window.confirm(`Excluir “${productName}”? Esta ação remove apenas o registro; a imagem local será preservada.`)) {
@@ -513,10 +520,34 @@ function bindEvents() {
   });
 }
 
+function applyPermissions() {
+  elements.saveButton.disabled = !state.canManage;
+  elements.deleteButton.disabled = !state.canManage;
+  document.querySelector('#new-product-button').disabled = !state.canManage;
+  elements.imageFile.disabled = !state.canManage;
+  for (const field of elements.form.querySelectorAll('input, select, textarea')) {
+    if (field.matches('select, input[type="checkbox"], input[type="file"]')) field.disabled = !state.canManage;
+    else field.readOnly = !state.canManage;
+  }
+  if (!state.canManage) {
+    document.querySelector('#catalogue-kicker').textContent = 'Produtos para sua campanha';
+    document.querySelector('#cancel-dialog-button').textContent = 'Fechar';
+  }
+}
+
 async function initialize() {
-  bindEvents();
   renderSkeletons();
   try {
+    const session = await sessionReady;
+    if (!session) {
+      elements.grid.replaceChildren();
+      elements.resultsKicker.textContent = 'Acesso não confirmado';
+      elements.resultsTitle.textContent = 'Entre para consultar os produtos';
+      return;
+    }
+    state.canManage = session.user.role === 'admin';
+    applyPermissions();
+    bindEvents();
     await Promise.all([loadCategories(), loadProducts()]);
   } catch (error) {
     showToast(error.message, true);

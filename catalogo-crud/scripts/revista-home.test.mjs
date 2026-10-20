@@ -23,7 +23,7 @@ function fixture(payload, failure = false) {
   elements.get('home-campaign-action').hidden = true;
   const sandbox = vm.createContext({ campaignArtworkUrl, AbortSignal,
     document: { getElementById: id => elements.get(id), createElement: () => new Element() },
-    fetch: async () => ({ ok: !failure, json: async () => payload }),
+    authFetch: async () => ({ ok: !failure, json: async () => payload }),
   });
   vm.runInContext(source.replace(/^import .+;\r?\n/gm, ''), sandbox);
   return { get: id => elements.get(`home-${id}`) };

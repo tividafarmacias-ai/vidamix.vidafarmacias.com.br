@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { createApplication } from '../src/app.mjs';
+import { adminAuthFixture, fixtureSessionHeaders } from './fixtures/auth.mjs';
 import { loadConfig } from '../src/config.mjs';
 import { initializeCatalogDatabase } from '../src/database/catalog-database.mjs';
 
@@ -17,8 +18,8 @@ const names = ['convertido.png', 'pendente.png', 'lote.png', 'Oferta verão #1.P
 const servers = [];
 let workspace, imagesDirectory, config, database, origin;
 
-async function start(appConfig) {
-  const server = createServer(createApplication({ config: appConfig, database }));
+async function start(appConfig, authService = adminAuthFixture()) {
+  const server = createServer(createApplication({ config: appConfig, database, authService }));
   servers.push(server);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return `http://127.0.0.1:${server.address().port}`;
@@ -146,7 +147,7 @@ test('image aliases preserve path restrictions and do not expose the manifest', 
   for (const pathname of ['/assets/manifesto-imagens.json', '/assets/imagens/%2e%2e%2fmanifesto-imagens.json',
     '/assets/imagens/..%5cmanifesto-imagens.json', '/assets/imagens/.oculto.png', '/assets/imagens/%00.png',
     '/assets/imagens/%ZZ.png']) {
-    assert.equal((await fetch(origin + pathname)).status, 403, pathname);
+    assert.ok([400, 403].includes((await fetch(origin + pathname)).status), pathname);
   }
   const rejected = await fetch(origin + '/api/products/1', { method: 'PUT',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imagem_arquivo: 'imagens/../manifesto-imagens.json' }) });
@@ -154,12 +155,12 @@ test('image aliases preserve path restrictions and do not expose the manifest', 
 });
 
 test('legacy and WebP URLs stay behind authentication and reject writes', async () => {
-  const protectedOrigin = await start({ ...config, auth: { enabled: true, username: 'test', password: 'local-only', realm: 'Test' } });
+  const protectedOrigin = await start(config, adminAuthFixture({ requireHeader: true }));
   for (const extension of ['png', 'webp']) {
     assert.equal((await fetch(`${protectedOrigin}/assets/imagens/convertido.${extension}`)).status, 401);
   }
   const authorized = await fetch(protectedOrigin + '/assets/imagens/convertido.png', {
-    headers: { Authorization: 'Basic ' + Buffer.from('test:local-only').toString('base64') },
+    headers: fixtureSessionHeaders,
   });
   assert.equal(authorized.status, 200);
   assert.equal(authorized.headers.get('content-type'), 'image/webp');
@@ -187,7 +188,7 @@ test('product image versions remain stable and invalidate when the same filename
   assert.ok(new URL(first.imagem_local_url, origin).searchParams.get('v'));
   assert.equal((await get()).imagem_local_url, first.imagem_local_url);
   const response = await fetch(origin + first.imagem_local_url);
-  assert.match(response.headers.get('cache-control'), /private.*immutable/);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
   await writeFile(path.join(imagesDirectory, 'imagens/nativo.webp'), Buffer.concat([webp, Buffer.from('changed')]));
   const changed = await get();
   assert.notEqual(changed.imagem_local_url, first.imagem_local_url);

@@ -190,7 +190,7 @@ export function initStoriesMobileEditor({ root = document, getProgress = () => (
       sync();
       onStepChange('canvas');
       if (focusedControl) focused.focus({ preventScroll: true });
-      else if (focusedMobile) find('.stories-back-link')?.focus({ preventScroll: true });
+      else if (focusedMobile) find('.site-brand')?.focus({ preventScroll: true });
     }
   }
 

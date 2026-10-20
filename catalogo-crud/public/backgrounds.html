@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f8fc" />
+    <script src="/js/theme.js"></script>
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-icons/icon-192.png" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <script src="/js/pwa.js" defer></script>
+    <link rel="stylesheet" href="/brand.css" />
+    <link rel="stylesheet" href="/backgrounds.css" />
+    <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <script type="module" src="/js/app-shell.js"></script>
+    <title>Gerenciar backgrounds | VidaMix Studio</title>
+  </head>
+  <body class="backgrounds-page">
+    <script src="/js/pwa-launch.js"></script>
+    <header class="site-header" data-app-header>
+      <div class="site-header-inner">
+        <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
+          <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
+        </a>
+      </div>
+    </header>
+
+    <main class="backgrounds-main" id="conteudo">
+      <section class="backgrounds-heading" aria-labelledby="backgrounds-title">
+        <div>
+          <p class="backgrounds-kicker">Biblioteca visual</p>
+          <h1 id="backgrounds-title">Gerenciar backgrounds</h1>
+          <p>Adicione e remova os cenários usados nas artes de Stories, Feed e TV Indoor.</p>
+        </div>
+        <a class="backgrounds-secondary-action" href="/">Voltar para a central →</a>
+      </section>
+
+      <nav class="background-tabs" aria-label="Formato do background" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-format="stories">Stories <span>1080 × 1920</span></button>
+        <button type="button" role="tab" aria-selected="false" data-format="feed">Feed <span>1080 × 1350</span></button>
+        <button type="button" role="tab" aria-selected="false" data-format="indoor-h">TV Indoor <span>1920 × 1080</span></button>
+      </nav>
+
+      <div class="backgrounds-layout">
+        <section class="background-upload-panel" aria-labelledby="upload-title">
+          <div class="background-panel-heading">
+            <div>
+              <p class="backgrounds-kicker">Novo arquivo</p>
+              <h2 id="upload-title">Adicionar background</h2>
+            </div>
+            <span class="background-format-badge" id="background-format-badge">Stories</span>
+          </div>
+          <p class="background-panel-help" id="upload-help">Escolha uma imagem para usar como cenário das artes verticais.</p>
+
+          <form id="background-form" class="background-form" novalidate>
+            <label class="background-field">
+              <span>Nome da campanha <small>(opcional)</small></span>
+              <input id="background-name" name="nome" type="text" maxlength="80" placeholder="Ex.: Semana da Beleza" autocomplete="off" />
+            </label>
+
+            <label class="background-file-field">
+              <span id="background-file-label">Imagem do background</span>
+              <input id="background-file" name="background" type="file" accept="image/png,image/jpeg,image/webp" required />
+              <strong id="background-file-name">Nenhum arquivo escolhido</strong>
+              <small>PNG, JPG ou WEBP · até 20 MB</small>
+            </label>
+
+            <label class="background-file-field" id="wallpaper-field" hidden>
+              <span>Wallpaper da campanha</span>
+              <input id="wallpaper-file" name="wallpaper" type="file" accept="image/png,image/jpeg,image/webp" />
+              <strong id="wallpaper-file-name">Nenhum arquivo escolhido</strong>
+              <small>Imagem de abertura do vídeo da TV Indoor.</small>
+            </label>
+
+            <p class="background-indoor-note" id="indoor-note" hidden>
+              TV Indoor exige duas imagens: o wallpaper abre o vídeo e o background recebe os produtos após a transição.
+            </p>
+            <button class="background-primary-button" id="background-submit" type="submit">Adicionar background</button>
+            <p class="background-status" id="background-form-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="background-library-panel" aria-labelledby="library-title">
+          <div class="background-panel-heading library-heading">
+            <div>
+              <p class="backgrounds-kicker">Arquivos disponíveis</p>
+              <h2 id="library-title">Biblioteca de Stories</h2>
+            </div>
+            <span class="background-count" id="background-count">0 itens</span>
+          </div>
+          <p class="background-status" id="background-list-status" role="status" aria-live="polite">Carregando backgrounds…</p>
+          <div class="background-grid" id="background-list" aria-busy="true"></div>
+        </section>
+      </div>
+    </main>
+    <div class="background-toast" id="background-toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/backgrounds.js"></script>
+  </body>
+</html>

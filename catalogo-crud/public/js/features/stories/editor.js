@@ -1,4 +1,5 @@
 import { getBackgroundBadgeTheme } from './background-theme.js';
+import { authFetch } from '../../auth-session.js';
 import { loadArtworkSelection } from '../revista/artwork.js';
 import {
   DEFAULT_FREE_TEXT_WIDTH,
@@ -43,7 +44,7 @@ function createElement(tagName, className, textContent) {
 }
 
 async function requestJson(url, { signal } = {}) {
-  const response = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+  const response = await authFetch(url, { headers: { Accept: 'application/json' }, signal });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Não foi possível carregar os dados.');
   return payload;

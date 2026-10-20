@@ -31,17 +31,11 @@
   </head>
   <body class="catalogue-page" data-tour-page="catalogue">
     <script src="/js/pwa-launch.js"></script>
-    <header class="site-header">
+    <header class="site-header" data-app-header>
       <div class="site-header-inner">
         <a class="site-brand" href="/" aria-label="VidaMix Studio — Central de criação">
           <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
         </a>
-        <nav class="site-nav" aria-label="Navegação principal">
-          <a href="/">Central</a>
-          <a href="/catalogo" aria-current="page">Catálogo</a>
-          <a href="/artes/stories">Stories</a>
-          <a href="/artes/feed">Feed</a>
-        </nav>
       </div>
     </header>
     <main class="catalogue-app">
@@ -49,7 +43,7 @@
         <header class="workspace-header catalogue-header">
           <div class="catalogue-heading">
             <div>
-              <p class="eyebrow">Gestão de produtos</p>
+              <p class="eyebrow" id="catalogue-kicker">Catálogo de produtos</p>
               <h1>Catálogo de produtos</h1>
             </div>
           </div>
@@ -66,7 +60,7 @@
               <span aria-hidden="true">✦</span>
               Criar Feed
             </a>
-            <button class="ghost-button" id="new-product-button" type="button" aria-label="Adicionar novo produto">
+            <button class="ghost-button admin-only" id="new-product-button" type="button" aria-label="Adicionar novo produto" disabled>
               <span aria-hidden="true">+</span>
               Novo produto
             </button>
@@ -248,16 +242,16 @@
                 <span>Fim da vigência</span>
                 <input name="data_vigencia_fim" type="date" />
               </label>
-              <label class="full-span">
+              <label class="full-span admin-only">
                 <span>URL de imagem original</span>
                 <input name="imagem_url" type="url" maxlength="1000" placeholder="https://..." />
               </label>
-              <label class="full-span">
+              <label class="full-span admin-only">
                 <span>Enviar imagem do produto</span>
                 <input id="image-upload" name="imagem_upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" />
                 <small>Formatos aceitos: PNG, JPG, WebP, GIF ou AVIF. Limite de 10 MB.</small>
               </label>
-              <label class="full-span">
+              <label class="full-span admin-only">
                 <span>Arquivo de imagem local</span>
                 <input name="imagem_arquivo" maxlength="1000" placeholder="imagens/nome-do-arquivo.png" />
                 <small>Use somente um arquivo existente dentro de <code>imagens/</code>.</small>
@@ -282,10 +276,10 @@
         </div>
 
         <footer class="dialog-footer">
-          <button class="danger-button" id="delete-product-button" type="button" hidden>Excluir produto</button>
+          <button class="danger-button admin-only" id="delete-product-button" type="button" hidden disabled>Excluir produto</button>
           <div class="footer-actions">
             <button class="ghost-button" id="cancel-dialog-button" type="button">Cancelar</button>
-            <button class="primary-button" id="save-product-button" type="submit">Salvar alterações</button>
+            <button class="primary-button admin-only" id="save-product-button" type="submit" disabled>Salvar alterações</button>
           </div>
         </footer>
       </form>

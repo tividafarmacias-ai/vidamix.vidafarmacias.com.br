@@ -1,8 +1,8 @@
 import { HttpError } from './http/errors.mjs';
 import path from 'node:path';
 import { backgroundVariant } from './modules/stories/background-variants.mjs';
-import { isRequestAuthorized, sendUnauthorized } from './http/auth.mjs';
-import { defaultSecurityHeaders, sendError } from './http/response.mjs';
+import { canonicalRequestPath, isPublicResource, canAccessPage, canAccessApi } from './http/access.mjs';
+import { defaultSecurityHeaders, readJsonBody, sendError, sendJson, sendNoContent } from './http/response.mjs';
 import { serveFile } from './http/static-files.mjs';
 import { createProductService } from './modules/products/product-service.mjs';
 import { createRevistaService } from './modules/revista/revista-service.mjs';
@@ -11,11 +11,12 @@ import {
   createStoryBackgroundService,
   isSupportedStoryBackground,
 } from './modules/stories/background-service.mjs';
+import { createBackgroundManager } from './modules/stories/background-manager.mjs';
 import { createApiRouter } from './routes/api-routes.mjs';
 import { resolvePageRoute } from './routes/page-routes.mjs';
 
-// Installation metadata contains no application data. Home Screen icon fetches
-// must work without the browser's HTTP Basic session, including HEAD requests.
+// Installation metadata and the login/offline shell contain no private data.
+// Home Screen icon fetches also work outside an authenticated browser session.
 const publicPwaFiles = new Set([
   '/manifest.json',
   '/manifest.webmanifest',
@@ -37,7 +38,7 @@ function requestUrl(request) {
   return new URL(request.url || '/', 'http://localhost');
 }
 
-export function createApplication({ config, database, logger = console }) {
+export function createApplication({ config, database, authService = null, logger = console }) {
   const productService = createProductService({ database, imagesDirectory: config.imagesDirectory });
   const storyBackgroundService = createStoryBackgroundService({
     storyBackgroundsDirectory: config.storyBackgroundsDirectory,
@@ -52,9 +53,14 @@ export function createApplication({ config, database, logger = console }) {
     format: 'indoor-h',
     urlPrefix: '/indoor-backgrounds',
   });
+  const backgroundManagers = {
+    stories: createBackgroundManager({ directory: config.storyBackgroundsDirectory, format: 'stories' }),
+    feed: createBackgroundManager({ directory: config.feedBackgroundsDirectory, format: 'feed' }),
+    'indoor-h': createBackgroundManager({ directory: config.indoorBackgroundsDirectory, format: 'indoor-h' }),
+  };
   const apiRouter = createApiRouter({
     revistaService: createRevistaService({ database, imagesDirectory: config.imagesDirectory }),
-    productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService,
+    productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, backgroundManagers,
   });
   const backgroundRoutes = [
     ['/story-backgrounds/', config.storyBackgroundsDirectory, 'stories'],
@@ -65,23 +71,64 @@ export function createApplication({ config, database, logger = console }) {
   return async function requestHandler(request, response) {
     try {
       const url = requestUrl(request);
-      if (publicPwaFiles.has(url.pathname) && isSafeStaticMethod(request.method)) {
+      const pathname = canonicalRequestPath(url.pathname);
+      const route = pathname.toLowerCase();
+      const pageFile = resolvePageRoute(route);
+      const redirect = (location) => {
+        response.writeHead(302, { ...defaultSecurityHeaders, 'Cache-Control': 'no-store', Location: location });
+        response.end();
+      };
+      if (isSafeStaticMethod(request.method) && (
+        publicPwaFiles.has(route) || isPublicResource(pathname)
+        || ['/login', '/login.html', '/offline.html'].includes(route)
+      )) {
         await serveFile({
           request,
           response,
           rootDirectory: config.publicDirectory,
-          urlPath: url.pathname.slice(1),
-          cacheControl: 'public, max-age=0, must-revalidate',
+          urlPath: route === '/login' ? 'login.html' : pathname.slice(1),
+          cacheControl: publicPwaFiles.has(route) ? 'public, max-age=0, must-revalidate' : 'no-store',
         });
         return;
       }
 
-      if (!isRequestAuthorized(request, config.auth)) {
-        sendUnauthorized(response, config.auth);
+      if (route === '/api/auth/login') {
+        if (request.method !== 'POST') return sendError(response, 405, 'Método não permitido.');
+        if (!authService) return sendError(response, 503, 'O serviço de acesso está indisponível.');
+        const body = await readJsonBody(request, { maxBytes: 4096 });
+        const session = await authService.login(request, response, body);
+        sendJson(response, 200, { user: session.user, csrfToken: session.csrfToken });
         return;
       }
 
-      if (url.pathname.startsWith('/api/')) {
+      const session = await authService?.getSession(request);
+      if (!session || !['admin', 'cliente'].includes(session.user?.role)) {
+        if (isSafeStaticMethod(request.method) && (pageFile || route === '/')) {
+          redirect(`/login?next=${encodeURIComponent(pathname + url.search)}`);
+        } else sendError(response, 401, 'Entre na sua conta para continuar.');
+        return;
+      }
+
+      if (route === '/api/auth/session') {
+        if (!isSafeStaticMethod(request.method)) return sendError(response, 405, 'Método não permitido.');
+        sendJson(response, 200, { user: session.user, csrfToken: session.csrfToken });
+        return;
+      }
+      if (route === '/api/auth/logout') {
+        if (request.method !== 'POST') return sendError(response, 405, 'Método não permitido.');
+        await authService.logout(request, response, session);
+        sendNoContent(response);
+        return;
+      }
+
+      if (route.startsWith('/api/')) {
+        if (!canAccessApi(session.user.role, request.method, route)) {
+          sendError(response, 403, 'Seu perfil não tem permissão para esta operação.');
+          return;
+        }
+        if (!isSafeStaticMethod(request.method)) authService.assertMutation(request, session);
+        // Route parameters may be case-sensitive filenames on Linux/Plesk.
+        url.pathname = pathname;
         const handled = await apiRouter.dispatch({ request, response, url });
         if (!handled) sendError(response, 404, 'Endpoint não encontrado.');
         return;
@@ -92,8 +139,8 @@ export function createApplication({ config, database, logger = console }) {
         return;
       }
 
-      if (url.pathname.startsWith('/assets/')) {
-        const assetPath = url.pathname.slice('/assets/'.length);
+      if (pathname.startsWith('/assets/')) {
+        const assetPath = pathname.slice('/assets/'.length);
         if (!assetPath.startsWith('imagens/')) {
           sendError(response, 403, 'Caminho de imagem não permitido.');
           return;
@@ -122,16 +169,15 @@ export function createApplication({ config, database, logger = console }) {
           response,
           rootDirectory: config.imagesDirectory,
           urlPath: assetPath,
-          cacheControl: 'private, no-cache',
-          versioned: true,
+          cacheControl: 'no-store',
         });
         return;
       }
 
-      const backgroundRoute = backgroundRoutes.find(([prefix]) => url.pathname.startsWith(prefix));
+      const backgroundRoute = backgroundRoutes.find(([prefix]) => pathname.startsWith(prefix));
       if (backgroundRoute) {
         const [prefix, rootDirectory, format] = backgroundRoute;
-        const backgroundPath = url.pathname.slice(prefix.length);
+        const backgroundPath = pathname.slice(prefix.length);
         if (!isSupportedStoryBackground(backgroundPath)) {
           sendError(response, 403, 'Formato de background não permitido.');
           return;
@@ -145,19 +191,22 @@ export function createApplication({ config, database, logger = console }) {
           request,
           response,
           ...file,
-          cacheControl: 'private, no-cache',
-          versioned: true,
+          cacheControl: 'no-store',
         });
         return;
       }
 
-      const pageFile = resolvePageRoute(url.pathname);
-      const requestedFile = pageFile || url.pathname.slice(1);
+      if (!pageFile) return sendError(response, 404, 'Página não encontrada.');
+      if (session.user.role === 'cliente' && pageFile === 'index.html') return redirect('/catalogo');
+      if (!canAccessPage(session.user.role, pageFile)) {
+        sendError(response, 403, 'Seu perfil não tem acesso a esta página.');
+        return;
+      }
       await serveFile({
         request,
         response,
         rootDirectory: config.publicDirectory,
-        urlPath: requestedFile,
+        urlPath: pageFile,
       });
     } catch (error) {
       if (!(error instanceof HttpError)) logger.error(error);

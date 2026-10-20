@@ -139,7 +139,7 @@ function createFixture(isMobile = true) {
   const scrollport = add('mobile-panels-scrollport', dialog);
   scrollport.classList.add('story-mobile-panels');
   const backLink = add('desktop-back-link', doc.body, 'a');
-  backLink.classList.add('stories-back-link');
+  backLink.classList.add('site-brand');
   const panels = {};
   const buttons = {};
   const controls = {};

@@ -3,11 +3,22 @@ import { createRouter } from '../http/router.mjs';
 import { defaultSecurityHeaders } from '../http/response.mjs';
 import { createRevistaTemplate, readRevistaWorkbook } from '../modules/revista/revista-service.mjs';
 
+const backgroundFormatMap = Object.freeze({
+  stories: 'stories',
+  feed: 'feed',
+  'indoor-h': 'indoor-h',
+});
+
+function getBackgroundManager(managers, format) {
+  const normalized = backgroundFormatMap[format];
+  return normalized ? managers[normalized] : null;
+}
+
 function getRequestedProductId(productService, value) {
   return productService.productId(value);
 }
 
-export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, revistaService }) {
+export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, backgroundManagers = {}, revistaService }) {
   const router = createRouter();
 
   router.get('/api/revista/template', async ({ response }) => {
@@ -70,6 +81,45 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
 
   router.get('/api/indoor-backgrounds', async ({ request, response }) => {
     sendRevalidatedJson(request, response, { items: await indoorBackgroundService.listStoryBackgrounds() });
+  });
+
+  router.post('/api/backgrounds/:format', async ({ params, request, response }) => {
+    const manager = getBackgroundManager(backgroundManagers, params.format);
+    if (!manager) {
+      sendError(response, 404, 'Formato de background não encontrado.');
+      return;
+    }
+
+    try {
+      const { files, fields } = await readMultipartFormData(request, {
+        maxBytes: 45_000_000,
+        tooLargeMessage: 'O upload de backgrounds excede 45 MB.',
+      });
+      const background = files.find((file) => file.fieldName === 'background');
+      const wallpaper = files.find((file) => file.fieldName === 'wallpaper');
+      const result = await manager.add({ name: fields.nome, background, wallpaper });
+      sendJson(response, 201, { ...result, message: 'Background adicionado com sucesso.' });
+    } catch (error) {
+      sendError(response, 400, error.message || 'Não foi possível adicionar o background.');
+    }
+  });
+
+  router.delete('/api/backgrounds/:format/:id', async ({ params, response }) => {
+    const manager = getBackgroundManager(backgroundManagers, params.format);
+    if (!manager) {
+      sendError(response, 404, 'Formato de background não encontrado.');
+      return;
+    }
+
+    try {
+      if (!await manager.remove(params.id)) {
+        sendError(response, 404, 'Background não encontrado.');
+        return;
+      }
+      sendJson(response, 200, { removed: true });
+    } catch (error) {
+      sendError(response, 400, error.message || 'Não foi possível remover o background.');
+    }
   });
 
   router.get('/api/products', ({ response, url }) => {

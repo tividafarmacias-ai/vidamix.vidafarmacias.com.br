@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#f5f8fc" />
+    <script src="/js/theme.js"></script>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="VidaMix" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="Entre no VidaMix Studio para criar suas artes e vídeos de ofertas." />
+    <title>Entrar | VidaMix Studio</title>
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <link rel="stylesheet" href="/brand.css" />
+    <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="stylesheet" href="/login.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <script src="/js/pwa.js" defer></script>
+    <script type="module" src="/js/login.js"></script>
+  </head>
+  <body class="login-page">
+    <a class="login-skip-link" href="#login-email">Pular para o login</a>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="site-brand" href="/login" aria-label="VidaMix Studio — Entrar">
+          <img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" />
+        </a>
+        <span class="login-header-name">VidaMix Studio</span>
+      </div>
+    </header>
+
+    <main class="login-main">
+      <section class="login-intro" aria-labelledby="login-intro-title">
+        <p class="login-eyebrow"><span aria-hidden="true"></span> SEU ESTÚDIO DE CRIAÇÃO</p>
+        <h1 id="login-intro-title">Suas ofertas, prontas para ganhar <span>destaque.</span></h1>
+        <p class="login-intro-description">Do catálogo à campanha. Crie artes para as redes sociais e vídeos para a TV da sua loja em um só lugar.</p>
+        <ul class="login-formats" aria-label="Formatos disponíveis">
+          <li>
+            <span class="login-format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-5 7h6m-3-3v6m-1 4h2"/></svg></span>
+            <span><strong>Stories</strong><small>Instagram e WhatsApp</small></span>
+          </li>
+          <li>
+            <span class="login-format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></svg></span>
+            <span><strong>Feed</strong><small>Ofertas que se destacam</small></span>
+          </li>
+          <li>
+            <span class="login-format-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4m-2-15 5 4-5 4z"/></svg></span>
+            <span><strong>TV Indoor</strong><small>Campanhas em movimento</small></span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="login-card-heading">
+          <span class="login-card-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5M3 12h12m-4-4 4 4-4 4"/></svg></span>
+          <h2 id="login-title">Entre no seu Studio</h2>
+          <p>Use seu e-mail e senha para começar.</p>
+        </div>
+        <form id="login-form" method="post" action="/api/auth/login" aria-busy="false">
+          <div class="login-field">
+            <label for="login-email">E-mail</label>
+            <input id="login-email" name="email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="voce@exemplo.com.br" maxlength="254" required />
+          </div>
+          <div class="login-field">
+            <label for="login-password">Senha</label>
+            <div class="login-password-field">
+              <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required />
+              <button id="login-password-toggle" class="login-password-toggle" type="button" aria-label="Mostrar senha" aria-controls="login-password" aria-pressed="false">
+                <svg class="login-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="login-eye-slash" d="m3 3 18 18"/></svg>
+              </button>
+            </div>
+          </div>
+          <p id="login-error" class="login-error" role="alert" hidden></p>
+          <button class="login-submit" id="login-submit" type="submit">
+            <span class="login-spinner" aria-hidden="true"></span>
+            <span id="login-submit-label">Entrar</span>
+            <svg class="login-submit-arrow" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>
+          </button>
+          <p id="login-status" class="login-sr-only" role="status" aria-live="polite"></p>
+        </form>
+        <noscript><p class="login-error">Ative o JavaScript no navegador para entrar no VidaMix Studio.</p></noscript>
+        <p class="login-help">Precisa de acesso? Fale com o administrador da sua conta.</p>
+      </section>
+    </main>
+    <footer class="login-footer">VidaMix Studio <span aria-hidden="true">·</span> Sua próxima campanha começa aqui.</footer>
+  </body>
+</html>

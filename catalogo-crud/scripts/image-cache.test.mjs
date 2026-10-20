@@ -5,13 +5,14 @@ import path from 'node:path';
 import { createServer } from 'node:http';
 import test from 'node:test';
 import { createApplication } from '../src/app.mjs';
+import { adminAuthFixture } from './fixtures/auth.mjs';
 import { loadConfig } from '../src/config.mjs';
 
 test('background manifests detect additions, replacements and removals without invalidating other images', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'vidamix-cache-'));
   const config = { ...loadConfig({ APP_AUTH_ENABLED: 'false' }),
     storyBackgroundsDirectory: directory, feedBackgroundsDirectory: directory, indoorBackgroundsDirectory: directory };
-  const server = createServer(createApplication({ config, database: {} }));
+  const server = createServer(createApplication({ config, database: {}, authService: adminAuthFixture() }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   try {
@@ -27,16 +28,16 @@ test('background manifests detect additions, replacements and removals without i
       assert.equal(conditional.status, 304);
       assert.equal(await conditional.text(), '');
       const image = await fetch(origin + imageUrl);
-      assert.match(image.headers.get('cache-control'), /private.*immutable/);
+      assert.equal(image.headers.get('cache-control'), 'no-store', 'protected images must be reauthorized after logout');
       assert.equal(await image.text(), 'first-image');
       const head = await fetch(origin + imageUrl, { method: 'HEAD' });
       assert.equal(head.headers.get('content-length'), '11');
       assert.equal(await head.text(), '');
       assert.equal((await fetch(origin + imageUrl, {
         headers: { 'If-None-Match': image.headers.get('etag') },
-      })).status, 304);
+      })).status, 200);
       const unversioned = await fetch(`${origin}/${format}-backgrounds/a.png`);
-      assert.equal(unversioned.headers.get('cache-control'), 'private, no-cache');
+      assert.equal(unversioned.headers.get('cache-control'), 'no-store');
       await writeFile(path.join(directory, 'b.webp'), 'new-image');
       const added = await fetch(endpoint, { headers: { 'If-None-Match': etag } });
       assert.equal(added.status, 200);
