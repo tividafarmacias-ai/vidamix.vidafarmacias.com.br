@@ -64,6 +64,8 @@ class Element {
       if (data) return node.dataset.productId === data[1];
       const move = simple.match(/^\[data-move="([^"]+)"\]$/);
       if (move) return node.dataset.move === move[1];
+      const tier = selector.match(/^\[data-tier="([^"]+)"\]$/);
+      if (tier) return node.dataset.tier === tier[1];
       if (simple.startsWith('.')) return (node.className || '').split(' ').includes(simple.slice(1));
       const attribute = selector.match(/^\[([^=]+)="([^"]+)"\]$/);
       return attribute ? node.getAttribute(attribute[1]) === attribute[2] : false;
@@ -162,7 +164,7 @@ async function openEditor(t, options = {}) {
     ...renderer,
     drawIndoorFrame: (context, snapshot, seconds) => {
       paints.push({ context, snapshot, seconds });
-      return renderer.getCarouselState(seconds, { hasWallpaper: Boolean(snapshot.wallpaper) });
+      return renderer.getCarouselState(seconds, { hasWallpaper: Boolean(snapshot.wallpaper), products: snapshot.products });
     },
     performance: { now: () => 0 },
     requestAnimationFrame: (callback) => { const id = nextId++; frames.set(id, callback); return id; },
@@ -264,7 +266,7 @@ test('Indoor requires exactly five products and a background before enabling pre
   assert.equal(f.get('scenes').children.length, 5);
   assert.deepEqual(Array.from(f.paints.at(-1).snapshot.products, (entry) => entry.product.id), [1, 2, 3, 4, 5]);
   f.get('scenes').children[4].click();
-  assert.equal(f.paints.at(-1).seconds, 32);
+  assert.equal(f.paints.at(-1).seconds, 40);
   f.get('play').click();
   assert.equal(f.frames.size, 1);
   f.document.hidden = true;
@@ -377,7 +379,7 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   await flush();
   assert.equal(f.exports.length, 1);
   assert.equal(f.exports[0].width, 1920);
-  assert.equal(f.exports[0].duration, 40);
+  assert.equal(f.exports[0].duration, 50);
   assert.equal(f.exports[0].height, 1080);
   assert.equal(f.get('download-link').hidden, false);
   assert.equal(f.get('download-link').clickCount, 1);
@@ -487,13 +489,13 @@ test('campaign wallpaper is loaded into preview and export with matching scene o
   assert.equal(f.paints.at(-1).snapshot.wallpaper.url, campaign.wallpaper_preview_url);
   assert.equal(f.get('scenes').children.length, 6);
   assert.equal(f.get('scenes').children[0].getAttribute('aria-pressed'), 'true');
-  assert.equal(f.get('duration').textContent, '43 segundos');
-  assert.equal(Number(f.get('time').max), 43 - 1 / 30);
-  assert.equal(f.get('time-label').textContent, '0,0 / 43 s');
+  assert.equal(f.get('duration').textContent, '53 segundos');
+  assert.equal(Number(f.get('time').max), 53 - 1 / 30);
+  assert.equal(f.get('time-label').textContent, '0,0 / 53 s');
   for (let index = 0; index < 5; index++) {
     const scene = f.get('scenes').children[index + 1];
     scene.click();
-    assert.equal(f.paints.at(-1).seconds, 3 + index * 8);
+    assert.equal(f.paints.at(-1).seconds, 3 + index * 10);
     assert.equal(scene.getAttribute('aria-pressed'), 'true');
     assert.equal(f.get('scenes').children[0].getAttribute('aria-pressed'), 'false');
   }
@@ -501,12 +503,58 @@ test('campaign wallpaper is loaded into preview and export with matching scene o
   assert.equal(f.paints.at(-1).seconds, 0);
   f.get('time').value = '100';
   f.get('time').dispatch('input');
-  assert.equal(f.paints.at(-1).seconds, 43 - 1 / 30);
+  assert.equal(f.paints.at(-1).seconds, 53 - 1 / 30);
   f.get('download').click();
   await flush();
-  assert.equal(f.exports[0].duration, 43);
+  assert.equal(f.exports[0].duration, 53);
   assert.equal(f.paints.at(-1).snapshot.wallpaper.url, campaign.wallpaper_preview_url);
-  assert.equal(f.paints.at(-1).seconds, 43 - 1 / 30);
+  assert.equal(f.paints.at(-1).seconds, 53 - 1 / 30);
+});
+
+test('per-product exposure tiers change the timeline and confirm the choice visually', async t => {
+  const f = await openEditor(t, { backgrounds: () => [campaign] });
+  selectFive(f);
+  const rowOne = f.get('selected').querySelector('[data-product-id="1"]');
+  for (const tier of ['10', '15', '20']) {
+    const option = rowOne.querySelector(`[data-tier="${tier}"]`);
+    assert.ok(option, `the ${tier}-second tier exists`);
+    assert.equal(option.className, 'indoor-duration-tier', 'tier buttons carry the styled class');
+  }
+  assert.equal(rowOne.querySelector('[data-tier="10"]').getAttribute('aria-pressed'), 'true');
+
+  rowOne.querySelector('[data-tier="20"]').click();
+  const chosen = f.get('selected').querySelector('[data-product-id="1"]').querySelector('[data-tier="20"]');
+  assert.equal(chosen.getAttribute('aria-pressed'), 'true', 'the chosen tier is marked as pressed');
+  assert.equal(chosen.classList.contains('is-confirmed'), true, 'the pulse animation class is applied');
+  assert.equal(f.document.activeElement.dataset.tier, '20', 'focus follows the chosen tier');
+  assert.match(f.get('status').textContent, /Produto 1: 20 segundos na TV · vídeo com 60 s\./);
+  assert.equal(f.get('download').disabled, true, 'changing a tier invalidates the current preview');
+
+  f.get('selected').querySelector('[data-product-id="3"]').querySelector('[data-tier="15"]').click();
+  assert.match(f.get('status').textContent, /Produto 3: 15 segundos na TV · vídeo com 65 s\./);
+  const statusAfterChoice = f.get('status').textContent;
+  f.get('selected').querySelector('[data-product-id="3"]').querySelector('[data-tier="15"]').click();
+  assert.equal(f.get('status').textContent, statusAfterChoice, 're-selecting the same tier keeps the message');
+
+  f.get('continue').click();
+  await flush();
+  f.get('backgrounds').querySelector('button').click();
+  f.get('open-preview').click();
+  await flush();
+  // 20 + 10 + 15 + 10 + 10 = 65 seconds of offers plus the 3-second opening.
+  assert.equal(f.get('duration').textContent, '68 segundos');
+  assert.equal(f.get('sequence').textContent, 'Abertura de 3 s + 5 produtos · 20 + 10 + 15 + 10 + 10 s');
+  assert.equal(Number(f.get('time').max), 68 - 1 / 30);
+  const sceneStarts = [3, 23, 33, 48, 58];
+  for (let index = 0; index < 5; index++) {
+    const scene = f.get('scenes').children[index + 1];
+    scene.click();
+    assert.equal(f.paints.at(-1).seconds, sceneStarts[index]);
+  }
+  f.get('download').click();
+  await flush();
+  assert.equal(f.exports[0].duration, 68);
+  assert.equal(f.paints.at(-1).seconds, 68 - 1 / 30);
 });
 
 test('a broken wallpaper blocks export and retries only that image', async t => {

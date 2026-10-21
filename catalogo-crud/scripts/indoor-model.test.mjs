@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  PRODUCT_LIMIT, addProduct, removeProduct, moveProduct, canContinue,
+  PRODUCT_LIMIT, INDOOR_DURATION_TIERS, DEFAULT_INDOOR_DURATION,
+  addProduct, removeProduct, moveProduct, setProductDuration, canContinue,
 } from '../public/js/features/indoor/model.js';
 
 function product(id, overrides = {}) {
@@ -9,7 +10,7 @@ function product(id, overrides = {}) {
 }
 
 function completeSelection() {
-  return Array.from({ length: 5 }, (_, index) => ({ product: product(index + 1), price: `${index + 1},90` }));
+  return Array.from({ length: 5 }, (_, index) => ({ product: product(index + 1), price: `${index + 1},90`, duration: 10 }));
 }
 
 test('selection cannot advance until it contains five distinct products with local images', () => {
@@ -88,4 +89,28 @@ test('removing a product blocks continuing until its replacement has been select
   assert.equal(replacement[4].price, '');
   assert.deepEqual(original, completeSelection());
   assert.deepEqual(removeProduct(original, 999), original);
+});
+
+test('products start on the ten-second tier and only accept the 10, 15 and 20-second tiers', () => {
+  assert.deepEqual(INDOOR_DURATION_TIERS, [10, 15, 20]);
+  assert.equal(DEFAULT_INDOOR_DURATION, 10);
+  assert.equal(addProduct([], product(1))[0].duration, 10);
+  const original = completeSelection();
+  const changed = setProductDuration(original, 2, 15);
+  assert.notStrictEqual(changed, original);
+  assert.equal(changed[1].duration, 15);
+  assert.deepEqual(changed.filter((entry, index) => index !== 1), original.filter((entry, index) => index !== 1));
+  assert.deepEqual(original, completeSelection());
+  for (const invalid of [8, 25, 0, -10, NaN, null, undefined, '15']) {
+    assert.strictEqual(setProductDuration(changed, 2, invalid), changed);
+  }
+  assert.strictEqual(setProductDuration(changed, 999, 20), changed, 'unknown product preserves the selection');
+  assert.strictEqual(setProductDuration(changed, 2, 15), changed, 'the same tier preserves the reference');
+});
+
+test('reordering products keeps each exposure tier attached to its product', () => {
+  const tiered = setProductDuration(setProductDuration(completeSelection(), 3, 20), 5, 15);
+  const moved = moveProduct(tiered, 3, -1);
+  assert.deepEqual(moved.map((entry) => entry.duration), [10, 20, 10, 10, 15]);
+  assert.deepEqual(moveProduct(moved, 3, 1), tiered);
 });

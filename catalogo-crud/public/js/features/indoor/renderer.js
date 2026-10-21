@@ -1,9 +1,9 @@
+import { INDOOR_DURATION_TIERS, DEFAULT_INDOOR_DURATION } from './model.js';
+
 export const INDOOR_WIDTH = 1920;
 export const INDOOR_HEIGHT = 1080;
 export const INDOOR_PRODUCT_COUNT = 5;
-export const INDOOR_PRODUCT_DURATION = 8;
 export const INDOOR_INTRO_DURATION = 3;
-export const INDOOR_DURATION = INDOOR_INTRO_DURATION + INDOOR_PRODUCT_COUNT * INDOOR_PRODUCT_DURATION;
 
 const TRANSITION_DURATION = 0.35;
 const REVEAL_DURATION = 0.9;
@@ -28,14 +28,25 @@ function ease(value) {
   return progress * progress * (3 - 2 * progress);
 }
 
-export function getIndoorDuration(hasWallpaper = false) {
-  return hasWallpaper ? INDOOR_DURATION : INDOOR_PRODUCT_COUNT * INDOOR_PRODUCT_DURATION;
+/** Per-product exposure tiers; anything else falls back to the ten-second default. */
+export function getProductDurations(products = []) {
+  return products.map((entry) => {
+    const duration = Number(entry?.duration);
+    return INDOOR_DURATION_TIERS.includes(duration) ? duration : DEFAULT_INDOOR_DURATION;
+  });
+}
+
+export function getIndoorDuration(hasWallpaper = false, products = []) {
+  const offers = getProductDurations(products).reduce((sum, duration) => sum + duration, 0);
+  return (hasWallpaper ? INDOOR_INTRO_DURATION : 0) + offers;
 }
 
 /** One timeline for preview, scene navigation and frame-by-frame MP4 rendering. */
-export function getCarouselState(seconds, { hasWallpaper = false } = {}) {
+export function getCarouselState(seconds, { hasWallpaper = false, products = [] } = {}) {
+  const durations = getProductDurations(products);
+  const total = getIndoorDuration(hasWallpaper, products);
   const input = Number(seconds);
-  const time = Number.isFinite(input) ? Math.max(0, input) % getIndoorDuration(hasWallpaper) : 0;
+  const time = Number.isFinite(input) ? Math.max(0, input) % total : 0;
   const intro = hasWallpaper ? INDOOR_INTRO_DURATION : 0;
   if (time < intro) {
     const progress = clamp((time - (intro - REVEAL_DURATION)) / REVEAL_DURATION, 0, 1);
@@ -46,17 +57,22 @@ export function getCarouselState(seconds, { hasWallpaper = false } = {}) {
     };
   }
   const offerTime = time - intro;
-  const index = Math.floor(offerTime / INDOOR_PRODUCT_DURATION);
-  const nextIndex = (index + 1) % INDOOR_PRODUCT_COUNT;
-  const localTime = offerTime - index * INDOOR_PRODUCT_DURATION;
-  if (hasWallpaper && index === INDOOR_PRODUCT_COUNT - 1) {
-    const progress = clamp((localTime - (INDOOR_PRODUCT_DURATION - LOOP_RETURN_DURATION)) / LOOP_RETURN_DURATION, 0, 1);
+  let index = 0;
+  let cumulative = 0;
+  while (index < durations.length - 1 && offerTime >= cumulative + durations[index]) {
+    cumulative += durations[index];
+    index += 1;
+  }
+  const localTime = offerTime - cumulative;
+  const nextIndex = (index + 1) % durations.length;
+  if (hasWallpaper && index === durations.length - 1) {
+    const progress = clamp((localTime - (durations[index] - LOOP_RETURN_DURATION)) / LOOP_RETURN_DURATION, 0, 1);
     return {
       phase: progress > 0 ? 'return' : 'products', time, index, nextIndex: -1,
       progress, transition: progress > 0, slides: [{ index, offsetX: 0, opacity: 1 }],
     };
   }
-  const progress = clamp((localTime - (INDOOR_PRODUCT_DURATION - TRANSITION_DURATION)) / TRANSITION_DURATION, 0, 1);
+  const progress = clamp((localTime - (durations[index] - TRANSITION_DURATION)) / TRANSITION_DURATION, 0, 1);
   const eased = ease(progress);
   const slides = [{ index, offsetX: eased === 0 ? 0 : -SLIDE_WIDTH * eased, opacity: 1 }];
   if (progress > 0) slides.push({ index: nextIndex, offsetX: SLIDE_WIDTH * (1 - eased), opacity: 1 });
@@ -270,7 +286,8 @@ function drawProduct(context, entry, badgeTheme) {
 
 /**
  * Paints directly into the supplied 1920×1080 canvas; no intermediate canvases or DOM.
- * products: exactly five { product: { nome, subtitulo, fabricante }, image, originalPrice, price } entries.
+ * products: exactly five { product: { nome, subtitulo, fabricante }, image, originalPrice, price, duration } entries;
+ * duration is one of the 10/15/20-second tiers and anything else falls back to ten seconds.
  * background and image must be loaded CanvasImageSources. Missing images are skipped.
  * Returns the carousel state used, so preview controls can follow the same timeline.
  */
@@ -278,7 +295,7 @@ export function drawIndoorFrame(context, { background, wallpaper, products, badg
   if (!Array.isArray(products) || products.length !== INDOOR_PRODUCT_COUNT || products.some((entry) => !entry)) {
     throw new RangeError('O vídeo Indoor precisa de exatamente 5 produtos.');
   }
-  const state = getCarouselState(seconds, { hasWallpaper: Boolean(imageSize(wallpaper)) });
+  const state = getCarouselState(seconds, { hasWallpaper: Boolean(imageSize(wallpaper)), products });
   context.save();
   try {
     context.setTransform(1, 0, 0, 1, 0, 0);

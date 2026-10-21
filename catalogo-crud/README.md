@@ -254,18 +254,19 @@ formatos, incluindo geometria, dimensões do MP4, controles das páginas e fundo
 
 Abra **TV Indoor** na central ou acesse `/artes/indoor-h`. O editor cria um
 carrossel horizontal de **1920 × 1080 pixels**, com **cinco produtos** em um
-vídeo MP4 de **43 segundos**, sem áudio, quando a campanha tem wallpaper.
-Os primeiros três segundos apresentam o wallpaper com zoom suave e uma abertura
-diagonal que revela a primeira oferta. Cada produto ocupa um intervalo de oito
-segundos, com transições horizontais suaves. O final retorna ao wallpaper para
-repetir o vídeo na televisão. Fundos antigos sem wallpaper mantêm o carrossel de
-40 segundos, com retorno ao primeiro produto.
+vídeo MP4 sem áudio. Os primeiros três segundos apresentam o wallpaper com zoom
+suave e uma abertura diagonal que revela a primeira oferta. Cada produto tem seu
+próprio tempo de exposição, escolhido entre **10, 15 ou 20 segundos** (10 por
+padrão), com transições horizontais suaves. O final retorna ao wallpaper para
+repetir o vídeo na televisão; fundos antigos sem wallpaper mantêm o carrossel,
+com retorno ao primeiro produto.
 
 1. Busque e selecione cinco produtos diferentes do catálogo, todos com imagem
    local disponível. A seleção mostra quantos produtos faltam para continuar.
-2. Reordene os produtos na sequência desejada e informe os preços de cada
-   oferta, se quiser. Os preços são opcionais e acompanham o produto quando
-   sua posição muda. Remova um item para substituí-lo por outro.
+2. Reordene os produtos na sequência desejada, escolha o tempo de cada um na TV
+   e informe os preços de cada oferta, se quiser. Os preços são opcionais e
+   acompanham o produto quando sua posição muda. Remova um item para
+   substituí-lo por outro.
 3. Continue para escolher uma campanha e conferir a prévia animada. Os atalhos
    permitem revisar a abertura e cada produto, com os respectivos intervalos.
    Confira a descrição dos produtos e os preços antes da exportação.

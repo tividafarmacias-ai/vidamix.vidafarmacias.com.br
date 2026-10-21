@@ -13,6 +13,9 @@ const formats = {
     twoProductAreas: DEFAULT_TWO_PRODUCT_AREAS,
     detailsWidth: DEFAULT_DETAILS_WIDTH,
     detailsTop: 1120,
+    // The initial product + description placement sits 25% of the product area
+    // height below the centered default (~190 px for the 760 px area).
+    initialShiftRatio: 0.25,
     backgroundsUrl: '/api/story-backgrounds',
     downloadPrefix: 'story',
   },
@@ -27,6 +30,7 @@ const formats = {
     },
     detailsWidth: 740,
     detailsTop: 930,
+    initialShiftRatio: 0,
     backgroundsUrl: '/api/feed-backgrounds',
     downloadPrefix: 'feed',
   },

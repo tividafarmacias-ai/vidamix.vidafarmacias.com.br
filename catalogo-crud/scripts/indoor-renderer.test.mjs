@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_DURATION, INDOOR_PRODUCT_COUNT,
+  INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_PRODUCT_COUNT, INDOOR_INTRO_DURATION,
   getIndoorDuration, getCarouselState, drawIndoorFrame,
 } from '../public/js/features/indoor/renderer.js';
+import { INDOOR_DURATION_TIERS } from '../public/js/features/indoor/model.js';
 
 function mockContext() {
   const stack = [];
@@ -58,27 +59,37 @@ function snapshot(overrides = {}) {
   };
 }
 
-test('Indoor keeps eight-second offers with a 43-second campaign or a 40-second legacy loop', () => {
-  assert.deepEqual([INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_DURATION, INDOOR_PRODUCT_COUNT], [1920, 1080, 43, 5]);
-  assert.equal(getIndoorDuration(true), 43);
-  assert.equal(getIndoorDuration(false), 40);
+test('Indoor defaults to ten-second offers and sums the 10, 15 and 20-second tiers', () => {
+  assert.deepEqual([INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_PRODUCT_COUNT, INDOOR_INTRO_DURATION], [1920, 1080, 5, 3]);
+  assert.deepEqual(INDOOR_DURATION_TIERS, [10, 15, 20]);
+  const defaults = Array.from({ length: 5 }, () => ({}));
+  assert.equal(getIndoorDuration(false, defaults), 50);
+  assert.equal(getIndoorDuration(true, defaults), 53);
+  const tiers = [10, 15, 20, 10, 15].map((duration) => ({ duration }));
+  assert.equal(getIndoorDuration(false, tiers), 70);
+  assert.equal(getIndoorDuration(true, tiers), 73);
+  const starts = [0, 10, 25, 45, 55];
   for (let index = 0; index < 5; index += 1) {
-    for (const phase of [0, 4, 7.5]) {
-      const state = getCarouselState(index * 8 + phase);
+    for (const phase of [0, 4, tiers[index].duration / 2]) {
+      const state = getCarouselState(starts[index] + phase, { products: tiers });
       assert.equal(state.index, index);
       assert.equal(state.transition, false);
       assert.deepEqual(state.slides, [{ index, offsetX: 0, opacity: 1 }]);
-      assert.deepEqual(getCarouselState(index * 8 + phase), state);
+      assert.deepEqual(getCarouselState(starts[index] + phase, { products: tiers }), state);
     }
   }
-  assert.deepEqual(getCarouselState(40), getCarouselState(0));
-  assert.deepEqual(getCarouselState(120), getCarouselState(0));
-  for (const invalid of [-10, NaN, Infinity, undefined]) assert.deepEqual(getCarouselState(invalid), getCarouselState(0));
+  assert.deepEqual(getCarouselState(70, { products: tiers }), getCarouselState(0, { products: tiers }));
+  assert.deepEqual(getCarouselState(140, { products: tiers }), getCarouselState(0, { products: tiers }));
+  for (const invalid of [-10, NaN, Infinity, undefined]) {
+    assert.deepEqual(getCarouselState(invalid, { products: tiers }), getCarouselState(0, { products: tiers }));
+  }
 });
 
 test('each transition slides to the next product and the last slides back to the first', () => {
+  const tiers = [10, 15, 20, 10, 15].map((duration) => ({ duration }));
+  const starts = [0, 10, 25, 45, 55];
   for (let index = 0; index < 5; index += 1) {
-    const middle = getCarouselState(index * 8 + 7.825);
+    const middle = getCarouselState(starts[index] + tiers[index].duration - 0.175, { products: tiers });
     assert.equal(middle.transition, true);
     assert.equal(middle.nextIndex, (index + 1) % 5);
     assert.ok(Math.abs(middle.progress - 0.5) < 1e-12);
@@ -86,8 +97,8 @@ test('each transition slides to the next product and the last slides back to the
     assert.ok(Math.abs(middle.slides[0].offsetX + 640) < 1e-8);
     assert.ok(Math.abs(middle.slides[1].offsetX - 640) < 1e-8);
     assert.ok(Math.abs(middle.slides[1].offsetX - middle.slides[0].offsetX - 1280) < 1e-8);
-    const before = getCarouselState((index + 1) * 8 - 0.000001);
-    const after = getCarouselState((index + 1) * 8);
+    const before = getCarouselState(starts[index] + tiers[index].duration - 0.000001, { products: tiers });
+    const after = getCarouselState(starts[index] + tiers[index].duration, { products: tiers });
     assert.ok(Math.abs(before.slides[1].offsetX - after.slides[0].offsetX) < 0.001);
     assert.equal(before.slides[1].index, after.slides[0].index);
   }
@@ -95,10 +106,10 @@ test('each transition slides to the next product and the last slides back to the
 
 test('renderer paints only the visible product, or two products during a transition', () => {
   const input = snapshot();
-  for (const [seconds, expectedProducts] of [[1, [0]], [16, [2]], [39.9, [4, 0]]]) {
+  for (const [seconds, expectedProducts] of [[1, [0]], [16, [1]], [39.9, [3, 4]]]) {
     const context = mockContext();
     const state = drawIndoorFrame(context, input, seconds);
-    assert.deepEqual(state, getCarouselState(seconds));
+    assert.deepEqual(state, getCarouselState(seconds, { products: input.products }));
     assert.deepEqual(context.calls.filter((call) => call.type === 'image').map((call) => call.args[0].id), ['background', ...expectedProducts]);
     assert.equal(context.globalAlpha, 0.4);
     assert.equal(context.shadowBlur, 8);
@@ -262,11 +273,11 @@ test('wallpaper opens alone, reveals the first offer, then returns seamlessly at
   reveal.assertBalanced();
 
   for (let product = 0; product < 5; product++) {
-    assert.equal(getCarouselState(3 + product * 8, { hasWallpaper: true }).index, product);
-    assert.equal(getCarouselState(3 + product * 8 + 4, { hasWallpaper: true }).index, product);
+    assert.equal(getCarouselState(3 + product * 10, { hasWallpaper: true, products: input.products }).index, product);
+    assert.equal(getCarouselState(3 + product * 10 + 4, { hasWallpaper: true, products: input.products }).index, product);
   }
   const last = mockContext();
-  assert.equal(drawIndoorFrame(last, input, 43 - 1 / 30).phase, 'return');
+  assert.equal(drawIndoorFrame(last, input, 53 - 1 / 30).phase, 'return');
   const closing = last.calls.filter(call => call.type === 'image').at(-1);
   assert.equal(closing.args[0].id, 'wallpaper');
   assert.ok(closing.alpha > 0.99);
@@ -274,6 +285,28 @@ test('wallpaper opens alone, reveals the first offer, then returns seamlessly at
   const first = mockContext();
   const loop = mockContext();
   drawIndoorFrame(first, input, 0);
-  drawIndoorFrame(loop, input, 43);
+  drawIndoorFrame(loop, input, 53);
   assert.deepEqual(loop.calls, first.calls, 'end boundary and opening render exactly the same frame');
+});
+
+test('mixed tiers keep scene boundaries and the wallpaper return aligned to the summed duration', () => {
+  const input = snapshot({ wallpaper: { width: 1920, height: 1080, id: 'wallpaper' } });
+  input.products.forEach((entry, index) => { entry.duration = [20, 10, 15, 10, 20][index]; });
+  const starts = [3, 23, 33, 48, 58];
+  for (let index = 0; index < 5; index++) {
+    const state = getCarouselState(starts[index], { hasWallpaper: true, products: input.products });
+    assert.equal(state.index, index);
+    assert.equal(state.phase, 'products');
+  }
+  assert.equal(getIndoorDuration(true, input.products), 78);
+  assert.equal(getIndoorDuration(false, input.products), 75);
+  assert.equal(drawIndoorFrame(mockContext(), input, 78 - 1 / 30).phase, 'return');
+  const first = mockContext();
+  const loop = mockContext();
+  drawIndoorFrame(first, input, 0);
+  drawIndoorFrame(loop, input, 78);
+  assert.deepEqual(loop.calls, first.calls, 'the summed boundary loops back to the exact opening frame');
+  for (const invalid of [{ duration: 8 }, { duration: 25 }, { duration: null }, { duration: 'dez' }, {}]) {
+    assert.equal(getIndoorDuration(false, [invalid]), 10, 'non-tier durations fall back to ten seconds');
+  }
 });

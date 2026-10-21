@@ -22,7 +22,7 @@ const format = getArtworkFormat(document.body.dataset.artworkFormat);
 const {
   width: STORY_WIDTH, height: STORY_HEIGHT, safeTop: STORY_SAFE_TOP,
   productArea: DEFAULT_PRODUCT_AREA, twoProductAreas: DEFAULT_TWO_PRODUCT_AREAS,
-  detailsWidth: DEFAULT_DETAILS_WIDTH,
+  detailsWidth: DEFAULT_DETAILS_WIDTH, initialShiftRatio: INITIAL_SHIFT_RATIO = 0,
 } = format;
 const state = createStoriesEditorState();
 const elements = getStoriesEditorElements();
@@ -723,6 +723,11 @@ function getAllProductBoxes() {
     .filter(Boolean);
 }
 
+/** Initial downward offset: a share of the product area height (Feed keeps 0). */
+function getInitialShiftY(area) {
+  return Math.round(area.height * INITIAL_SHIFT_RATIO);
+}
+
 function makeDefaultProductTransform(target = 'product') {
   if (!getProductImage(target)) return null;
 
@@ -737,7 +742,7 @@ function makeDefaultProductTransform(target = 'product') {
   const height = width / ratio;
   return clampProductTransform({
     x: area.x + (area.width - width) / 2,
-    y: area.y + (area.height - height) / 2,
+    y: area.y + (area.height - height) / 2 + getInitialShiftY(area),
     width,
   }, target);
 }
@@ -756,7 +761,7 @@ function makeDefaultDetailsTransform(target = 'details') {
     const productBottom = productBox
       ? productBox.y + productBox.height
       : productArea.y + productArea.height;
-    const desiredY = Math.max(format.detailsTop, productBottom + 48);
+    const desiredY = Math.max(format.detailsTop + getInitialShiftY(productArea), productBottom + 48);
     return getDetailsTransformFromVisualBox({
       x: centerX - (provisionalLayout.descriptionWidth / 2),
       y: Math.min(desiredY, STORY_HEIGHT - provisionalLayout.cardHeight - 56),
@@ -769,7 +774,7 @@ function makeDefaultDetailsTransform(target = 'details') {
     ...getAllProductBoxes().map((productBox) => productBox.y + productBox.height),
   );
   const provisionalLayout = getDetailsLayout({ x: 0, y: 0, width }, target);
-  const desiredY = Math.max(format.detailsTop, productBottom + 64);
+  const desiredY = Math.max(format.detailsTop + getInitialShiftY(getDefaultProductArea('product')), productBottom + 64);
   return getDetailsTransformFromVisualBox({
     x: (STORY_WIDTH - provisionalLayout.descriptionWidth) / 2,
     y: Math.min(desiredY, STORY_HEIGHT - provisionalLayout.cardHeight - 56),
