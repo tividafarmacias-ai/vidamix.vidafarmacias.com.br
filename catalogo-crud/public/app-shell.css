@@ -53,7 +53,7 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
   white-space: nowrap;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.site-logout { background: var(--glass-surface-strong); font-family: inherit; cursor: pointer; }
+.site-logout { order: 11; flex: none; background: var(--glass-surface-strong); font-family: inherit; cursor: pointer; }
 .site-logout:disabled { opacity: .65; cursor: wait; }
 .site-account { display: none; min-width: 0; color: var(--color-muted); font-size: 12px; overflow-wrap: anywhere; }
 .site-nav a:hover { color: var(--azul); background: var(--glass-surface-strong); }
@@ -122,6 +122,7 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
     gap: 8px;
   }
   .site-header .site-brand-logo { width: 128px; }
+  .site-logout { padding: 8px; font-size: 11px; }
   .site-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html:not([data-user-role="cliente"]) a[href="/artes/indoor-h"], html:not([data-user-role="cliente"]) a[href="/indoor-h.html"] { display: none !important; }
   .app-screen-name {
@@ -176,6 +177,11 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
   html.is-standalone { overscroll-behavior-y: none; }
   html.is-standalone body:not(.stories-page) { overscroll-behavior-y: none; }
   html.is-standalone .pwa-install-button { display: none; }
+}
+
+@media (max-width: 380px) {
+  .app-screen-name { display: none; }
+  .site-menu-toggle { margin-left: auto; }
 }
 
 @media (prefers-reduced-transparency: reduce) {

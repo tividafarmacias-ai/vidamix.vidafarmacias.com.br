@@ -83,7 +83,8 @@ export function initAppHeader(win, doc, screen, session = null) {
         account.setAttribute('role', 'alert');
       }
     });
-    nav.append(account, exit);
+    nav.append(account);
+    inner.append(exit);
   } else {
     const login = doc.createElement('a');
     login.href = '/login';

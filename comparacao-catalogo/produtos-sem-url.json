@@ -1,0 +1,62 @@
+[
+  {
+    "produto_id": 32406,
+    "ean": "7899095249134",
+    "nome": "Abrifit 7mg/ml",
+    "imagem_url": null,
+    "imagem_url_exibicao": null,
+    "campo_utilizado": "imagem_url_exibicao",
+    "usou_fallback": true,
+    "url_normalizada": null,
+    "arquivo": null,
+    "status": "sem_imagem"
+  },
+  {
+    "produto_id": 32404,
+    "ean": "7899095233805",
+    "nome": "Acetilcisteína 20mg/ml",
+    "imagem_url": null,
+    "imagem_url_exibicao": null,
+    "campo_utilizado": "imagem_url_exibicao",
+    "usou_fallback": true,
+    "url_normalizada": null,
+    "arquivo": null,
+    "status": "sem_imagem"
+  },
+  {
+    "produto_id": 32400,
+    "ean": "7891182015585",
+    "nome": "Cond Skala Ceramidas 325ml",
+    "imagem_url": null,
+    "imagem_url_exibicao": null,
+    "campo_utilizado": "imagem_url_exibicao",
+    "usou_fallback": true,
+    "url_normalizada": null,
+    "arquivo": null,
+    "status": "sem_imagem"
+  },
+  {
+    "produto_id": 32363,
+    "ean": "7896004792316",
+    "nome": "Naratriptana 2,5mg",
+    "imagem_url": null,
+    "imagem_url_exibicao": null,
+    "campo_utilizado": "imagem_url_exibicao",
+    "usou_fallback": true,
+    "url_normalizada": null,
+    "arquivo": null,
+    "status": "sem_imagem"
+  },
+  {
+    "produto_id": 32335,
+    "ean": "7908324404395",
+    "nome": "Sabonete Francis Brasilid",
+    "imagem_url": null,
+    "imagem_url_exibicao": null,
+    "campo_utilizado": "imagem_url_exibicao",
+    "usou_fallback": true,
+    "url_normalizada": null,
+    "arquivo": null,
+    "status": "sem_imagem"
+  }
+]

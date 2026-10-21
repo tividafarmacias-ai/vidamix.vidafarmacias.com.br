@@ -168,7 +168,7 @@ test('customer navigation waits for the session, includes TV Indoor and omits ad
   const nav = f.inner.children.find(({ className }) => className === 'site-nav');
   assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
   assert.equal(nav.children.find(({ className }) => className === 'site-account').textContent, '<Conta cliente> · Cliente');
-  assert.equal(nav.children.find(({ className }) => className === 'site-logout').textContent, 'Sair');
+  assert.equal(f.inner.children.find(({ className }) => className === 'site-logout').textContent, 'Sair');
   assert.equal(f.brand.href, '/catalogo');
   assert.equal(nav.hidden, true, 'mobile menu starts collapsed');
   const toggle = f.inner.children.find(({ className }) => className === 'site-menu-toggle');

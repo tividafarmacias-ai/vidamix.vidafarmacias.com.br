@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const roots = [
+  '../baixar-imagens-faltantes.mjs',
   'server.mjs',
   'src',
   'public/app.js',
