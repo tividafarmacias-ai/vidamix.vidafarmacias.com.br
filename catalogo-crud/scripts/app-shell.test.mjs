@@ -166,10 +166,10 @@ test('customer navigation waits for the session, includes TV Indoor and omits ad
   resolveSession({ user: { id: 9, name: '<Conta cliente>', role: 'cliente' } });
   await f.ready;
   const nav = f.inner.children.find(({ className }) => className === 'site-nav');
-  assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
+  assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
   assert.equal(nav.children.find(({ className }) => className === 'site-account').textContent, '<Conta cliente> · Cliente');
   assert.equal(f.inner.children.find(({ className }) => className === 'site-logout').textContent, 'Sair');
-  assert.equal(f.brand.href, '/catalogo');
+  assert.equal(f.brand.href, '/');
   assert.equal(nav.hidden, true, 'mobile menu starts collapsed');
   const toggle = f.inner.children.find(({ className }) => className === 'site-menu-toggle');
   toggle.emit('click');
@@ -177,8 +177,9 @@ test('customer navigation waits for the session, includes TV Indoor and omits ad
   f.doc.emit('keydown', { key: 'Escape' });
   assert.equal(nav.hidden, true);
   const tabs = f.doc.body.children.find(({ className }) => className === 'app-tabbar');
-  assert.equal(tabs.children.length, 4);
+  assert.equal(tabs.children.length, 5);
   assert.equal(tabs.children.at(-1).href, '/artes/indoor-h');
+  assert.equal(tabs.children[0].href, '/');
 });
 
 test('failed sessions and offline screens show only the login destination', async () => {

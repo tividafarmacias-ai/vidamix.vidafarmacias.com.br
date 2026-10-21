@@ -12,6 +12,8 @@ body.home-page {
 
 a { color: inherit; }
 .home-page [hidden] { display: none !important; }
+/* Conteúdo administrativo fica visível apenas para usuários admin. */
+.home-page:not(.is-admin) .admin-only { display: none !important; }
 a:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
 .skip-link {
   position: fixed; top: 12px; left: 12px; z-index: 10; padding: 10px 14px;

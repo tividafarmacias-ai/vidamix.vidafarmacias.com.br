@@ -19,7 +19,7 @@ const headerDestinations = [
 
 export function getHeaderDestinations(role) {
   if (role === 'admin') return headerDestinations;
-  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['catalogue', 'stories', 'feed', 'indoor'].includes(screen));
+  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['home', 'catalogue', 'stories', 'feed', 'indoor'].includes(screen));
   return [];
 }
 
@@ -53,7 +53,7 @@ export function initAppHeader(win, doc, screen, session = null) {
   nav.setAttribute('aria-label', 'Navegação principal');
   const brand = header.querySelector('.site-brand');
   if (brand) {
-    brand.href = session?.user.role === 'admin' ? '/' : session ? '/catalogo' : '/login';
+    brand.href = session ? '/' : '/login';
     brand.setAttribute('aria-label', 'VidaMix Studio');
   }
   for (const destination of getHeaderDestinations(session?.user.role)) {
@@ -178,6 +178,7 @@ export function initAppShell(win = window, doc = document, options = {}) {
   root.dataset.appScreen = screen || '';
   const ready = screen === 'offline' ? Promise.resolve(null) : Object.hasOwn(options, 'session') ? Promise.resolve(options.session) : sessionReady;
   const navigationReady = ready.then((session) => {
+    doc.body.classList.toggle('is-admin', session?.user?.role === 'admin');
     initAppHeader(win, doc, screen, session);
     if (!session && screen !== 'offline') {
       const message = doc.createElement('section');
@@ -197,7 +198,7 @@ export function initAppShell(win = window, doc = document, options = {}) {
       const nav = doc.createElement('nav');
       nav.className = 'app-tabbar';
       nav.setAttribute('aria-label', 'Navegação do aplicativo');
-      const tabs = session.user.role === 'admin' ? destinations : [...destinations.filter(({ screen: key }) => ['catalogue', 'stories', 'feed'].includes(key)), indoorDestination];
+      const tabs = session.user.role === 'admin' ? destinations : [...destinations.filter(({ screen: key }) => ['home', 'catalogue', 'stories', 'feed'].includes(key)), indoorDestination];
       nav.style.setProperty('--app-tab-count', tabs.length);
       for (const destination of tabs) {
         const link = doc.createElement('a');

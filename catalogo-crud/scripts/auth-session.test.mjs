@@ -105,7 +105,7 @@ test('offline page does not request or reveal private navigation', async () => {
 });
 
 test('customer navigation and tour offer the allowed creation tools and consultation', () => {
-  assert.deepEqual(getHeaderDestinations('cliente').map(({ screen }) => screen), ['catalogue', 'stories', 'feed', 'indoor']);
+  assert.deepEqual(getHeaderDestinations('cliente').map(({ screen }) => screen), ['home', 'catalogue', 'stories', 'feed', 'indoor']);
   assert.equal(getHeaderDestinations('admin').length, 7);
   const tour = getTour('catalogue', { role: 'cliente' });
   assert.match(tour.steps.find(({ id }) => id === 'results').description, /consultar/);

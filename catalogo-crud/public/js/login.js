@@ -1,4 +1,6 @@
 const clientDestinations = new Map([
+  ['/', '/'],
+  ['/index.html', '/'],
   ['/catalogo', '/catalogo'],
   ['/catalogo.html', '/catalogo'],
   ['/artes/stories', '/artes/stories'],
@@ -10,8 +12,6 @@ const clientDestinations = new Map([
 ]);
 const adminDestinations = new Map([
   ...clientDestinations,
-  ['/', '/'],
-  ['/index.html', '/'],
   ['/revista', '/revista'],
   ['/revista.html', '/revista'],
   ['/backgrounds', '/backgrounds'],
@@ -19,7 +19,7 @@ const adminDestinations = new Map([
 ]);
 
 export function loginDestination(next, role, origin) {
-  const fallback = role === 'admin' ? '/' : '/catalogo';
+  const fallback = '/';
   if (typeof next !== 'string' || !/^\/(?!\/)/.test(next) || /[\\\u0000-\u0020\u007f]/.test(next)) return fallback;
   try {
     const destination = new URL(next, origin);

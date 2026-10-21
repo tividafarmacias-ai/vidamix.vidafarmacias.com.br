@@ -47,11 +47,12 @@ function fixture({ session = response(401, {}), login = response(200, { user: { 
 
 test('defaults and permitted destinations follow the authenticated role', () => {
   assert.equal(loginDestination(null, 'admin', origin), '/');
-  assert.equal(loginDestination(null, 'cliente', origin), '/catalogo');
+  assert.equal(loginDestination(null, 'cliente', origin), '/');
   assert.equal(loginDestination('/revista', 'admin', origin), '/revista');
-  assert.equal(loginDestination('/backgrounds', 'cliente', origin), '/catalogo');
-  assert.equal(loginDestination('/', 'cliente', origin), '/catalogo');
-  assert.equal(loginDestination('/revista', 'cliente', origin), '/catalogo');
+  assert.equal(loginDestination('/backgrounds', 'cliente', origin), '/');
+  assert.equal(loginDestination('/', 'cliente', origin), '/');
+  assert.equal(loginDestination('/index.html', 'cliente', origin), '/');
+  assert.equal(loginDestination('/revista', 'cliente', origin), '/');
   for (const role of ['admin', 'cliente']) {
     assert.equal(loginDestination('/artes/stories?product=123#preview', role, origin), '/artes/stories?product=123#preview');
     assert.equal(loginDestination('/feed.html', role, origin), '/artes/feed');
@@ -68,7 +69,7 @@ test('next never redirects to external URLs, APIs or unrecognized destinations',
     `${origin}/catalogo`,
   ]) {
     assert.equal(loginDestination(next, 'admin', origin), '/', next);
-    assert.equal(loginDestination(next, 'cliente', origin), '/catalogo', next);
+    assert.equal(loginDestination(next, 'cliente', origin), '/', next);
   }
 });
 
@@ -200,5 +201,5 @@ test('a stale session lookup cannot override the result of a new login', async (
   await f.submit();
   session.resolve(response(200, { user: { role: 'admin' } }));
   await f.ready;
-  assert.deepEqual(f.redirects, ['/catalogo']);
+  assert.deepEqual(f.redirects, ['/']);
 });

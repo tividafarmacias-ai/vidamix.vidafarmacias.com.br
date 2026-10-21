@@ -197,7 +197,6 @@ export function createApplication({ config, database, authService = null, logger
       }
 
       if (!pageFile) return sendError(response, 404, 'Página não encontrada.');
-      if (session.user.role === 'cliente' && pageFile === 'index.html') return redirect('/catalogo');
       if (!canAccessPage(session.user.role, pageFile)) {
         sendError(response, 403, 'Seu perfil não tem acesso a esta página.');
         return;

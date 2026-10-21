@@ -161,10 +161,7 @@ test('client can read products and create all allowed formats, including physica
   assert.equal(session.response.status, 200);
   assert.equal(session.body.user.role, 'cliente', 'a submitted role cannot elevate the stored account');
   const headers = { Cookie: session.cookie };
-  const home = await app.request('/', { headers });
-  assert.equal(home.status, 302);
-  assert.equal(home.headers.get('location'), '/catalogo');
-  for (const route of ['/catalogo', '/catalogo/', '/catalogo.html', '/artes/stories', '/stories.html',
+  for (const route of ['/', '/index.html', '/catalogo', '/catalogo/', '/catalogo.html', '/artes/stories', '/stories.html',
     '/artes/feed/', '/feed.html', '/artes/indoor-h', '/indoor-h.html']) {
     const response = await app.request(route, { headers });
     assert.equal(response.status, 200, route);
