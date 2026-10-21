@@ -1,0 +1,19 @@
+# Bancos de dados, backups e estado local (gerados em execução/sincronização)
+backups/
+state/
+
+# Comparações e manifestos gerados pelos scripts de sincronização
+comparacao-catalogo/
+
+# Imagens de produtos baixadas/sincronizadas (não são fonte do projeto)
+imagens-produtos/
+
+# Arquivos soltos na raiz (scripts avulsos, planilhas, dumps e imagens)
+/baixar-imagens-produtos.mjs
+/BASE_MIDIA_MIX 19_08.xlsx
+/catalogo base.json
+/produtos.json
+/logo horizontal modo escuro.png
+/logo pwa icon.png
+/logotipo vida horizontal.png
+/story-amaciante-downy.png

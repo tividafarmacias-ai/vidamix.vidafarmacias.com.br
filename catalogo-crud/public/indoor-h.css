@@ -66,25 +66,8 @@ h2[tabindex="-1"]:focus { outline: none; }
 }
 .indoor-duration-tier:hover:not([aria-pressed="true"]) { border-color: var(--azul); background: var(--color-blue-soft); }
 .indoor-duration-tier:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
-/* Chosen tier: filled pill + green check badge, matching the selected states elsewhere. */
+/* Chosen tier: filled pill, matching the selected states elsewhere. */
 .indoor-duration-tier[aria-pressed="true"] { color: #fff; font-weight: 700; border-color: var(--azul); background: var(--azul); box-shadow: inset 0 0 0 1px var(--azul); }
-.indoor-duration-tier[aria-pressed="true"]::after {
-  content: '✓';
-  position: absolute;
-  top: -6px;
-  right: -5px;
-  display: grid;
-  width: 15px;
-  height: 15px;
-  place-items: center;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1;
-  border-radius: 50%;
-  background: #087443;
-  box-shadow: 0 1px 4px #0003;
-}
 /* Transient confirmation pulse fired right after a tier is chosen. */
 .indoor-duration-tier.is-confirmed { animation: indoor-tier-confirm .6s ease-out; }
 @keyframes indoor-tier-confirm {
