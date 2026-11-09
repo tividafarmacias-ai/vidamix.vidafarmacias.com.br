@@ -6,6 +6,7 @@ const pages = new Map([
   ['/', 'index.html'],
   ['/catalogo', 'catalogo.html'],
   ['/revista', 'revista.html'],
+  ['/revista/ofertas', 'revista-ofertas.html'],
   ['/backgrounds', 'backgrounds.html'],
   ['/artes/stories', 'stories.html'],
   ['/artes/feed', 'feed.html'],

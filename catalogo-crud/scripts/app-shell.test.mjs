@@ -145,7 +145,7 @@ test('browsing navigation resolves route aliases, while editors keep their own n
   await catalogue.ready;
   const nav = catalogue.doc.body.children[0];
   assert.equal(nav.children.length, 5);
-  assert.equal(nav.children.find(link => link.href === '/revista').href, '/revista');
+  assert.equal(nav.children.find(link => link.href === '/revista/ofertas').href, '/revista/ofertas');
   assert.equal(nav.children.some((link) => link.href.includes('indoor')), false);
   assert.equal(nav.children.filter((link) => link.getAttribute('aria-current') === 'page').length, 1);
   assert.equal(nav.children[1].href, '/catalogo');
@@ -166,7 +166,7 @@ test('customer navigation waits for the session, includes TV Indoor and omits ad
   resolveSession({ user: { id: 9, name: '<Conta cliente>', role: 'cliente' } });
   await f.ready;
   const nav = f.inner.children.find(({ className }) => className === 'site-nav');
-  assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
+  assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/', '/catalogo', '/revista/ofertas', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
   assert.equal(nav.children.find(({ className }) => className === 'site-account').textContent, '<Conta cliente> · Cliente');
   assert.equal(f.inner.children.find(({ className }) => className === 'site-logout').textContent, 'Sair');
   assert.equal(f.brand.href, '/');
@@ -178,7 +178,7 @@ test('customer navigation waits for the session, includes TV Indoor and omits ad
   assert.equal(nav.hidden, true);
   const tabs = f.doc.body.children.find(({ className }) => className === 'app-tabbar');
   assert.equal(tabs.children.length, 5);
-  assert.equal(tabs.children.at(-1).href, '/artes/indoor-h');
+  assert.equal(tabs.children.at(-1).href, '/revista/ofertas');
   assert.equal(tabs.children[0].href, '/');
 });
 

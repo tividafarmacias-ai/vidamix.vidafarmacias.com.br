@@ -27,6 +27,12 @@ class Element {
   replaceChildren(...children) { this.children = children; }
   setAttribute(name, value) { this[name] = value; }
   addEventListener(name, callback) { this.listeners.set(name, callback); }
+  get options() { return this.children; }
+  focus() { this.focused = true; }
+  showModal() { this.open = true; }
+  close() { this.open = false; }
+  setCustomValidity(message) { this.validationMessage = message; }
+  reportValidity() { return !this.validationMessage; }
 }
 
 async function openCatalogue({ productsError = () => null, empty = false, role = 'admin' } = {}) {
@@ -38,14 +44,24 @@ async function openCatalogue({ productsError = () => null, empty = false, role =
   }));
   const fields = new Map([...markup.matchAll(/<(input|select|textarea)\b[^>]*\bname="([^"]+)"[^>]*>/g)].map(([tag, type, name]) => {
     const field = new Element();
+    field.type = tag.match(/type="([^"]+)"/)?.[1] || type;
+    if (type === 'select') {
+      const options = markup.match(new RegExp(`<select[^>]*name="${name}"[^>]*>([\\s\\S]*?)</select>`))?.[1] || '';
+      field.children = [...options.matchAll(/<option value="([^"]*)"/g)].map(([, value]) => ({ value }));
+    }
     field.matches = () => type === 'select' || /\btype="(?:checkbox|file)"/.test(tag);
     return [name, field];
   }));
   elements.get('product-form').elements = { namedItem: (name) => fields.get(name) || null };
   elements.get('product-form').querySelectorAll = () => [...fields.values()];
+  elements.get('product-form').querySelector = () => ({ open: false });
+  elements.get('product-form').reset = () => { for (const field of fields.values()) { field.value = ''; field.checked = false; } };
+  elements.get('image-upload').files = [];
   const requests = [];
+  const mutations = [];
   const context = vm.createContext({
-    Intl, URLSearchParams,
+    Intl, URL, URLSearchParams, FormData,
+    window: { matchMedia: () => ({ matches: false }) },
     document: {
       querySelector: (selector) => elements.get(selector.slice(1)) || null,
       createElement: () => new Element(),
@@ -58,12 +74,19 @@ async function openCatalogue({ productsError = () => null, empty = false, role =
     setTimeout: () => 1,
     clearTimeout() {},
     sessionReady: Promise.resolve(role ? { user: { id: 1, name: 'Usuário', role } } : null),
-    authFetch: async (url) => {
+    authFetch: async (url, options = {}) => {
       requests.push(url);
       let data;
       let status = 200;
-      if (url === '/api/summary') data = { total: 2, ativos: 2, com_imagem: 2 };
+      if (options.method === 'POST' || options.method === 'PUT') {
+        const body = JSON.parse(options.body);
+        mutations.push({ url, body, method: options.method });
+        data = { ...body, id: 10 };
+      }
+      else if (url === '/api/summary') data = { total: 2, ativos: 2, com_imagem: 2 };
       else if (url === '/api/categories') data = { items: [{ nome: 'Higiene', total: 2 }] };
+      else if (url === '/api/manufacturers') data = { items: [{ id: 1, nome: 'Vini Lady' }] };
+      else if (url === '/api/product-groups') data = { items: [{ nome: 'TARJADO', imagem_local_url: '/assets/imagens/tarjado.png' }, { nome: 'GENÉRICO', imagem_local_url: '/assets/imagens/generico.png' }] };
       else if (url.startsWith('/api/products?')) {
         const error = productsError();
         status = error ? 503 : 200;
@@ -76,7 +99,7 @@ async function openCatalogue({ productsError = () => null, empty = false, role =
     },
   });
   await vm.runInContext(script.replace(/^import .*?;\s*/m, ''), context, { filename: 'app.js' });
-  return { elements, fields, requests, context };
+  return { elements, fields, requests, mutations, context };
 }
 
 test('opening the real catalogue page loads products without referencing removed summary counters', async () => {
@@ -143,4 +166,41 @@ test('catalogue does not load data or enable mutations without a verified sessio
     assert.match(markup, new RegExp(`id="${id}"[^>]*\\bdisabled`));
     assert.match(markup, new RegExp(`class="[^"]*admin-only[^"]*" id="${id}"`));
   }
+});
+
+test('new registration focuses EAN and saves the chosen manufacturer and group', async () => {
+  const { context, fields, elements, mutations } = await openCatalogue();
+  context.openDialog();
+  assert.equal(fields.get('ean').focused, true);
+  assert.equal(elements.get('product-dialog').open, true);
+  assert.ok(markup.indexOf('name="ean"') < markup.indexOf('id="image-upload"'));
+  assert.ok(markup.indexOf('id="image-upload"') < markup.indexOf('name="nome"'));
+  fields.get('ean').value = '07896007548400';
+  fields.get('nome').value = 'Produto cadastrado';
+  fields.get('fabricante').value = 'Vini Lady';
+  fields.get('grupo').value = 'GENÉRICO';
+  context.updateUploadHelp();
+  assert.match(elements.get('upload-help').textContent, /07896007548400/);
+  await context.saveProduct({ preventDefault() {} });
+  assert.equal(mutations.length, 1);
+  assert.equal(mutations[0].url, '/api/products');
+  assert.equal(mutations[0].body.generico, true);
+  assert.equal(mutations[0].body.fabricante, 'Vini Lady');
+  assert.equal(mutations[0].body.ean, '07896007548400');
+  assert.equal(elements.get('product-dialog').open, false);
+});
+
+test('group changes preview their default box and preserve a manually linked product photo', async () => {
+  const { context, fields, elements } = await openCatalogue();
+  context.openDialog();
+  fields.get('grupo').value = 'TARJADO';
+  fields.get('grupo').listeners.get('change')();
+  assert.equal(elements.get('dialog-image-preview').children[0].src, '/assets/imagens/tarjado.png');
+  fields.get('grupo').value = 'GENÉRICO';
+  fields.get('grupo').listeners.get('change')();
+  assert.equal(elements.get('dialog-image-preview').children[0].src, '/assets/imagens/generico.png');
+  fields.get('imagem_arquivo').value = 'imagens/foto.png';
+  fields.get('grupo').value = 'TARJADO';
+  fields.get('grupo').listeners.get('change')();
+  assert.equal(elements.get('dialog-image-preview').children[0].src, '/assets/imagens/foto.png');
 });

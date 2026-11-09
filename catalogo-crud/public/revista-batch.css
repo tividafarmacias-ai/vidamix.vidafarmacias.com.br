@@ -1,0 +1,18 @@
+.revista-batch-panel { flex: none; padding: 18px max(18px, 3vw); color: var(--color-ink); background: var(--glass-surface-strong); border-bottom: 1px solid var(--glass-selected-line); }
+.revista-batch-panel strong { color: var(--azul); }
+.revista-batch-panel p { margin: 8px 0; font-size: .8rem; line-height: 1.5; }
+.revista-batch-help { color: var(--color-muted); }
+.revista-batch-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.revista-batch-actions button, .revista-batch-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; border-radius: 9px; font: inherit; font-size: .8rem; font-weight: 600; }
+.revista-batch-actions button { border: 0; color: #fff; background: var(--azul); cursor: pointer; }
+.revista-batch-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.revista-batch-actions a { color: var(--azul); }
+.revista-batch-panel [hidden] { display: none !important; }
+.revista-batch-panel .is-error { color: var(--vermelho); }
+.revista-batch-panel progress { display: block; width: 100%; height: 8px; margin-top: 12px; }
+@media (max-width: 900px) {
+  .revista-batch-panel { padding: 10px 14px; max-height: 35dvh; overflow: auto; }
+  .revista-batch-panel .revista-batch-help { display: none; }
+  .revista-batch-actions { gap: 4px; }
+  .revista-batch-actions button, .revista-batch-actions a { padding: 6px 10px; font-size: .74rem; }
+}

@@ -6,7 +6,7 @@ const destinations = [
   { screen: 'catalogue', href: '/catalogo', label: 'Catálogo', icon: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>' },
   { screen: 'stories', href: '/artes/stories', label: 'Stories', icon: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-5 7h6m-3-3v6m-1 4h2"/>' },
   { screen: 'feed', href: '/artes/feed', label: 'Feed', icon: '<rect x="3" y="2" width="18" height="20" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>' },
-  { screen: 'revista', href: '/revista', label: 'Revista', icon: '<path d="M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>' },
+  { screen: 'revista', href: '/revista/ofertas', label: 'Revista', icon: '<path d="M12 5v16M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>' },
 ];
 
 const headerDestinations = [
@@ -19,7 +19,7 @@ const headerDestinations = [
 
 export function getHeaderDestinations(role) {
   if (role === 'admin') return headerDestinations;
-  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['home', 'catalogue', 'stories', 'feed', 'indoor'].includes(screen));
+  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['home', 'catalogue', 'revista', 'stories', 'feed', 'indoor'].includes(screen));
   return [];
 }
 
@@ -28,6 +28,7 @@ export function getAppScreen(pathname) {
   return ({
     '/': 'home', '/index.html': 'home',
     '/catalogo': 'catalogue', '/catalogo.html': 'catalogue',
+    '/revista/ofertas': 'revista', '/revista-ofertas.html': 'revista',
     '/revista': 'revista', '/revista.html': 'revista',
     '/backgrounds': 'backgrounds', '/backgrounds.html': 'backgrounds',
     '/artes/stories': 'stories', '/stories.html': 'stories',
@@ -198,7 +199,7 @@ export function initAppShell(win = window, doc = document, options = {}) {
       const nav = doc.createElement('nav');
       nav.className = 'app-tabbar';
       nav.setAttribute('aria-label', 'Navegação do aplicativo');
-      const tabs = session.user.role === 'admin' ? destinations : [...destinations.filter(({ screen: key }) => ['home', 'catalogue', 'stories', 'feed'].includes(key)), indoorDestination];
+      const tabs = destinations;
       nav.style.setProperty('--app-tab-count', tabs.length);
       for (const destination of tabs) {
         const link = doc.createElement('a');

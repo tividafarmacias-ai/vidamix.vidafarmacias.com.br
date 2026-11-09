@@ -174,8 +174,8 @@ test('product image upload stores the file and links it to the product', async (
   assert.equal(response.status, 200);
 
   const product = await response.json();
-  assert.match(product.imagem_arquivo, /^imagens\/upload-produto-1-/);
-  assert.match(imagePath(product.imagem_local_url), /\/assets\/imagens\/upload-produto-1-.*\.png$/);
+  assert.match(product.imagem_arquivo, /^imagens\/upload-ean-7896007548400-/);
+  assert.match(imagePath(product.imagem_local_url), /\/assets\/imagens\/upload-ean-7896007548400-.*\.png$/);
   const image = await fetch(origin + product.imagem_local_url);
   assert.equal(image.status, 200);
   assert.equal(image.headers.get('content-type'), 'image/png');

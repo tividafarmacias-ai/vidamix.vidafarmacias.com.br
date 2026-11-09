@@ -5,7 +5,6 @@ export const STORY_VIDEO_FPS = 30;
 
 const VIDEO_WIDTH = 1080;
 const VIDEO_HEIGHT = 1920;
-const frameCount = STORY_VIDEO_DURATION * STORY_VIDEO_FPS;
 const MAX_QUEUED_FRAMES = 4;
 const ENCODER_TIMEOUT_MS = 30000;
 // WebKit may round a canvas VideoFrame timestamp by one microsecond when
@@ -27,9 +26,82 @@ function timestampForFrame(frameIndex) {
   return Math.round(frameIndex * 1_000_000 / STORY_VIDEO_FPS);
 }
 
+/**
+ * Keep the 30 fps grid during motion and hold a single sample in each still interval.
+ * Omitted ranges preserve frame-by-frame export; [] explicitly means a still video.
+ */
+export function getStoryVideoFramePlan({ duration = STORY_VIDEO_DURATION, motionRanges } = {}) {
+  if (!Number.isFinite(duration) || duration <= 0 || !Number.isSafeInteger(duration * STORY_VIDEO_FPS)) {
+    throw new RangeError('A duração deve corresponder a um número inteiro positivo de quadros.');
+  }
+  const frameCount = duration * STORY_VIDEO_FPS;
+  const ranges = motionRanges === undefined ? [{ start: 0, end: duration }] : motionRanges;
+  if (!Array.isArray(ranges) || ranges.some((range) => !range
+      || !Number.isFinite(range.start) || !Number.isFinite(range.end) || range.end < range.start)) {
+    throw new TypeError('Informe intervalos de movimento válidos em segundos.');
+  }
+  // Round outwards to preserve motion at boundaries between sampled frames.
+  const intervals = ranges.filter(({ start, end }) => end > start && end > 0 && start < duration)
+    .map(({ start, end }) => ({
+      start: Math.max(0, Math.floor(start * STORY_VIDEO_FPS)),
+      end: Math.min(frameCount, Math.ceil(end * STORY_VIDEO_FPS)),
+    }))
+    .sort((a, b) => a.start - b.start);
+  const merged = [];
+  for (const interval of intervals) {
+    const previous = merged.at(-1);
+    if (previous && interval.start <= previous.end) previous.end = Math.max(previous.end, interval.end);
+    else merged.push({ ...interval });
+  }
+  const frames = [];
+  const addFrame = (startFrame, endFrame) => {
+    const timestamp = timestampForFrame(startFrame);
+    frames.push({ startFrame, endFrame, timestamp, duration: timestampForFrame(endFrame) - timestamp });
+  };
+  let cursor = 0;
+  for (const { start, end } of merged) {
+    if (cursor < start) addFrame(cursor, start);
+    for (let index = start; index < end; index += 1) addFrame(index, index + 1);
+    cursor = end;
+  }
+  if (cursor < frameCount) addFrame(cursor, frameCount);
+  return frames;
+}
+
 function supportsDimensions(width, height) {
   return (width === VIDEO_WIDTH && [VIDEO_HEIGHT, 1350].includes(height))
     || (width === 1920 && height === 1080);
+}
+
+function needsPixelFrameCapture() {
+  const navigator = globalThis.navigator;
+  // Include iPadOS desktop mode and every iOS browser/PWA, not only Safari.
+  return /iPad|iPhone|iPod/.test(navigator?.userAgent || '')
+    || (/Mac/.test(navigator?.platform || '') && navigator?.maxTouchPoints > 1);
+}
+
+function createFrameCapture(canvas, width, height) {
+  if (!needsPixelFrameCapture()) {
+    return (timing) => new VideoFrame(canvas, { ...timing, alpha: 'discard' });
+  }
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Não foi possível capturar os pixels da arte para o vídeo.');
+  // Avoid the iOS canvas -> native video surface path: its backing surface can
+  // disagree with the logical canvas size and produce a top-left crop. Reading
+  // pixels fixes the row stride and full frame extent independently of DPR/CSS.
+  return (timing) => {
+    const pixels = context.getImageData(0, 0, width, height, { colorSpace: 'srgb' });
+    return new VideoFrame(pixels.data, {
+      ...timing,
+      format: 'RGBX',
+      codedWidth: width,
+      codedHeight: height,
+      displayWidth: width,
+      displayHeight: height,
+      layout: [{ offset: 0, stride: width * 4 }],
+      colorSpace: { primaries: 'bt709', transfer: 'iec61966-2-1', matrix: 'rgb', fullRange: true },
+    });
+  };
 }
 
 /** Checks the actual H.264 encoder at the artwork's output resolution. */
@@ -76,15 +148,13 @@ export async function getStoryVideoConfig({ signal, width = VIDEO_WIDTH, height 
 /**
  * Encode explicitly timed frames as a real MP4/H.264 file, without audio.
  * renderFrame(seconds) paints the supplied Stories, Feed or Indoor TV canvas and may be async.
+ * motionRanges lists every animated interval; other intervals are encoded once with an extended duration.
  * onProgress receives a fraction between 0 and 1; 1 means the MP4 is finalized.
  * The caller owns the canvas and any images/object URLs used while rendering.
  */
-export async function exportStoryVideo({ canvas, renderFrame, onProgress = () => {}, signal, duration = STORY_VIDEO_DURATION }) {
-  if (!Number.isFinite(duration) || duration <= 0 || !Number.isSafeInteger(duration * STORY_VIDEO_FPS)) {
-    throw new RangeError('A duração deve corresponder a um número inteiro positivo de quadros.');
-  }
-  const frameCount = duration * STORY_VIDEO_FPS;
+export async function exportStoryVideo({ canvas, renderFrame, onProgress = () => {}, signal, duration = STORY_VIDEO_DURATION, motionRanges }) {
   checkAborted(signal);
+  const framePlan = getStoryVideoFramePlan({ duration, motionRanges });
   if (!canvas || !supportsDimensions(canvas.width, canvas.height)) {
     throw new Error(DIMENSIONS_MESSAGE);
   }
@@ -94,6 +164,7 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
   const { width, height } = canvas;
   const config = await getStoryVideoConfig({ signal, width, height });
   checkAborted(signal);
+  const captureFrame = createFrameCapture(canvas, width, height);
 
   const target = new ArrayBufferTarget();
   let muxer = new Muxer({
@@ -105,6 +176,7 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
   let encoder;
   let failure;
   let encodedFrames = 0;
+  let submittedFrames = 0;
   let rejectInterrupted;
   const interrupted = new Promise((resolve, reject) => { rejectInterrupted = reject; });
   // The encoder can fail between awaited operations; attach a handler immediately.
@@ -162,18 +234,16 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
       output: (chunk, metadata) => {
         if (failure || !muxer) return;
         try {
-          const frameIndex = Math.round(chunk.timestamp * STORY_VIDEO_FPS / 1_000_000);
-          const timestamp = timestampForFrame(frameIndex);
-          if (frameIndex !== encodedFrames
-              || Math.abs(chunk.timestamp - timestamp) > TIMESTAMP_ROUNDING_TOLERANCE_US) {
+          const expected = framePlan[encodedFrames];
+          if (encodedFrames >= submittedFrames || !expected
+              || Math.abs(chunk.timestamp - expected.timestamp) > TIMESTAMP_ROUNDING_TOLERANCE_US) {
             throw new Error('O codificador não preservou a sequência de quadros da arte.');
           }
           const data = new Uint8Array(chunk.byteLength);
           chunk.copyTo(data);
           // Use our duration even if an encoder omits chunk.duration. Rounding
           // adjacent timestamps separately prevents drift at 30 frames/second.
-          muxer.addVideoChunkRaw(data, chunk.type, timestamp,
-            timestampForFrame(frameIndex + 1) - timestamp, metadata);
+          muxer.addVideoChunkRaw(data, chunk.type, expected.timestamp, expected.duration, metadata);
           encodedFrames += 1;
         } catch (error) {
           fail(error);
@@ -184,35 +254,40 @@ export async function exportStoryVideo({ canvas, renderFrame, onProgress = () =>
     encoder.configure(config);
     onProgress(0);
 
-    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+    let lastKeyFrame = -Infinity;
+    for (const [sampleIndex, sample] of framePlan.entries()) {
       checkState();
-      await Promise.race([Promise.resolve(renderFrame(frameIndex / STORY_VIDEO_FPS)), interrupted]);
+      await Promise.race([Promise.resolve(renderFrame(sample.startFrame / STORY_VIDEO_FPS)), interrupted]);
       checkState();
-      const timestamp = timestampForFrame(frameIndex);
-      const frame = new VideoFrame(canvas, {
-        timestamp,
-        duration: timestampForFrame(frameIndex + 1) - timestamp,
-        alpha: 'discard',
+      const frame = captureFrame({
+        timestamp: sample.timestamp,
+        duration: sample.duration,
       });
       try {
-        encoder.encode(frame, { keyFrame: frameIndex % (STORY_VIDEO_FPS * 2) === 0 });
+        // Still samples are independently seekable; keyframe spacing follows
+        // elapsed video time, even when hundreds of duplicate frames are skipped.
+        const keyFrame = sample.endFrame - sample.startFrame > 1
+          || sample.startFrame - lastKeyFrame >= STORY_VIDEO_FPS * 2;
+        if (keyFrame) lastKeyFrame = sample.startFrame;
+        submittedFrames += 1;
+        encoder.encode(frame, { keyFrame });
       } finally {
         frame.close();
       }
       await waitForQueue();
       // Periodically drain the encoder's internal buffers as well as its queue.
-      if ((frameIndex + 1) % STORY_VIDEO_FPS === 0 && frameIndex + 1 < frameCount) {
+      if ((sampleIndex + 1) % STORY_VIDEO_FPS === 0 && sampleIndex + 1 < framePlan.length) {
         await waitForEncoder(encoder.flush());
       }
-      onProgress((frameIndex + 1) / frameCount * 0.98);
-      if ((frameIndex + 1) % MAX_QUEUED_FRAMES === 0) {
+      onProgress((sampleIndex + 1) / framePlan.length * 0.98);
+      if ((sampleIndex + 1) % MAX_QUEUED_FRAMES === 0) {
         // Yield to input/painting, so progress and cancellation stay responsive.
         await Promise.race([new Promise((resolve) => setTimeout(resolve, 0)), interrupted]);
       }
     }
 
     await waitForEncoder(encoder.flush());
-    if (encodedFrames !== frameCount) {
+    if (encodedFrames !== framePlan.length) {
       throw new Error('O navegador não codificou todos os quadros da arte. Tente exportar novamente.');
     }
     muxer.finalize();

@@ -15,7 +15,7 @@ export function isPublicResource(pathname) {
   return /^\/(?:[a-z0-9-]+\.(?:css|js)|js\/[a-z0-9_./-]+\.js|fonts\/[a-z0-9-]+\.woff2|(?:branding|pwa-icons|icons)\/[a-z0-9-]+\.png)$/i.test(pathname);
 }
 
-const clientePages = new Set(['index.html', 'catalogo.html', 'stories.html', 'feed.html', 'indoor-h.html']);
+const clientePages = new Set(['index.html', 'catalogo.html', 'revista.html', 'revista-ofertas.html', 'stories.html', 'feed.html', 'indoor-h.html']);
 export function canAccessPage(role, filename) {
   return role === 'admin' || (role === 'cliente' && clientePages.has(filename));
 }
@@ -23,5 +23,5 @@ export function canAccessPage(role, filename) {
 export function canAccessApi(role, method, pathname) {
   if (role === 'admin') return true;
   if (role !== 'cliente' || !['GET', 'HEAD'].includes(method)) return false;
-  return /^\/api\/(?:health|summary|categories|story-backgrounds|feed-backgrounds|indoor-backgrounds|products(?:\/(?:\d+|by-ean\/[^/]+))?)$/.test(pathname);
+  return /^\/api\/(?:health|summary|categories|story-backgrounds|feed-backgrounds|indoor-backgrounds|products(?:\/(?:\d+|by-ean\/[^/]+))?|revista\/(?:active(?:\/products\/\d+)?|campaigns(?:\/\d+)?))$/.test(pathname);
 }

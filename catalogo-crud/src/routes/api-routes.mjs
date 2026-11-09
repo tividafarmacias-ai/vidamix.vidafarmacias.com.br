@@ -1,7 +1,8 @@
 import { readJsonBody, readMultipartFormData, sendError, sendJson, sendNoContent, sendRevalidatedJson } from '../http/response.mjs';
 import { createRouter } from '../http/router.mjs';
 import { defaultSecurityHeaders } from '../http/response.mjs';
-import { createRevistaTemplate, readRevistaWorkbook } from '../modules/revista/revista-service.mjs';
+import { createRevistaTemplate, readRevistaWorkbook, normalizeRevistaBackgrounds } from '../modules/revista/revista-service.mjs';
+import { badRequest } from '../http/errors.mjs';
 
 const backgroundFormatMap = Object.freeze({
   stories: 'stories',
@@ -20,6 +21,17 @@ function getRequestedProductId(productService, value) {
 
 export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, backgroundManagers = {}, revistaService }) {
   const router = createRouter();
+  const backgroundServices = { stories: storyBackgroundService, feed: feedBackgroundService, 'indoor-h': indoorBackgroundService };
+  async function validateRevistaBackgrounds(value) {
+    const backgrounds = normalizeRevistaBackgrounds(value);
+    await Promise.all(Object.entries(backgrounds).map(async ([format, file]) => {
+      const options = await backgroundServices[format].listStoryBackgrounds();
+      if (!options.some(option => option.arquivo === file)) {
+        throw badRequest('Um dos backgrounds selecionados não está mais disponível neste formato. Atualize os fundos e escolha novamente.');
+      }
+    }));
+    return backgrounds;
+  }
 
   router.get('/api/revista/template', async ({ response }) => {
     const buffer = await createRevistaTemplate();
@@ -37,7 +49,7 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
       ? campaign.items.find(item => item.productId === Number(params.id) && item.available) : null;
     const product = item ? productService.getProduct(item.productId) : null;
     if (!product) return sendError(response, 404, 'Esta oferta não está mais disponível na revista vigente. Volte à Central para escolher uma oferta atual.');
-    sendJson(response, 200, { product, priceCents: item.priceCents, campaignName: campaign.name });
+    sendJson(response, 200, { product, priceCents: item.priceCents, campaignName: campaign.name, backgrounds: campaign.backgrounds });
   });
   router.get('/api/revista/campaigns/:id', ({ params, response }) => {
     const campaign = /^\d+$/.test(params.id) ? revistaService.get(Number(params.id)) : null;
@@ -49,12 +61,27 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
     if (!id || !revistaService.remove(id)) return sendError(response, 404, 'Campanha não encontrada.');
     sendJson(response, 200, { id, removed: true });
   });
+  router.put('/api/revista/campaigns/:id/backgrounds', async ({ params, request, response }) => {
+    const id = /^\d+$/.test(params.id) ? Number(params.id) : 0;
+    if (!id || !revistaService.get(id)) return sendError(response, 404, 'Campanha não encontrada.');
+    const body = await readJsonBody(request);
+    if (!body || !Object.hasOwn(body, 'backgrounds')) throw badRequest('Informe os backgrounds da revista.');
+    const backgrounds = await validateRevistaBackgrounds(body.backgrounds);
+    const campaign = revistaService.updateBackgrounds(id, backgrounds);
+    if (!campaign) return sendError(response, 404, 'Campanha não encontrada.');
+    sendJson(response, 200, campaign);
+  });
   for (const action of ['validate', 'campaigns']) {
     router.post(`/api/revista/${action}`, async ({ request, response }) => {
       const { files, fields } = await readMultipartFormData(request, { maxBytes: 2_100_000, tooLargeMessage: 'A planilha deve ter até 2 MB.' });
       const rows = await readRevistaWorkbook(files.find(file => file.fieldName === 'file'));
       if (action === 'validate') return sendJson(response, 200, revistaService.validate(rows));
-      const result = revistaService.create(rows, fields.name);
+      let backgrounds = {};
+      if (fields.backgrounds !== undefined) {
+        try { backgrounds = JSON.parse(fields.backgrounds); }
+        catch { throw badRequest('Informe os backgrounds da revista por formato.'); }
+      }
+      const result = revistaService.create(rows, fields.name, await validateRevistaBackgrounds(backgrounds));
       sendJson(response, result.report ? 422 : result.existing ? 200 : 201, result);
     });
   }
@@ -69,6 +96,26 @@ export function createApiRouter({ productService, storyBackgroundService, feedBa
 
   router.get('/api/categories', ({ response }) => {
     sendJson(response, 200, { items: productService.listCategories() });
+  });
+
+  router.get('/api/manufacturers', ({ response }) => {
+    sendJson(response, 200, { items: productService.listManufacturers() });
+  });
+  router.post('/api/manufacturers', async ({ request, response }) => {
+    sendJson(response, 201, productService.createManufacturer(await readJsonBody(request)));
+  });
+  router.put('/api/manufacturers/:id', async ({ params, request, response }) => {
+    const id = productService.productId(params.id);
+    const result = id ? productService.renameManufacturer(id, await readJsonBody(request)) : null;
+    if (!result) return sendError(response, 404, 'Fabricante não encontrado.');
+    sendJson(response, 200, result);
+  });
+  router.get('/api/product-groups', ({ response }) => {
+    sendJson(response, 200, { items: productService.listGroups() });
+  });
+  router.post('/api/product-groups/:group/image', async ({ params, request, response }) => {
+    const { files } = await readMultipartFormData(request);
+    sendJson(response, 200, await productService.uploadGroupImage(params.group, files.find((file) => file.fieldName === 'image')));
   });
 
   router.get('/api/story-backgrounds', async ({ request, response }) => {

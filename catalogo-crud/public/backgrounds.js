@@ -5,7 +5,7 @@ const FORMATS = Object.freeze({
     label: 'Stories',
     endpoint: '/api/story-backgrounds',
     upload: '/api/backgrounds/stories',
-    help: 'Escolha uma imagem para usar como cenário das artes verticais.',
+    help: 'Cadastre o background vertical e, opcionalmente, um wallpaper para abrir o vídeo de Stories. Use imagens de 1080 × 1920.',
   },
   feed: {
     label: 'Feed',
@@ -81,8 +81,11 @@ function updateFormat(format) {
   elements.libraryTitle.textContent = `Biblioteca de ${config.label}`;
   const indoor = format === 'indoor-h';
   elements.fileLabel.textContent = indoor ? 'Imagem do background' : 'Imagem do background';
-  elements.wallpaperField.hidden = !indoor;
-  elements.indoorNote.hidden = !indoor;
+  elements.wallpaperField.hidden = !indoor && format !== 'stories';
+  elements.indoorNote.hidden = !indoor && format !== 'stories';
+  elements.indoorNote.textContent = indoor
+    ? 'TV Indoor exige duas imagens: o wallpaper abre o vídeo e o background recebe os produtos após a transição.'
+    : 'Em Stories, o wallpaper é opcional: adiciona uma abertura de 3 segundos aos 15 segundos de ofertas. O PNG usa apenas o background.';
   elements.wallpaperFile.required = indoor;
   elements.form.reset();
   elements.fileName.textContent = 'Nenhum arquivo escolhido';

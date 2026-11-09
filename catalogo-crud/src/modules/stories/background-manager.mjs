@@ -55,6 +55,7 @@ function displayNameFromFile(file) {
 
 export function createBackgroundManager({ directory, format }) {
   const indoor = format === 'indoor-h';
+  const supportsWallpaper = indoor || format === 'stories';
 
   async function add({ name, background, wallpaper }) {
     if (!background) throw new Error('Selecione a imagem do background.');
@@ -65,7 +66,7 @@ export function createBackgroundManager({ directory, format }) {
     const label = slugify(name || displayNameFromFile(background));
     const id = randomUUID();
     const backgroundName = `${label}--${id}${backgroundExtension}`;
-    const wallpaperFileName = indoor ? wallpaperName(`${label}--${id}${wallpaperExtension}`) : null;
+    const wallpaperFileName = supportsWallpaper && wallpaper ? wallpaperName(`${label}--${id}${wallpaperExtension}`) : null;
 
     await fs.mkdir(directory, { recursive: true });
     const backgroundPath = path.join(directory, backgroundName);
@@ -94,7 +95,7 @@ export function createBackgroundManager({ directory, format }) {
       throw error;
     }
 
-    if (indoor) {
+    if (supportsWallpaper) {
       await Promise.all(extensions.map((extension) => fs.unlink(
         path.join(directory, wallpaperName(`${fileName.slice(0, -path.extname(fileName).length)}${extension}`)),
       ).catch((error) => {

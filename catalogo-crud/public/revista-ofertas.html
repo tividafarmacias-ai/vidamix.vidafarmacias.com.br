@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#f5f8fc" />
+    <script src="/js/theme.js"></script>
+    <title>Ofertas da revista | VidaMix Studio</title>
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+    <link rel="stylesheet" href="/brand.css" />
+    <link rel="stylesheet" href="/home.css" />
+    <link rel="stylesheet" href="/revista-ofertas.css" />
+    <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <script src="/js/pwa.js" defer></script>
+    <script type="module" src="/js/app-shell.js"></script>
+  </head>
+  <body class="home-page revista-offers-page">
+    <script src="/js/pwa-launch.js"></script>
+    <a class="skip-link" href="#offers-main">Ir para as ofertas</a>
+    <header class="site-header" data-app-header><div class="site-header-inner"><a class="site-brand" href="/" aria-label="VidaMix Studio"><img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" /></a></div></header>
+    <main class="studio-main" id="offers-main">
+      <div class="section-heading offers-heading">
+        <div><h1 id="offers-title">Revista vigente</h1><p id="offers-description">Selecione as ofertas para criar um vídeo ou exportar suas artes em lote.</p></div>
+        <a class="studio-catalog-link admin-only" href="/revista">Gerenciar campanhas</a>
+      </div>
+      <section class="offers-selection" aria-label="Criar com os produtos selecionados" id="offers-selection" hidden>
+        <div><strong id="offers-count" role="status" aria-live="polite">Nenhum produto selecionado</strong></div>
+        <div class="offers-actions">
+          <button type="button" data-batch-format="indoor-h" disabled>Criar vídeo Indoor</button>
+          <button type="button" data-batch-format="feed" disabled>Exportar Feed em lote</button>
+          <button type="button" data-batch-format="stories" disabled>Exportar Stories em lote</button>
+        </div>
+        <p class="offers-action-status" id="offers-action-status" role="status" aria-live="polite"></p>
+      </section>
+      <div class="home-revista-toolbar" id="offers-toolbar" hidden>
+        <label for="offers-search">Buscar nesta revista</label><input id="offers-search" type="search" placeholder="Nome, marca ou EAN" autocomplete="off" />
+        <button type="button" id="offers-select-all">Selecionar resultados</button><button type="button" id="offers-clear" disabled>Limpar seleção</button>
+      </div>
+      <p class="home-revista-status" id="offers-status" role="status" aria-live="polite">Carregando revista vigente…</p>
+      <button class="home-revista-more" id="offers-retry" type="button" hidden>Tentar novamente</button>
+      <div class="home-revista-grid" id="offers-products"></div>
+      <button class="home-revista-more" id="offers-more" type="button" hidden>Ver mais produtos</button>
+    </main>
+    <script type="module" src="/js/features/revista/offers.js"></script>
+  </body>
+</html>

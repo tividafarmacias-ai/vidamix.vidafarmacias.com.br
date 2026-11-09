@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { exportStoryVideo, getStoryVideoConfig } from '../public/js/features/stories/video-export.js';
+import { exportStoryVideo, getStoryVideoConfig, getStoryVideoFramePlan } from '../public/js/features/stories/video-export.js';
+import { getStoryVideoDuration, getStoryVideoMotionRanges } from '../public/js/features/stories/video-animation.js';
+import { getIndoorDuration, getIndoorMotionRanges } from '../public/js/features/indoor/renderer.js';
 
 // Exercise the real exporter and MP4 muxer; only browser encoding is simulated.
 // These tiny AVC samples test the container, not decoder playback or canvas pixels.
@@ -12,6 +14,7 @@ const AVC_DESCRIPTION = Uint8Array.from([
 function installEncoder(t, behavior = {}) {
   const recordings = { frames: [], encoders: [], supportChecks: [], queueMaximum: 0, liveFrames: 0 };
   const replacements = {
+    navigator: behavior.navigator || { userAgent: 'Chrome Android', platform: 'Linux', maxTouchPoints: 5 },
     isSecureContext: true,
     VideoFrame: class {
       constructor(canvas, options) {
@@ -123,6 +126,59 @@ function options(overrides = {}) {
   return { canvas: { width: 1080, height: 1920 }, renderFrame() {}, ...overrides };
 }
 
+for (const device of [
+  { userAgent: 'Mozilla/5.0 (iPhone) AppleWebKit Safari', platform: 'iPhone' },
+  { userAgent: 'Mozilla/5.0 (iPhone) AppleWebKit CriOS', platform: 'iPhone' },
+  { userAgent: 'Mozilla/5.0 (iPhone) AppleWebKit', platform: 'iPhone', standalone: true },
+  { userAgent: 'Mozilla/5.0 (Macintosh) AppleWebKit Safari', platform: 'MacIntel', maxTouchPoints: 5 },
+]) {
+  for (const [width, height] of [[1080, 1920], [1080, 1350], [1920, 1080]]) {
+    test(`captures the entire pixel buffer on ${device.userAgent}, PWA=${!!device.standalone}, ${width}x${height}`, async (t) => {
+      const recordings = installEncoder(t, { navigator: device });
+      const pixels = new Uint8ClampedArray(width * height * 4);
+      let reads = 0;
+      let renders = 0;
+      const canvas = {
+        width, height,
+        // CSS size must not influence exported pixels.
+        clientWidth: 360, clientHeight: 640,
+        getContext(kind) {
+          assert.equal(kind, '2d');
+          return { getImageData(x, y, w, h, settings) {
+            assert.deepEqual([x, y, w, h], [0, 0, width, height]);
+            assert.equal(settings.colorSpace, 'srgb');
+            assert.equal(++reads, renders, 'Capture occurs after each render');
+            return { data: pixels };
+          } };
+        },
+      };
+      await exportStoryVideo(options({ canvas, duration: 2 / 30, renderFrame() {
+        renders += 1;
+        pixels.set([renders, 22, 33, 255], pixels.length - 4);
+      } }));
+      assert.equal(reads, 2);
+      for (const frame of recordings.frames) {
+        assert.equal(frame.canvas, pixels, 'Pass raw pixels instead of the native canvas surface');
+        assert.equal(frame.canvas.length, width * height * 4);
+        assert.deepEqual(Array.from(frame.canvas.slice(-4)), [2, 22, 33, 255]);
+        assert.equal(frame.format, 'RGBX');
+        assert.deepEqual([frame.codedWidth, frame.codedHeight, frame.displayWidth, frame.displayHeight], [width, height, width, height]);
+        assert.deepEqual(frame.layout, [{ offset: 0, stride: width * 4 }]);
+      }
+      assertReleased(recordings);
+    });
+  }
+}
+
+test('releases encoder when iOS pixel readback fails', async (t) => {
+  const recordings = installEncoder(t, { navigator: { userAgent: 'iPhone' } });
+  const canvas = { width: 1080, height: 1920, getContext() {
+    return { getImageData() { throw new Error('Pixel readback failed'); } };
+  } };
+  await assert.rejects(exportStoryVideo(options({ canvas })), /Pixel readback failed/);
+  assertReleased(recordings);
+});
+
 function assertReleased(recordings) {
   assert.equal(recordings.liveFrames, 0);
   assert.ok(recordings.frames.every((frame) => frame.closeCount === 1));
@@ -165,6 +221,135 @@ function boxDuration(buffer, box) {
     : buffer.readUInt32BE(box.start + 24);
   return duration / timescale;
 }
+
+function sampleDurations(buffer, boxes) {
+  const stts = findBox(boxes, 'stts');
+  const count = buffer.readUInt32BE(stts.start + 12);
+  const durations = [];
+  for (let index = 0; index < count; index += 1) {
+    const offset = stts.start + 16 + index * 8;
+    durations.push(...Array(buffer.readUInt32BE(offset)).fill(buffer.readUInt32BE(offset + 4)));
+  }
+  return durations;
+}
+
+test('frame planning merges overlapping motion, rounds boundaries outwards and leaves input untouched', () => {
+  const motionRanges = Object.freeze([
+    { start: 1.21, end: 1.38 }, { start: -1, end: 0.05 },
+    { start: 1.3, end: 1.5 }, { start: 1.5, end: 1.6 },
+    { start: 1.95, end: 4 }, { start: 5, end: 6 }, { start: 1, end: 1 },
+  ].map(Object.freeze));
+  const plan = getStoryVideoFramePlan({ duration: 2, motionRanges });
+  const animated = new Set([0, 1, ...Array.from({ length: 12 }, (_, i) => 36 + i), 58, 59]);
+  assert.deepEqual(plan.filter(sample => sample.endFrame - sample.startFrame === 1).map(sample => sample.startFrame), [...animated]);
+  assert.deepEqual(plan.filter(sample => sample.endFrame - sample.startFrame > 1).map(sample => [sample.startFrame, sample.endFrame]), [[2, 36], [48, 58]]);
+  assert.equal(plan.reduce((sum, sample) => sum + sample.duration, 0), 2_000_000);
+  assert.equal(getStoryVideoFramePlan({ duration: 2 }).length, 60, 'Unmapped animations keep full rendering');
+  assert.equal(getStoryVideoFramePlan({ duration: 2, motionRanges: [] }).length, 1);
+});
+
+test('invalid durations or motion maps fail before allocating encoder resources', async (t) => {
+  const recordings = installEncoder(t);
+  for (const duration of [0, -1, NaN, Infinity, 0.01]) {
+    await assert.rejects(exportStoryVideo(options({ duration })), RangeError);
+  }
+  for (const motionRanges of [null, {}, [null], [{ start: 2, end: 1 }], [{ start: 0, end: Infinity }]]) {
+    await assert.rejects(exportStoryVideo(options({ motionRanges })), TypeError);
+  }
+  assert.equal(recordings.encoders.length, 0);
+  assert.equal(recordings.frames.length, 0);
+});
+
+const layers = [
+  { kind: 'product', index: 0 }, { kind: 'product', index: 1 },
+  { kind: 'details', index: 0 }, { kind: 'details', index: 1 }, { kind: 'text', index: 0 },
+];
+const sparseScenarios = [
+  { name: 'entirely static', width: 1080, height: 1920, duration: 15, motionRanges: [] },
+  { name: 'a static ending after animation', width: 1080, height: 1920, duration: 15, motionRanges: [{ start: 0, end: 1 }] },
+  { name: 'a final single frame after a long hold', width: 1080, height: 1920, duration: 15, motionRanges: [{ start: 449 / 30, end: 15 }] },
+  ...[1920, 1350].flatMap(height => [false, true].map(wallpaper => ({
+    name: `${height === 1920 ? 'Stories' : 'Feed'} with wallpaper=${wallpaper}`, width: 1080, height,
+    duration: getStoryVideoDuration(wallpaper), motionRanges: getStoryVideoMotionRanges({ layers, wallpaper }),
+  }))),
+  ...[false, true].map(hasWallpaper => {
+    const products = [20, 10, 15, 10, 20].map(duration => ({ duration }));
+    return {
+      name: `Indoor mixed durations with wallpaper=${hasWallpaper}`, width: 1920, height: 1080,
+      duration: getIndoorDuration(hasWallpaper, products), motionRanges: getIndoorMotionRanges({ hasWallpaper, products }),
+    };
+  }),
+];
+
+for (const scenario of sparseScenarios) test(`sparse MP4 preserves every sample duration: ${scenario.name}`, async (t) => {
+  const recordings = installEncoder(t, { outputTimestamp: input => input.timestamp + (input.index % 3 - 1) });
+  const canvas = { width: scenario.width, height: scenario.height };
+  const plan = getStoryVideoFramePlan(scenario);
+  const rendered = [];
+  const progress = [];
+  const blob = await exportStoryVideo(options({ ...scenario, canvas,
+    renderFrame: seconds => rendered.push(seconds), onProgress: value => progress.push(value),
+  }));
+  assert.deepEqual(rendered, plan.map(sample => sample.startFrame / 30));
+  assert.equal(recordings.frames.length, plan.length);
+  assert.ok(plan.length < scenario.duration * 30 / 4);
+  let end = 0;
+  for (const [index, frame] of recordings.frames.entries()) {
+    assert.equal(frame.timestamp, end, 'No timestamp gaps or overlaps');
+    assert.equal(frame.duration, plan[index].duration);
+    if (plan[index].endFrame - plan[index].startFrame > 1) {
+      assert.equal(recordings.encoders[0].inputs[index].keyFrame, true, 'Static holds are seekable');
+    }
+    end += frame.duration;
+  }
+  assert.equal(end, scenario.duration * 1_000_000);
+  assert.equal(progress[0], 0);
+  assert.equal(progress.at(-1), 1);
+  assert.equal(progress.filter(value => value === 1).length, 1);
+  assert.ok(progress.every((value, index) => value >= 0 && value <= 1 && (!index || value >= progress[index - 1])));
+  assert.ok(recordings.queueMaximum <= 4);
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const boxes = readBoxes(buffer);
+  assert.equal(boxDuration(buffer, findBox(boxes, 'mvhd')), scenario.duration);
+  assert.equal(boxDuration(buffer, findBox(boxes, 'mdhd')), scenario.duration);
+  assert.equal(buffer.readUInt32BE(findBox(boxes, 'stsz').start + 16), plan.length);
+  assert.deepEqual(sampleDurations(buffer, boxes), plan.map(sample => sample.endFrame - sample.startFrame),
+    'Actual MP4 sample table must preserve all holds, including the final sample');
+  assert.ok(boxes.findIndex(box => box.type === 'moov') < boxes.findIndex(box => box.type === 'mdat'));
+  const header = findBox(boxes, 'tkhd');
+  assert.equal(buffer.readUInt32BE(header.end - 8) / 65536, scenario.width);
+  assert.equal(buffer.readUInt32BE(header.end - 4) / 65536, scenario.height);
+  assertReleased(recordings);
+});
+
+test('iOS captures pixels once for an entire static interval', async (t) => {
+  const recordings = installEncoder(t, { navigator: { userAgent: 'iPhone' } });
+  let reads = 0;
+  let renders = 0;
+  const canvas = { width: 1080, height: 1920, getContext() {
+    return { getImageData() { reads += 1; return { data: new Uint8ClampedArray(1080 * 1920 * 4) }; } };
+  } };
+  await exportStoryVideo(options({ canvas, motionRanges: [], renderFrame() { renders += 1; } }));
+  assert.equal(reads, 1);
+  assert.equal(renders, 1);
+  assert.equal(recordings.frames[0].duration, 15_000_000);
+  assertReleased(recordings);
+});
+
+test('sparse export rejects missing, duplicated and reordered outputs', async (t) => {
+  const scenario = sparseScenarios.find(scenario => scenario.name.startsWith('Stories'));
+  const plan = getStoryVideoFramePlan(scenario);
+  for (const behavior of [
+    { dropOutputAt: plan.length - 1 },
+    { dropOutputAt: 3 },
+    { outputTimestamp: input => input.index === 3 ? plan[2].timestamp : input.timestamp },
+    { outputTimestamp: input => input.index === 3 ? plan[4].timestamp : input.timestamp },
+  ]) await t.test(JSON.stringify(behavior), async (child) => {
+    const recordings = installEncoder(child, behavior);
+    await assert.rejects(exportStoryVideo(options(scenario)), /sequência|todos os quadros/);
+    assertReleased(recordings);
+  });
+});
 
 test('exports a 15-second 1080 × 1920 MP4 with 450 timed frames and bounded encoding memory', async (t) => {
   const recordings = installEncoder(t);

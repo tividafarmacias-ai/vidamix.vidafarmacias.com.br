@@ -1,0 +1,22 @@
+.registration-field { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.registration-link { justify-self: start; min-height: 32px; padding: 3px 0; border: 0; background: none; color: var(--azul); text-align: left; font-size: .78rem; text-decoration: underline; }
+.registration-extra { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 14px; }
+.registration-extra summary { cursor: pointer; color: var(--ink-soft); padding: 6px 0 14px; font-size: .85rem; }
+.registration-feedback { margin: 0; color: var(--ink-soft); font-size: .85rem; }
+.registration-feedback.error { color: var(--danger); }
+.reference-dialog { width: min(540px, calc(100vw - 32px)); }
+.reference-dialog .dialog-header { display: flex; }
+.reference-dialog .dialog-footer { display: flex; justify-content: flex-end; }
+.default-image-preview { display: grid; place-items: center; min-height: 80px; color: var(--ink-soft); }
+.default-image-preview img { width: 120px; height: 120px; object-fit: contain; background: white; border-radius: 12px; }
+@media (min-width: 901px) {
+  #product-dialog .form-layout { grid-template-columns: minmax(0, 1fr) 230px; }
+  #product-dialog .form-fields { grid-column: 1; grid-row: 1; }
+  #product-dialog .image-panel { grid-column: 2; grid-row: 1; border-right: 0; border-left: 1px solid var(--line); }
+}
+@media (max-width: 900px) {
+  #product-dialog .form-layout { display: flex; flex-direction: column; }
+  #product-dialog .image-panel { order: 2; }
+  .registration-link { min-height: 44px; font-size: .85rem; }
+  .catalogue-page .reference-dialog { inset: 0; width: calc(100% - 24px); height: fit-content; max-height: calc(100dvh - 24px); margin: auto; border-radius: 18px; overflow: auto; }
+}

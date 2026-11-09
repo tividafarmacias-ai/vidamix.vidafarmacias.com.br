@@ -1,8 +1,9 @@
 import { getBackgroundBadgeTheme } from '../stories/background-theme.js';
 import { authFetch } from '../../auth-session.js';
 import { loadArtworkSelection } from '../revista/artwork.js';
+import { loadCampaignSelection } from '../revista/selection.js';
 import { PRODUCT_LIMIT, INDOOR_DURATION_TIERS, addProduct, removeProduct, moveProduct, setProductDuration, canContinue } from './model.js';
-import { INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_INTRO_DURATION, getProductDurations, getIndoorDuration, drawIndoorFrame } from './renderer.js';
+import { INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_INTRO_DURATION, getProductDurations, getIndoorDuration, getIndoorMotionRanges, drawIndoorFrame } from './renderer.js';
 import { bindPriceInput } from '../stories/price-input.js';
 
 const byId = (id) => document.getElementById(`indoor-${id}`);
@@ -22,11 +23,17 @@ const state = {
   step: 'products', selection: [], products: [], page: 0, total: 0, hasMore: false,
   productRequest: null, productError: false, backgrounds: [], background: null,
   backgroundsLoading: false, backgroundsLoaded: false, snapshot: null, previewVersion: 0,
+  campaignBackgroundFile: '', campaignBackgroundError: '',
+  campaignBatch: false, selectionLimit: PRODUCT_LIMIT,
   seconds: 0, playing: false, frame: 0, exportController: null, downloadUrl: null, productView: 'catalog',
 };
 const images = new Map();
 const productScroll = { catalog: 0, selection: 0 };
 let searchTimer;
+
+function selectionComplete() {
+  return canContinue(state.selection, { flexible: state.campaignBatch, limit: state.selectionLimit });
+}
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -63,7 +70,7 @@ function status(message, error = false, node = ui.status) {
 function syncMobileControls() {
   const mobile = mobileViewport.matches;
   const busy = Boolean(state.exportController);
-  const complete = canContinue(state.selection);
+  const complete = selectionComplete();
   const count = state.selection.length;
   ui['product-views'].hidden = !mobile;
   ui['mobile-dock'].hidden = !mobile;
@@ -71,7 +78,7 @@ function syncMobileControls() {
   ui['selection-panel'].hidden = mobile && state.productView !== 'selection';
   ui['show-catalog'].setAttribute('aria-pressed', String(state.productView === 'catalog'));
   ui['show-selection'].setAttribute('aria-pressed', String(state.productView === 'selection'));
-  ui['mobile-count'].textContent = `${count}/${PRODUCT_LIMIT}`;
+  ui['mobile-count'].textContent = `${count}/${state.selectionLimit}`;
   ui['mobile-back'].hidden = false;
   ui['mobile-back'].disabled = false;
   ui['mobile-hint'].classList.remove('is-error');
@@ -80,8 +87,8 @@ function syncMobileControls() {
     ui['mobile-back'].textContent = reviewing ? '← Catálogo' : 'Buscar';
     ui['mobile-next'].textContent = reviewing ? 'Escolher fundo →' : 'Revisar seleção →';
     ui['mobile-next'].disabled = reviewing ? !complete : !count;
-    ui['mobile-hint'].textContent = complete ? '5 de 5 · Confira ordem, tempo e preços.'
-      : `${count} de 5 selecionados · Faltam ${PRODUCT_LIMIT - count}.`;
+    ui['mobile-hint'].textContent = complete ? `${count} produtos · Confira ordem, tempo e preços.`
+      : `${count} de ${state.selectionLimit} selecionados · Faltam ${state.selectionLimit - count}.`;
   } else if (state.step === 'background') {
     ui['mobile-back'].textContent = '← Produtos';
     ui['mobile-next'].textContent = 'Conferir vídeo →';
@@ -108,6 +115,10 @@ function showProductView(view, { focus = true } = {}) {
 }
 
 function selectionStatus() {
+  if (state.campaignBatch) {
+    status(state.selection.length ? 'Produtos da revista selecionados. Confira a ordem, os tempos e os preços antes de continuar.' : 'Selecione ao menos um produto para o vídeo.');
+    return;
+  }
   const remaining = PRODUCT_LIMIT - state.selection.length;
   status(remaining ? `Escolha mais ${remaining} ${remaining === 1 ? 'produto' : 'produtos'} para completar o vídeo.`
     : 'Os cinco produtos estão selecionados. Confira a ordem e continue para escolher o fundo.');
@@ -115,7 +126,7 @@ function selectionStatus() {
 
 function syncControls() {
   const busy = Boolean(state.exportController);
-  const complete = canContinue(state.selection);
+  const complete = selectionComplete();
   const hasWallpaper = Boolean(state.background?.wallpaper_url);
   const durations = getProductDurations(state.selection);
   const duration = getIndoorDuration(hasWallpaper, state.selection);
@@ -125,8 +136,8 @@ function syncControls() {
     : new Set(durations).size === 1 ? `${durations[0]} s por produto`
       : `${durations.join(' + ')} s`;
   ui.sequence.textContent = hasWallpaper
-    ? `Abertura de 3 s + 5 produtos · ${sequenceSummary}`
-    : `5 produtos · ${sequenceSummary} · sem wallpaper`;
+    ? `Abertura de 3 s + ${state.selection.length || state.selectionLimit} produtos · ${sequenceSummary}`
+    : `${state.selection.length || state.selectionLimit} produtos · ${sequenceSummary} · sem wallpaper`;
   ui.download.textContent = `Baixar MP4 · ${duration} s`;
   for (const node of stepButtons) {
     node.disabled = busy || (node.dataset.step !== 'products' && !complete)
@@ -172,9 +183,9 @@ function updateSelection(next) {
 }
 
 function renderSelected() {
-  ui['selection-count'].textContent = `${state.selection.length} / ${PRODUCT_LIMIT}`;
+  ui['selection-count'].textContent = `${state.selection.length} / ${state.selectionLimit}`;
   ui.selected.replaceChildren();
-  for (let index = 0; index < PRODUCT_LIMIT; index += 1) {
+  for (let index = 0; index < (state.campaignBatch ? state.selection.length : PRODUCT_LIMIT); index += 1) {
     const entry = state.selection[index];
     const row = element('li', entry ? '' : 'indoor-slot-empty');
     row.append(element('span', 'indoor-slot', String(index + 1)));
@@ -268,11 +279,11 @@ function renderResults() {
   for (const product of state.products) {
     const selected = state.selection.some((entry) => entry.product.id === product.id);
     const card = button('', () => {
-      updateSelection(selected ? removeProduct(state.selection, product.id) : addProduct(state.selection, product));
+      updateSelection(selected ? removeProduct(state.selection, product.id) : addProduct(state.selection, product, state.selectionLimit));
       ui.results.querySelector(`[data-product-id="${product.id}"]`)?.focus({ preventScroll: true });
     }, 'indoor-product');
     card.dataset.productId = String(product.id);
-    card.disabled = !product.imagem_local_url || (!selected && state.selection.length >= PRODUCT_LIMIT);
+    card.disabled = !product.imagem_local_url || (!selected && state.selection.length >= state.selectionLimit);
     card.setAttribute('aria-pressed', String(selected));
     if (product.imagem_local_url) card.append(thumbnail(product.imagem_local_url));
     card.append(element('strong', '', product.nome), element('small', '', selected ? '✓ Selecionado' : 'Adicionar ao vídeo'));
@@ -335,6 +346,8 @@ function renderBackgrounds() {
   for (const background of state.backgrounds) {
     const card = button('', () => {
       state.background = background;
+      state.campaignBackgroundFile = '';
+      state.campaignBackgroundError = '';
       invalidatePreview();
       for (const option of ui.backgrounds.querySelectorAll('.indoor-background-option')) {
         option.setAttribute('aria-pressed', String(option === card));
@@ -370,8 +383,13 @@ async function loadBackgrounds() {
       state.background = null;
       invalidatePreview();
     }
-    if (state.step === 'background') status(state.backgrounds.length
-      ? 'Escolha o fundo para sua campanha.' : 'Aguardando a disponibilização dos fundos para TV Indoor.');
+    if (state.campaignBackgroundFile && !state.background) {
+      state.background = state.backgrounds.find(item => item.arquivo === state.campaignBackgroundFile) || null;
+      state.campaignBackgroundError = state.background ? '' : 'O background vinculado à revista não está mais disponível. Escolha outro fundo para continuar.';
+      if (state.background) state.campaignBackgroundFile = '';
+      invalidatePreview();
+    }
+    if (state.step === 'background') showBackgroundStatus();
   } catch (error) {
     if (state.step === 'background') status(error.name === 'AbortError'
       ? 'O carregamento dos fundos demorou demais. Tente atualizar a lista.' : error.message, true);
@@ -380,6 +398,13 @@ async function loadBackgrounds() {
     state.backgroundsLoading = false;
     renderBackgrounds();
   }
+}
+
+function showBackgroundStatus() {
+  status(state.campaignBackgroundError || (state.background
+    ? `Fundo selecionado: ${state.background.nome}. Continue para conferir o vídeo.`
+    : state.backgroundsLoaded && !state.backgrounds.length
+      ? 'Aguardando a disponibilização dos fundos para TV Indoor.' : 'Escolha o fundo para sua campanha.'), Boolean(state.campaignBackgroundError));
 }
 
 function loadImage(url) {
@@ -495,7 +520,7 @@ async function preparePreview() {
 
 function goTo(step) {
   if (state.exportController || !['products', 'background', 'preview'].includes(step)) return;
-  if (step !== 'products' && !canContinue(state.selection)) return;
+  if (step !== 'products' && !selectionComplete()) return;
   if (step === 'preview' && (!state.background || state.backgroundsLoading)) return;
   pause();
   state.previewVersion += 1;
@@ -508,8 +533,7 @@ function goTo(step) {
   if (mobileViewport.matches) window.scrollTo({ top: 0, behavior: 'instant' });
   if (step === 'products') selectionStatus();
   else if (step === 'background') {
-    status(state.backgroundsLoaded && !state.backgrounds.length
-      ? 'Aguardando a disponibilização dos fundos para TV Indoor.' : 'Escolha o fundo para sua campanha.');
+    showBackgroundStatus();
     if (!state.backgroundsLoaded) void loadBackgrounds();
   } else void preparePreview();
 }
@@ -536,6 +560,7 @@ async function download() {
     if (!exportContext) throw new Error('Não foi possível preparar o vídeo neste navegador.');
     const blob = await exportStoryVideo({
       canvas, signal: controller.signal, duration: getIndoorDuration(Boolean(snapshot.wallpaper), snapshot.products),
+      motionRanges: getIndoorMotionRanges({ hasWallpaper: Boolean(snapshot.wallpaper), products: snapshot.products }),
       renderFrame: (seconds) => drawIndoorFrame(exportContext, snapshot, seconds),
       onProgress: (fraction) => {
         const percentage = Math.round(fraction * 100);
@@ -635,6 +660,27 @@ async function initializeProducts() {
   await loadProducts();
   if (!window.location?.search) return;
   try {
+    if (new URLSearchParams(window.location.search).has('selection')) {
+      const batch = await loadCampaignSelection(window.location.search, url => fetchJson(url, AbortSignal.timeout(15000)));
+      state.campaignBatch = true;
+      state.selectionLimit = Math.max(PRODUCT_LIMIT, batch.items.length);
+      const next = batch.items.map(item => ({ product: item.product, price: item.price, originalPrice: '', duration: INDOOR_DURATION_TIERS[0] }));
+      updateSelection(next);
+      state.campaignBackgroundFile = batch.campaign.backgrounds?.['indoor-h'] || '';
+      const heading = document.querySelector('.indoor-heading p:not(.indoor-kicker)');
+      if (heading) heading.textContent = batch.items.length + ' ofertas da revista em sequência. Confira a ordem, os preços e o tempo de cada produto.';
+      const firstStep = stepButtons.find(button => button.dataset.step === 'products');
+      firstStep?.setAttribute('aria-label', 'Etapa 1: revisar produtos da revista');
+      const label = firstStep?.querySelector('.indoor-step-full');
+      if (label) label.textContent = 'Revisar produtos';
+      ui.canvas.setAttribute('aria-label', 'Prévia do vídeo dos produtos selecionados para TV');
+      const back = element('a', 'indoor-button secondary', '← Voltar à seleção da revista');
+      back.href = '/revista/ofertas';
+      ui.status.after(back);
+      showProductView('selection', { focus: false });
+      if (state.campaignBackgroundFile) await loadBackgrounds();
+      return;
+    }
     const selection = await loadArtworkSelection(window.location.search, async url => {
       const response = await authFetch(url, { signal: AbortSignal.timeout(15000) });
       const data = await response.json();
@@ -646,6 +692,8 @@ async function initializeProducts() {
     if (next === state.selection) return;
     next[next.length - 1].price = selection.price || '';
     updateSelection(next);
+    state.campaignBackgroundFile = selection.backgrounds?.['indoor-h'] || '';
+    if (state.campaignBackgroundFile) await loadBackgrounds();
   } catch (error) { status(error.message, true); }
 }
 void initializeProducts();

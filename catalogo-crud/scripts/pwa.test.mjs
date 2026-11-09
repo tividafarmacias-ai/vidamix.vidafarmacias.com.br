@@ -67,7 +67,7 @@ test('production without an authentication service fails closed and never enable
 
 test('todas as entradas oferecem o manifesto e a marca; ícones têm dimensões reais', async () => {
   for (const route of ['/', '/catalogo', '/artes/stories', '/artes/feed', '/artes/indoor-h',
-    '/index.html', '/catalogo.html', '/stories.html', '/feed.html', '/indoor-h.html']) {
+    '/index.html', '/catalogo.html', '/stories.html', '/feed.html', '/indoor-h.html', '/revista/ofertas', '/revista-ofertas.html']) {
     const response = await fetch(origin + route);
     assert.equal(response.status, 200, route);
     const html = await response.text();

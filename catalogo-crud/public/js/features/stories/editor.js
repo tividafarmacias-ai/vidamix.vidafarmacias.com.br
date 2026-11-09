@@ -1,6 +1,8 @@
 import { getBackgroundBadgeTheme } from './background-theme.js';
+import { getDiscountLabel } from '../discount.js';
 import { authFetch } from '../../auth-session.js';
 import { loadArtworkSelection } from '../revista/artwork.js';
+import { initCampaignBatchEditor } from '../revista/batch-editor.js';
 import {
   DEFAULT_FREE_TEXT_WIDTH,
   DESCRIPTION_CARD_PADDING,
@@ -15,7 +17,7 @@ import { getStoriesEditorElements } from './dom.js';
 import { createStoriesEditorState } from './state.js';
 import { createAutoLayout } from './auto-layout.js';
 import { bindPriceInput } from './price-input.js';
-import { drawStoryVideoFrame } from './video-animation.js';
+import { drawStoryVideoFrame, getStoryVideoDuration, getStoryVideoMotionRanges } from './video-animation.js';
 import { initStoriesMobileEditor } from './mobile-editor.js';
 
 const format = getArtworkFormat(document.body.dataset.artworkFormat);
@@ -232,9 +234,14 @@ function updateAvailability() {
   artworkReady = ready;
   elements.download.disabled = !ready || exporting;
   elements.downloadVideo.disabled = !ready || exporting;
+  if (!state.videoExportController) {
+    elements.downloadVideoLabel.textContent = `Baixar MP4 · ${getStoryVideoDuration(Boolean(state.selectedBackground?.wallpaper_url))} s`;
+  }
 
   if (state.campaignSelectionError && !state.selectedProduct) {
     setStatus(state.campaignSelectionError, true);
+  } else if (state.campaignBackgroundError && !state.selectedBackground) {
+    setStatus(state.campaignBackgroundError, true);
   } else if (!state.selectedBackground) {
     setStatus('Carregando backgrounds disponíveis...');
   } else if (!state.backgroundImage || state.backgroundImageUrl !== state.selectedBackground.url) {
@@ -1053,16 +1060,19 @@ function drawDetailsCard(context, product, price, target = 'details') {
   const badgeX = descriptionX + ((descriptionWidth - badgeWidth) / 2);
   const badgeTheme = state.backgroundBadgeTheme || { fill: '#0e746c', text: '#ffffff' };
   if (originalPrice) {
+    const discount = getDiscountLabel(originalPrice, price);
+    const discountWidth = discount ? descriptionWidth * 0.4 : 0;
+    const originalWidth = descriptionWidth - discountWidth;
     const text = `De R$ ${originalPrice}`;
     let size = layout.priceHeight * 0.26;
     context.font = `600 ${size}px Arial, sans-serif`;
-    const maxWidth = descriptionWidth - 16;
+    const maxWidth = originalWidth - 16;
     if (context.measureText(text).width > maxWidth) {
       size *= maxWidth / context.measureText(text).width;
       context.font = `600 ${size}px Arial, sans-serif`;
     }
     const width = context.measureText(text).width;
-    const x = descriptionX + (descriptionWidth - width) / 2;
+    const x = descriptionX + (originalWidth - width) / 2;
     const y = layout.priceY - layout.originalPriceHeight / 2;
     context.fillStyle = '#ffffff';
     drawRoundedRect(context, x - 8, y - layout.originalPriceHeight / 2, width + 16, layout.originalPriceHeight, 8);
@@ -1073,6 +1083,20 @@ function drawDetailsCard(context, product, price, target = 'details') {
     context.fillText(text, x, y);
     const prefixWidth = context.measureText('De ').width;
     context.fillRect(x + prefixWidth, y, width - prefixWidth, Math.max(1, size / 18));
+    if (discount) {
+      const discountX = descriptionX + originalWidth + 4;
+      const discountHeight = layout.originalPriceHeight * 0.86;
+      context.fillStyle = badgeTheme.fill;
+      drawRoundedRect(context, discountX, y - discountHeight / 2, discountWidth - 4, discountHeight, 8);
+      context.fill();
+      let discountSize = layout.priceHeight * 0.23;
+      context.font = `800 ${discountSize}px Arial, sans-serif`;
+      discountSize *= Math.min(1, (discountWidth - 16) / context.measureText(discount).width);
+      context.font = `800 ${discountSize}px Arial, sans-serif`;
+      context.fillStyle = badgeTheme.text;
+      context.textAlign = 'center';
+      context.fillText(discount, discountX + (discountWidth - 4) / 2, y);
+    }
   }
   context.fillStyle = price ? badgeTheme.fill : '#c9d5d2';
   drawRoundedRect(context, badgeX, layout.priceY, badgeWidth, layout.priceHeight, layout.priceHeight * 0.28);
@@ -1640,9 +1664,11 @@ function renderBackgrounds() {
     image.decoding = 'async';
     image.src = background.thumbnail_url || background.url;
     button.append(image, createElement('span', null, background.nome));
+    if (background.wallpaper_url) button.append(createElement('small', null, 'Vídeo com wallpaper · 18 s'));
     button.addEventListener('click', () => {
       state.selectedBackground = background;
       state.backgroundChosen = true;
+      state.campaignBackgroundError = '';
       setPanelCollapsed(backgroundPanel, true);
       for (const option of options) {
         option.classList.toggle('is-selected', option === button);
@@ -1896,6 +1922,14 @@ async function preselectProductFromLocation() {
     if (price !== undefined) {
       state.price = price;
       syncPriceInputs();
+    }
+    const backgroundFile = selection.backgrounds?.[format.downloadPrefix === 'feed' ? 'feed' : 'stories'];
+    if (backgroundFile) {
+      state.selectedBackground = state.backgrounds.find(background => background.arquivo === backgroundFile) || null;
+      state.backgroundChosen = Boolean(state.selectedBackground);
+      state.campaignBackgroundError = state.selectedBackground ? '' : 'O background vinculado à revista não está mais disponível. Escolha outro fundo para continuar.';
+      renderBackgrounds();
+      setPanelCollapsed(backgroundPanel, state.backgroundChosen);
     }
     syncProductPanel({ collapseWhenComplete: true });
     resetProductCompositionState();
@@ -2582,13 +2616,15 @@ async function downloadStoryVideo() {
   if (elements.downloadVideo.disabled) return;
 
   const controller = new AbortController();
+  const wallpaperUrl = state.selectedBackground?.wallpaper_preview_url || state.selectedBackground?.wallpaper_url;
+  const duration = getStoryVideoDuration(Boolean(wallpaperUrl));
   state.videoExportController = controller;
   updateAvailability();
   elements.downloadVideo.setAttribute('aria-busy', 'true');
   elements.downloadVideoLabel.textContent = 'Preparando MP4…';
   elements.videoExportPanel.hidden = false;
   elements.videoExportPanel.classList.remove('is-error');
-  elements.videoExportStatus.textContent = 'Preparando vídeo de 15 segundos…';
+  elements.videoExportStatus.textContent = `Preparando vídeo de ${duration} segundos…`;
   elements.videoProgress.value = 0;
   elements.videoProgress.hidden = false;
   elements.cancelVideo.disabled = false;
@@ -2604,6 +2640,14 @@ async function downloadStoryVideo() {
   try {
     const filename = storyDownloadName(state.selectedProduct.nome, 'mp4');
     const snapshot = captureVideoSnapshot(canvases);
+    if (wallpaperUrl) {
+      const wallpaperImage = await loadImage(wallpaperUrl);
+      controller.signal.throwIfAborted();
+      const wallpaper = createExportCanvas(false);
+      canvases.push(wallpaper.canvas);
+      drawImageCover(wallpaper.context, wallpaperImage, 0, 0, STORY_WIDTH, STORY_HEIGHT);
+      snapshot.wallpaper = wallpaper.canvas;
+    }
     const { canvas, context } = createExportCanvas(false);
     canvases.push(canvas);
     // Load the MP4 library only when requested; PNG and the editor stay independent.
@@ -2612,6 +2656,8 @@ async function downloadStoryVideo() {
     const blob = await exportStoryVideo({
       canvas,
       signal: controller.signal,
+      duration,
+      motionRanges: getStoryVideoMotionRanges(snapshot),
       renderFrame: (seconds) => drawStoryVideoFrame(context, snapshot, seconds),
       onProgress: (progress) => {
         const percent = Math.min(100, Math.max(0, Math.floor(progress * 100)));
@@ -2621,7 +2667,7 @@ async function downloadStoryVideo() {
         elements.downloadVideoLabel.textContent = `Gerando MP4 · ${percent}%`;
         // Announce coarse milestones without flooding screen readers on every frame.
         if (percent % 10 === 0) {
-          elements.videoExportStatus.textContent = `Gerando vídeo de 15 segundos: ${percent}%.`;
+          elements.videoExportStatus.textContent = `Gerando vídeo de ${duration} segundos: ${percent}%.`;
         }
       },
     });
@@ -2631,7 +2677,7 @@ async function downloadStoryVideo() {
     elements.videoDownloadLink.download = filename;
     elements.videoDownloadLink.hidden = false;
     elements.videoDownloadLink.click();
-    resultMessage = 'MP4 pronto: 15 segundos, com animações de entrada e saída. Se o download não iniciar, use o link abaixo.';
+    resultMessage = `MP4 pronto: ${duration} segundos${wallpaperUrl ? ', com abertura da campanha' : ''}, com animações de entrada e saída. Se o download não iniciar, use o link abaixo.`;
   } catch (error) {
     if (controller.signal.aborted || error.name === 'AbortError') {
       resultMessage = 'Exportação cancelada. Sua arte continua disponível no editor.';
@@ -2948,10 +2994,55 @@ export async function initStoriesEditor() {
   drawPreviewNow();
   try {
     await Promise.all([loadBackgrounds(), loadProducts()]);
-    await preselectProductFromLocation();
+    const batchMode = await initCampaignBatchEditor({
+      format: format.downloadPrefix === 'feed' ? 'feed' : 'stories',
+      request: (url, options = {}) => requestJson(url, { signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000) }),
+      isBusy: () => state.pngExporting || Boolean(state.videoExportController),
+      setBusy: value => { state.pngExporting = value; updateAvailability(); },
+      prepare: async ({ campaign, items }) => {
+        const file = campaign.backgrounds?.[format.downloadPrefix === 'feed' ? 'feed' : 'stories'];
+        if (file) {
+          state.selectedBackground = state.backgrounds.find(background => background.arquivo === file) || null;
+          state.backgroundChosen = Boolean(state.selectedBackground);
+          state.campaignBackgroundError = state.selectedBackground ? '' : 'O fundo da revista não está disponível. Escolha outro fundo antes de exportar.';
+          renderBackgrounds();
+        }
+        await prepareBatchItem(items[0]);
+      },
+      render: async (item, signal) => {
+        await prepareBatchItem(item);
+        signal.throwIfAborted();
+        if (!artworkReady) throw new Error(`Não foi possível preparar ${item.product.nome}. Confira o fundo e as imagens e tente novamente.`);
+        const { canvas, context } = createExportCanvas(false);
+        try {
+          drawComposition(context);
+          return await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob)
+            : reject(new Error('Não foi possível gerar o PNG. Tente novamente.')), 'image/png'));
+        } finally { canvas.width = canvas.height = 0; }
+      },
+    });
+    if (!batchMode) await preselectProductFromLocation();
     await renderPreview();
     // The mobile canvas stays expanded even when a product arrives from the catalogue.
   } catch {
     // The individual loading functions already show a useful error in the interface.
   }
+}
+
+async function prepareBatchItem(item) {
+  state.compositionMode = 'single';
+  state.compositionChosen = true;
+  state.selectedProduct = item.product;
+  state.secondaryProduct = null;
+  state.price = item.price;
+  state.originalPrice = state.secondaryPrice = state.secondaryOriginalPrice = '';
+  state.useOriginalPrice = false;
+  state.campaignSelectionError = '';
+  resetProductCompositionState();
+  syncPriceInputs();
+  syncCompositionModeControls();
+  syncProductPanel();
+  await renderPreview();
+  applyAutoLayout();
 }

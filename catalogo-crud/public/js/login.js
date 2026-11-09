@@ -3,6 +3,8 @@ const clientDestinations = new Map([
   ['/index.html', '/'],
   ['/catalogo', '/catalogo'],
   ['/catalogo.html', '/catalogo'],
+  ['/revista', '/revista'],
+  ['/revista.html', '/revista'],
   ['/artes/stories', '/artes/stories'],
   ['/stories.html', '/artes/stories'],
   ['/artes/feed', '/artes/feed'],
@@ -12,8 +14,6 @@ const clientDestinations = new Map([
 ]);
 const adminDestinations = new Map([
   ...clientDestinations,
-  ['/revista', '/revista'],
-  ['/revista.html', '/revista'],
   ['/backgrounds', '/backgrounds'],
   ['/backgrounds.html', '/backgrounds'],
 ]);

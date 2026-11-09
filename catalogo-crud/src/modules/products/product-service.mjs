@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import sharp from 'sharp';
 import { badRequest } from '../../http/errors.mjs';
-import { productImageUrl, resolveProductImage } from './product-images.mjs';
+import { configuredProductImages, productImageGroup, productImageUrl, resolveProductImage } from './product-images.mjs';
+import { categoryExpression, createManufacturerRegistry, normalizeCategory, normalizeGroup, productGroups } from './product-references.mjs';
 
 const productColumns = [
   'nome',
@@ -78,20 +79,27 @@ function booleanInteger(value) {
   throw badRequest('Campos booleanos devem receber true ou false.');
 }
 
-function serializeProduct(row, imagesDirectory) {
+function serializeProduct(row, imagesDirectory, defaults, manufacturers) {
   if (!row) return null;
-  const imageFile = resolveProductImage(imagesDirectory, row.imagem_arquivo);
+  const group = productImageGroup(row);
+  const defaultFile = defaults[group];
+  const imageFile = resolveProductImage(imagesDirectory, row.imagem_arquivo || defaultFile);
+  const usesDefault = !row.imagem_arquivo && Boolean(defaultFile);
 
   return {
     ...row,
+    grupo: group || row.grupo,
+    fabricante: manufacturers.find(row.fabricante)?.nome || row.fabricante,
+    categoria_produtos: normalizeCategory(row.categoria_produtos),
     generico: Boolean(row.generico),
     produto_destaque: Boolean(row.produto_destaque),
     imagem_local_url: imageFile ? productImageUrl(imageFile, imagesDirectory) : null,
-    possui_imagem_local: ['baixado', 'existente', 'manual'].includes(row.imagem_status),
+    imagem_padrao: usesDefault,
+    possui_imagem_local: usesDefault || ['baixado', 'existente', 'manual'].includes(row.imagem_status),
   };
 }
 
-function productFilters(searchParams) {
+function productFilters(searchParams, imageCondition) {
   const where = [];
   const values = [];
   const query = searchParams.get('q')?.trim();
@@ -116,11 +124,11 @@ function productFilters(searchParams) {
     values.push(status);
   }
   if (category) {
-    where.push('categoria_produtos = ?');
-    values.push(category);
+    where.push(`${categoryExpression} = ?`);
+    values.push(normalizeCategory(category));
   }
-  if (image === 'com') where.push("imagem_status IN ('baixado', 'existente', 'manual')");
-  if (image === 'sem') where.push("(imagem_status NOT IN ('baixado', 'existente', 'manual') OR imagem_status IS NULL)");
+  if (image === 'com') where.push(imageCondition);
+  if (image === 'sem') where.push(`NOT (${imageCondition})`);
 
   return { where: where.length ? `WHERE ${where.join(' AND ')}` : '', values };
 }
@@ -131,7 +139,16 @@ function productId(value) {
 }
 
 export function createProductService({ database, imagesDirectory }) {
-  const serialize = (row) => serializeProduct(row, imagesDirectory);
+  const manufacturers = createManufacturerRegistry(database);
+  const defaultImages = () => configuredProductImages(database);
+  function imageCondition() {
+    const defaults = defaultImages();
+    const rules = ["coalesce(imagem_status IN ('baixado', 'existente', 'manual'), 0)"];
+    if (defaults.TARJADO) rules.push("(coalesce(imagem_arquivo, '') = '' AND generico = 0 AND upper(trim(grupo)) = 'TARJADO')");
+    if (defaults['GENÉRICO']) rules.push("(coalesce(imagem_arquivo, '') = '' AND (generico = 1 OR upper(trim(grupo)) IN ('GENÉRICO', 'GENéRICO', 'GENERICO')))");
+    return `(${rules.join(' OR ')})`;
+  }
+  const serialize = (row) => serializeProduct(row, imagesDirectory, defaultImages(), manufacturers);
 
   function safeLocalImagePath(value) {
     if (value === undefined) return undefined;
@@ -167,8 +184,20 @@ export function createProductService({ database, imagesDirectory }) {
     for (const field of stringFields) {
       if (Object.hasOwn(payload, field)) output[field] = nullableString(payload[field]);
     }
+    if (output.fabricante) {
+      const manufacturer = manufacturers.find(output.fabricante);
+      if (!manufacturer) throw badRequest('Cadastre o fabricante antes de selecioná-lo para o produto.');
+      output.fabricante = manufacturer.nome;
+    }
+    if (Object.hasOwn(output, 'grupo') && output.grupo) {
+      const group = normalizeGroup(output.grupo);
+      if (!group) throw badRequest('Selecione um dos quatro grupos disponíveis.');
+      output.grupo = group;
+    }
+    if (Object.hasOwn(output, 'categoria_produtos')) output.categoria_produtos = normalizeCategory(output.categoria_produtos);
     if (Object.hasOwn(payload, 'categoria_id')) output.categoria_id = nullableInteger(payload.categoria_id);
     if (Object.hasOwn(payload, 'generico')) output.generico = booleanInteger(payload.generico);
+    if (output.grupo) output.generico = output.grupo === 'GENÉRICO' ? 1 : 0;
     if (Object.hasOwn(payload, 'produto_destaque')) output.produto_destaque = booleanInteger(payload.produto_destaque);
     if (Object.hasOwn(payload, 'imagem_arquivo')) output.imagem_arquivo = safeLocalImagePath(payload.imagem_arquivo);
 
@@ -208,7 +237,7 @@ export function createProductService({ database, imagesDirectory }) {
     const requestedPageSize = Number(searchParams.get('pageSize') || 48);
     const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
     const pageSize = Number.isInteger(requestedPageSize) ? Math.min(Math.max(requestedPageSize, 12), 100) : 48;
-    const filters = productFilters(searchParams);
+    const filters = productFilters(searchParams, imageCondition());
     const total = database.prepare(`SELECT COUNT(*) AS count FROM products ${filters.where}`).get(...filters.values).count;
     const rows = database.prepare(`
       SELECT * FROM products
@@ -233,8 +262,8 @@ export function createProductService({ database, imagesDirectory }) {
       SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN status = 'ativo' THEN 1 ELSE 0 END) AS ativos,
-        SUM(CASE WHEN imagem_status IN ('baixado', 'existente', 'manual') THEN 1 ELSE 0 END) AS com_imagem,
-        COUNT(DISTINCT COALESCE(NULLIF(categoria_produtos, ''), 'Sem categoria')) AS categorias
+        SUM(CASE WHEN ${imageCondition()} THEN 1 ELSE 0 END) AS com_imagem,
+        COUNT(DISTINCT COALESCE(${categoryExpression}, 'Sem categoria')) AS categorias
       FROM products
     `).get();
 
@@ -248,11 +277,11 @@ export function createProductService({ database, imagesDirectory }) {
 
   function listCategories() {
     return database.prepare(`
-      SELECT categoria_produtos AS nome, COUNT(*) AS total
+      SELECT ${categoryExpression} AS nome, COUNT(*) AS total
       FROM products
-      WHERE categoria_produtos IS NOT NULL AND categoria_produtos != ''
-      GROUP BY categoria_produtos
-      ORDER BY categoria_produtos COLLATE NOCASE ASC
+      WHERE ${categoryExpression} IS NOT NULL
+      GROUP BY ${categoryExpression}
+      ORDER BY nome COLLATE NOCASE ASC
     `).all();
   }
 
@@ -322,6 +351,17 @@ export function createProductService({ database, imagesDirectory }) {
   async function uploadProductImage(id, file) {
     const existing = database.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return null;
+    const ean = /^\d{8,14}$/.test(existing.ean || '') ? `ean-${existing.ean}` : `produto-${id}`;
+    const filename = await storeImage(file, `upload-${ean}`);
+    try {
+      return updateProduct(id, { imagem_arquivo: filename });
+    } catch (error) {
+      await fs.unlink(path.join(imagesDirectory, filename)).catch(() => {});
+      throw error;
+    }
+  }
+
+  async function storeImage(file, prefix) {
     if (!file?.buffer?.length) throw badRequest('Selecione uma imagem para o produto.');
     if (file.buffer.length > 10_000_000) throw badRequest('A imagem excede o limite de 10 MB.');
 
@@ -345,16 +385,30 @@ export function createProductService({ database, imagesDirectory }) {
 
     const imagesSubdirectory = path.join(imagesDirectory, 'imagens');
     await fs.mkdir(imagesSubdirectory, { recursive: true });
-    const filename = `imagens/upload-produto-${id}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
+    const filename = `imagens/${prefix}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`;
     const absolutePath = path.join(imagesDirectory, filename);
     await fs.writeFile(absolutePath, file.buffer, { flag: 'wx' });
 
+    return filename;
+  }
+
+  function listGroups() {
+    const defaults = defaultImages();
+    return productGroups.map((nome) => ({ nome, imagem_local_url: defaults[nome]
+      ? productImageUrl(resolveProductImage(imagesDirectory, defaults[nome]), imagesDirectory) : null }));
+  }
+
+  async function uploadGroupImage(group, file) {
+    const normalized = normalizeGroup(group);
+    if (!['TARJADO', 'GENÉRICO'].includes(normalized)) throw badRequest('A imagem padrão é usada por Tarjado ou Genérico.');
+    const filename = await storeImage(file, normalized === 'TARJADO' ? 'padrao-tarjado' : 'padrao-generico');
     try {
-      return updateProduct(id, { imagem_arquivo: filename });
+      database.prepare('INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)').run(`product_image_${normalized}`, filename);
     } catch (error) {
-      await fs.unlink(absolutePath).catch(() => {});
+      await fs.unlink(path.join(imagesDirectory, filename)).catch(() => {});
       throw error;
     }
+    return listGroups().find((item) => item.nome === normalized);
   }
 
   return {
@@ -364,6 +418,11 @@ export function createProductService({ database, imagesDirectory }) {
     listProducts,
     getSummary,
     listCategories,
+    listManufacturers: manufacturers.list,
+    createManufacturer: manufacturers.create,
+    renameManufacturer: manufacturers.rename,
+    listGroups,
+    uploadGroupImage,
     createProduct,
     updateProduct,
     uploadProductImage,

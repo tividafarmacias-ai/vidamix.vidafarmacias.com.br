@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import vm from 'node:vm';
 import { createStoriesEditorState } from '../public/js/features/stories/state.js';
+import { getDiscountLabel } from '../public/js/features/discount.js';
 
 const source = await readFile(new URL('../public/js/features/stories/editor.js', import.meta.url), 'utf8');
 function extract(name) {
@@ -20,7 +21,7 @@ function fixture(mode = 'single') {
     measureText(text) { return { width: text.length * parseFloat(this.font.match(/[\d.]+px/)[0]) * .55 }; },
   };
   const sandbox = vm.createContext({
-    state, context, STORY_WIDTH: 1080, MIN_DETAILS_WIDTH: 176, DESCRIPTION_CARD_PADDING: 20,
+    state, context, getDiscountLabel, STORY_WIDTH: 1080, MIN_DETAILS_WIDTH: 176, DESCRIPTION_CARD_PADDING: 20,
     clamp: (v, min, max) => Math.min(max, Math.max(min, v)),
     isTwoProductsMode: () => state.compositionMode === 'two-products',
     hasPrice: () => true,
@@ -51,6 +52,7 @@ test('optional promotion changes rendering and measured bounds only while enable
   const normal = calls.find(call => call.text === 'De R$ 29,90');
   assert.ok(normal);
   assert.ok(calls.some(call => call.text === 'Por R$'));
+  assert.ok(calls.some(call => call.text === '33,44% OFF'));
   assert.ok(calls.some(call => call.strike && call.y === normal.y));
   assert.ok(normal.y < calls.find(call => call.text === '19,90').y);
   f.state.useOriginalPrice = false;
@@ -96,7 +98,23 @@ test('two products keep independent original prices and combo has one shared off
   Object.assign(f.state, { useOriginalPrice: true, originalPrice: '39,90', secondaryOriginalPrice: '49,90' });
   assert.ok(f.draw().some(call => call.text === 'De R$ 39,90'));
   assert.ok(f.draw('details-secondary').some(call => call.text === 'De R$ 49,90'));
+  assert.ok(f.draw().some(call => call.text === '50,13% OFF'));
+  assert.ok(f.draw('details-secondary').some(call => call.text === '40,08% OFF'));
   f.state.compositionMode = 'combo';
   assert.ok(!f.draw('details-secondary').some(call => call.text?.startsWith('De ')));
   assert.ok(f.draw().some(call => call.text === 'De R$ 39,90'));
+});
+
+test('discount calculation handles Brazilian prices and omits missing or non-discount offers', () => {
+  assert.equal(getDiscountLabel('R$ 1.000,00', 'R$ 750,00'), '25% OFF');
+  for (const [original, price] of [['', '10,00'], ['20,00', ''], ['0,00', '0,00'],
+    ['20,00', '20,00'], ['20,00', '30,00'], ['abc', '10,00']]) {
+    assert.equal(getDiscountLabel(original, price), '');
+  }
+  const f = fixture();
+  Object.assign(f.state, { useOriginalPrice: true, originalPrice: '10,00' });
+  assert.ok(!f.draw().some(call => call.text?.includes('% OFF')));
+  f.state.originalPrice = '29,90';
+  f.state.useOriginalPrice = false;
+  assert.ok(!f.draw().some(call => call.text?.includes('% OFF')));
 });

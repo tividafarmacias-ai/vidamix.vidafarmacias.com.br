@@ -3,6 +3,8 @@ import { MIN_DETAILS_WIDTH, STORY_HEIGHT, STORY_SAFE_TOP, STORY_WIDTH } from './
 const GAP = 32;
 const MARGIN = 56;
 const EPSILON = 0.01;
+// Leave breathing room around product images in both Feed and Stories.
+const AUTO_PRODUCT_SCALE = 0.8;
 
 function intersects(first, second) {
   return first.x < second.x + second.width - EPSILON
@@ -30,7 +32,7 @@ function availableAreas(obstacle, SAFE_AREA) {
 }
 
 function fitProduct(product, area, scale = 1) {
-  const width = Math.min(area.width, area.height * product.aspectRatio) * scale;
+  const width = Math.min(area.width, area.height * product.aspectRatio) * scale * AUTO_PRODUCT_SCALE;
   return {
     x: area.x + (area.width - width) / 2,
     y: area.y + area.height - width / product.aspectRatio,
@@ -136,7 +138,7 @@ export function createAutoLayout(options) {
       });
       usedHeight = Math.max(...products.map((product) => candidate.products[product.target].width / product.aspectRatio));
     } else if (pairArrangement === 'stack') {
-      const width = Math.min(area.width, (productHeight - GAP) / products.reduce((sum, product) => sum + 1 / product.aspectRatio, 0));
+      const width = Math.min(area.width, (productHeight - GAP) / products.reduce((sum, product) => sum + 1 / product.aspectRatio, 0)) * AUTO_PRODUCT_SCALE;
       if (width <= 0) return;
       let y = 0;
       products.forEach((product) => {
@@ -153,7 +155,7 @@ export function createAutoLayout(options) {
       });
       usedHeight = Math.max(...products.map((product) => candidate.products[product.target].width / product.aspectRatio));
     } else {
-      const height = Math.min(productHeight, (area.width - GAP) / products.reduce((sum, product) => sum + product.aspectRatio, 0));
+      const height = Math.min(productHeight, (area.width - GAP) / products.reduce((sum, product) => sum + product.aspectRatio, 0)) * AUTO_PRODUCT_SCALE;
       const groupWidth = products.reduce((sum, product) => sum + height * product.aspectRatio, GAP);
       let x = area.x + (area.width - groupWidth) / 2;
       products.forEach((product) => {

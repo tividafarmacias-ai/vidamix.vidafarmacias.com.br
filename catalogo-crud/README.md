@@ -210,6 +210,34 @@ para obter as novas URLs; mantenha os PNG até validar os arquivos convertidos.
 
 ## Rotas
 
+### Cadastro de produtos
+
+O formulário começa por **EAN → Enviar imagem → Nome → Subtítulo**, seguido de
+fabricante, grupo, categoria, status, direção da imagem, princípio ativo e MS.
+Os demais dados ficam em **Informações adicionais**. O upload mantém os zeros
+iniciais do EAN no nome do arquivo quando o código contém de 8 a 14 dígitos.
+
+**Cadastrar / editar fabricantes** abre um cadastro separado e persistente.
+A lista inicial reúne os nomes do catálogo; espaços, maiúsculas e acentos não
+geram fabricantes duplicados. A grafia mais usada é adotada inicialmente.
+Editar um fabricante atualiza seus produtos vinculados. O cadastro do produto
+aceita somente fabricantes registrados (ou o campo vazio).
+
+Os grupos são **NÃO MEDICAMENTO, MIP, TARJADO e GENÉRICO**. O grupo Genérico
+controla também o indicador legado `generico`. “Não Medicado” é apresentado como
+“NÃO MEDICAMENTO”. As categorias “Medicamento” e “Medicamentos” aparecem juntas
+como **Medicamento**, incluindo contagens e filtros, sem excluir produtos.
+
+Em **Configurar imagens padrão**, envie as caixinhas de Tarjado e Genérico.
+Elas são usadas automaticamente pelos produtos sem foto própria, inclusive os
+antigos, no catálogo e nos editores. Trocar de grupo troca a caixinha; enviar uma
+foto própria tem prioridade. As artes oficiais precisam ser enviadas nessa tela.
+As referências ficam no SQLite e os arquivos em `IMAGES_ROOT/imagens/`, portanto
+ambos precisam de armazenamento persistente. Não é necessário reimportar a base.
+
+As rotas `/api/manufacturers` e `/api/product-groups` são exclusivas do administrador.
+Os testes deste fluxo fazem parte de `npm run test:catalogue`.
+
 | Endereço | Uso |
 | --- | --- |
 | `/login` | Entrada com e-mail e senha |
@@ -219,6 +247,7 @@ para obter as novas URLs; mantenha os PNG até validar os arquivos convertidos.
 | `/artes/feed` | Editor de artes para Feed vertical (4:5) |
 | `/artes/indoor-h` | Carrossel de cinco produtos para TV Indoor horizontal (16:9) |
 | `/revista` | Gestão de revistas, exclusiva do administrador |
+| `/revista/ofertas` | Produtos da revista vigente, seleção e criação em lote |
 | `/backgrounds` | Gestão de backgrounds, exclusiva do administrador |
 | `/api/auth/session` | Sessão atual e token CSRF |
 | `/api/auth/login` e `/api/auth/logout` | Entrada e saída via POST |
@@ -226,6 +255,40 @@ para obter as novas URLs; mantenha os PNG até validar os arquivos convertidos.
 
 Os caminhos antigos de arquivos continuam funcionando como compatibilidade, mas
 novas telas devem ser registradas por rota semântica.
+
+Na tela **Revista**, os **Backgrounds da revista** permitem vincular um fundo já
+cadastrado para cada formato (Story, Feed e TV Indoor), com prévia da imagem.
+Para alterar uma revista existente, abra **Produtos e fundos**, escolha os fundos
+e clique em **Salvar backgrounds**. Os anúncios abertos pelos produtos da revista
+vigente recebem o produto, o preço e o fundo daquele formato, incluindo
+o wallpaper associado quando houver. **Sem vínculo** mantém a escolha habitual
+no editor. Se um fundo vinculado for removido, o editor pede outra seleção e
+preserva o produto e o preço. A atualização do banco é automática e mantém as
+revistas existentes; reimportar uma planilha não altera seus vínculos salvos.
+
+A chamada da revista na Central abre **`/revista/ofertas`**. A lista de produtos
+fica nessa tela, com busca, seleção individual, **Selecionar resultados** e
+**Limpar seleção**. Selecionar resultados inclui todos os produtos disponíveis
+da busca, inclusive os que ainda não aparecem na primeira página. A seleção
+permanece ao buscar, carregar mais produtos e voltar dos editores na mesma aba.
+
+**Exportar Feed em lote** e **Exportar Stories em lote** abrem o editor com o
+primeiro produto e o fundo vinculado à revista. Confira ou troque o fundo e clique
+em **Baixar lote em ZIP**. Cada produto gera um PNG individual, com o preço atual
+da revista e ajuste automático, em 1080 × 1350 (Feed) ou 1080 × 1920 (Stories).
+O painel mostra o progresso, permite cancelar e oferece o download novamente.
+Lotes acima de 256 MB devem ser divididos em seleções menores. Falhas interrompem
+o lote sem apresentar um ZIP incompleto como concluído.
+
+**Criar vídeo Indoor** leva todos os selecionados ao editor, com seus preços e
+o fundo da revista. Nesse fluxo, o vídeo aceita a quantidade selecionada, inclusive
+um produto ou mais de cinco. É possível revisar a ordem, remover produtos e
+definir 10, 15 ou 20 segundos por oferta antes de conferir a prévia e baixar MP4.
+O fluxo comum do Indoor continua usando cinco produtos.
+
+Somente os IDs são guardados no navegador: preços, disponibilidade e vigência
+são conferidos no servidor ao abrir a seleção e antes de gerar o lote de PNGs.
+Uma seleção de uma revista que deixou de ser vigente pede nova escolha.
 
 ## Editor de Feed
 
@@ -362,7 +425,7 @@ e incluídos em `npm run verify`.
 ## Exportação de Stories em MP4
 
 Com o fundo, os produtos e os preços preenchidos, clique em **Baixar MP4 · 15 s**.
-O vídeo tem 1080 × 1920 pixels, 30 quadros por segundo e duração de 15 segundos,
+O vídeo tem 1080 × 1920 pixels, animações a 30 quadros por segundo e duração de 15 segundos,
 sem áudio. Produtos, cartões de descrição/preço e texto livre entram suavemente
 em sequência; a oferta permanece parada para leitura de 1,5 a 13,5 segundos e
 sai com animação no final. O fundo permanece fixo.
@@ -383,6 +446,26 @@ Os módulos `video-animation.js` e `video-export.js` ficam em
 `public/js/features/stories/`. A biblioteca e sua licença estão em `public/js/vendor/`.
 Os testes de animação e exportação são executados por `npm run test:stories-video`
 e fazem parte de `npm run verify`.
+
+Stories, Feed e Indoor TV mapeiam os intervalos de movimento antes da exportação.
+Somente esses intervalos são desenhados e codificados a 30 fps; cada intervalo
+estático é gravado uma única vez, com duração estendida no MP4 (taxa variável),
+preservando o tempo total e os instantes das transições. O mapa de Stories/Feed
+usa os mesmos atrasos e durações das camadas de produto, descrição e texto; a
+abertura opcional acrescenta três segundos e inclui seu fade. O mapa da TV cobre
+o zoom e a revelação da abertura, as transições entre produtos e o retorno ao
+início, respeitando a duração escolhida para cada produto.
+
+Como referência, uma composição com dois produtos, descrições e texto usa 77
+quadros em vez de 450 (15 s), ou 93 em vez de 540 com abertura (18 s).
+Uma TV com cinco produtos de 10 s usa 60 em vez de 1.500 quadros, ou 163 em vez
+de 1.590 com abertura. A redução de tempo de exportação depende do dispositivo.
+Chamadas ao exportador sem um mapa continuam renderizando todos os quadros;
+um mapa vazio declara um vídeo inteiramente estático.
+
+Os testes verificam que cada quadro omitido seria idêntico, além das durações
+individuais gravadas na tabela `stts` do MP4. A correção local do muxer para a
+duração do último quadro está documentada em `public/js/vendor/README.md`.
 
 ## Tour guiado
 

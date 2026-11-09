@@ -1,8 +1,39 @@
 export const STORY_VIDEO_DURATION_SECONDS = 15;
+export const STORY_WALLPAPER_DURATION_SECONDS = 3;
+
+export function getStoryVideoDuration(hasWallpaper = false) {
+  return STORY_VIDEO_DURATION_SECONDS + (hasWallpaper ? STORY_WALLPAPER_DURATION_SECONDS : 0);
+}
 
 const ENTRANCE_DURATION = 0.9;
 const EXIT_START = 13.5;
 const EXIT_DURATION = 0.9;
+const WALLPAPER_FADE_DURATION = 0.5;
+
+function getLayerTiming(layer) {
+  const secondary = layer.index === 1;
+  const delay = layer.kind === 'product' ? 0 : layer.kind === 'details' ? 0.22 : 0.46;
+  return {
+    entranceStart: delay + (secondary ? 0.16 : 0),
+    exitStart: EXIT_START + delay * 0.5 + (secondary ? 0.08 : 0),
+  };
+}
+
+/** Motion intervals in seconds, derived from the same timings as the renderer. */
+export function getStoryVideoMotionRanges(snapshot) {
+  const offset = snapshot.wallpaper ? STORY_WALLPAPER_DURATION_SECONDS : 0;
+  const ranges = snapshot.wallpaper
+    ? [{ start: offset - WALLPAPER_FADE_DURATION, end: offset }]
+    : [];
+  for (const layer of snapshot.layers) {
+    const { entranceStart, exitStart } = getLayerTiming(layer);
+    ranges.push(
+      { start: offset + entranceStart, end: offset + entranceStart + ENTRANCE_DURATION },
+      { start: offset + exitStart, end: offset + exitStart + EXIT_DURATION },
+    );
+  }
+  return ranges;
+}
 
 function smoothStep(value) {
   const progress = Math.max(0, Math.min(1, value));
@@ -15,9 +46,9 @@ export function getStoryVideoLayerState(layer, seconds) {
   const secondary = layer.index === 1;
   const direction = secondary ? 1 : -1;
   const kind = layer.kind;
-  const delay = kind === 'product' ? 0 : kind === 'details' ? 0.22 : 0.46;
-  const entrance = smoothStep((time - delay - (secondary ? 0.16 : 0)) / ENTRANCE_DURATION);
-  const exit = smoothStep((time - EXIT_START - delay * 0.5 - (secondary ? 0.08 : 0)) / EXIT_DURATION);
+  const { entranceStart, exitStart } = getLayerTiming(layer);
+  const entrance = smoothStep((time - entranceStart) / ENTRANCE_DURATION);
+  const exit = smoothStep((time - exitStart) / EXIT_DURATION);
   const entering = 1 - entrance;
   const product = kind === 'product';
   const details = kind === 'details';
@@ -49,6 +80,17 @@ export function drawStoryVideoFrame(context, snapshot, seconds) {
     context.shadowOffsetY = 0;
     context.clearRect(0, 0, snapshot.width, snapshot.height);
     context.drawImage(snapshot.background, 0, 0);
+
+    if (snapshot.wallpaper) {
+      const time = Math.max(0, Number(seconds) || 0);
+      if (time < STORY_WALLPAPER_DURATION_SECONDS) {
+        // Fade into the background during the last half-second of the opening.
+        context.globalAlpha = 1 - smoothStep((time - (STORY_WALLPAPER_DURATION_SECONDS - WALLPAPER_FADE_DURATION)) / WALLPAPER_FADE_DURATION);
+        context.drawImage(snapshot.wallpaper, 0, 0);
+        return;
+      }
+      seconds = time - STORY_WALLPAPER_DURATION_SECONDS;
+    }
 
     for (const layer of snapshot.layers) {
       const animation = getStoryVideoLayerState(layer, seconds);

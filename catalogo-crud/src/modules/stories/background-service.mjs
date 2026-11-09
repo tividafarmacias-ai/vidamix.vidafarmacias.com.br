@@ -87,7 +87,7 @@ export function createStoryBackgroundService({ storyBackgroundsDirectory, format
       urlPrefix,
     })));
 
-    if (format === 'indoor-h') {
+    if (format === 'indoor-h' || format === 'stories') {
       await Promise.all(backgrounds.map(async (background) => {
         if (!background) return;
         const stem = path.basename(background.arquivo, path.extname(background.arquivo));

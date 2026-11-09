@@ -1,0 +1,23 @@
+.offers-heading { margin-top: 28px; align-items: center; }
+.offers-heading h1 { margin: 0; color: var(--brand-blue-dark); font-size: clamp(1.6rem, 3vw, 2.5rem); }
+.offers-heading p:not(.studio-kicker), .offers-selection p { color: var(--color-muted); font-size: .83rem; line-height: 1.6; }
+.offers-selection { position: sticky; top: calc(var(--app-header-height) + 12px); z-index: 30; margin-bottom: 22px; padding: 22px; border: 1px solid var(--glass-selected-line); border-radius: 18px; background: var(--color-panel); box-shadow: var(--glass-shadow); }
+.offers-selection strong { color: var(--azul); font-size: 1.1rem; }
+.offers-selection p { margin: 8px 0 16px; }
+.offers-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.revista-offers-page button { min-height: 46px; padding: 10px 16px; border: 1px solid var(--glass-selected-line); border-radius: 10px; font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; color: var(--azul); background: var(--glass-surface-strong); }
+.offers-actions button { color: #fff; background: var(--azul); }
+.revista-offers-page button:disabled { opacity: .5; cursor: not-allowed; }
+.revista-offers-page button:focus-visible, .offer-select:focus-within { outline: 3px solid var(--azul); outline-offset: 3px; }
+.offer-select { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 12px 18px; font-size: .82rem; font-weight: 600; cursor: pointer; background: var(--glass-surface-strong); }
+.offer-select input { width: 20px; height: 20px; margin: 0; accent-color: var(--azul); }
+.home-revista-product.is-selected { border-color: var(--azul); box-shadow: 0 0 0 2px var(--azul); }
+.home-revista-product.is-unavailable { opacity: .65; }
+.offers-selection .offers-action-status:empty { display: none; }
+.offers-action-status.is-error { color: var(--vermelho); }
+@media (max-width: 900px) {
+  .offers-heading { align-items: start; flex-direction: column; gap: 12px; }
+  .offers-actions button { flex: 1 1 150px; }
+  .offers-selection { padding: 18px; }
+  .revista-offers-page .home-revista-toolbar input { font-size: 16px; }
+}

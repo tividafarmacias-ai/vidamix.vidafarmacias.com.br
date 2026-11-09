@@ -7,6 +7,7 @@ import * as model from '../public/js/features/indoor/model.js';
 import * as renderer from '../public/js/features/indoor/renderer.js';
 import { bindPriceInput } from '../public/js/features/stories/price-input.js';
 import { loadArtworkSelection } from '../public/js/features/revista/artwork.js';
+import { loadCampaignSelection, saveCampaignSelection } from '../public/js/features/revista/selection.js';
 
 const [markup, moduleSource] = await Promise.all([
   readFile(new URL('../public/indoor-h.html', import.meta.url), 'utf8'),
@@ -37,6 +38,7 @@ class Element {
     };
   }
   append(...children) { this.children.push(...children); }
+  after(node) { this.nextSibling = node; }
   replaceChildren(...children) { this.children = children; }
   setAttribute(name, value) { this.attributes.set(name, String(value)); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
@@ -160,6 +162,7 @@ async function openEditor(t, options = {}) {
   }
   const sandbox = vm.createContext({
     ...model, bindPriceInput, getBackgroundBadgeTheme, loadArtworkSelection, document, window, Image: FakeImage,
+    loadCampaignSelection: (search, request) => loadCampaignSelection(search, request, options.storage),
     AbortController, AbortSignal, DOMException, URLSearchParams, Blob,
     ...renderer,
     drawIndoorFrame: (context, snapshot, seconds) => {
@@ -181,8 +184,10 @@ async function openEditor(t, options = {}) {
       let body;
       if (parsed.pathname === '/api/products') {
         body = options.products ? await options.products(parsed.searchParams, signal) : productPage();
+      } else if (url === '/api/revista/active') {
+        body = { campaign: options.campaign };
       } else if (url === '/api/revista/active/products/1?campaignId=5') {
-        body = { product: products[0], priceCents: 3705 };
+        body = { product: products[0], priceCents: 3705, backgrounds: options.campaignBackgrounds };
       } else if (url === '/api/indoor-backgrounds') {
         body = { items: options.backgrounds ? await options.backgrounds() : backgrounds };
       } else throw new Error(`Unexpected API URL: ${url}`);
@@ -223,6 +228,34 @@ test('Indoor starts with the selected magazine product and saved promotional pri
   assert.equal(f.get('selection-count').textContent, '1 / 5');
   assert.ok(f.get('selected').querySelectorAll('input').some(input => input.value === '37,05'));
   assert.equal(f.get('continue').disabled, true, 'four more products are still required for the video');
+});
+
+test('Indoor preselects the magazine background and wallpaper and allows a manual replacement', async t => {
+  const campaign = { arquivo: 'revista.png', nome: 'Revista TV', url: '/revista.png', wallpaper_url: '/revista-wallpaper.png' };
+  const f = await openEditor(t, { search: '?productId=1&campaignId=5', campaignBackgrounds: { 'indoor-h': campaign.arquivo },
+    backgrounds: async () => [...backgrounds, campaign] });
+  assert.equal(f.get('backgrounds').querySelectorAll('button')[1].getAttribute('aria-pressed'), 'true');
+  for (let id = 2; id <= 5; id++) f.get('results').querySelector(`[data-product-id="${id}"]`).click();
+  f.get('continue').click();
+  assert.equal(f.get('open-preview').disabled, false);
+  f.get('open-preview').click();
+  await flush();
+  assert.ok(f.imageRequests.includes(campaign.wallpaper_url));
+  const backgroundStep = f.steps.find(step => step.dataset.step === 'background');
+  backgroundStep.click();
+  f.get('backgrounds').querySelector('button').click();
+  assert.equal(f.get('backgrounds').querySelectorAll('button')[0].getAttribute('aria-pressed'), 'true');
+});
+
+test('Indoor keeps magazine product and price when its linked background was removed', async t => {
+  const f = await openEditor(t, { search: '?productId=1&campaignId=5', campaignBackgrounds: { 'indoor-h': 'removed.png' } });
+  for (let id = 2; id <= 5; id++) f.get('results').querySelector(`[data-product-id="${id}"]`).click();
+  f.get('continue').click();
+  assert.match(f.get('status').textContent, /não está mais disponível/);
+  assert.equal(f.get('open-preview').disabled, true);
+  assert.ok(f.get('selected').querySelectorAll('input').some(input => input.value === '37,05'));
+  f.get('backgrounds').querySelector('button').click();
+  assert.equal(f.get('open-preview').disabled, false);
 });
 
 async function openPreview(fixture) {
@@ -381,6 +414,7 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   assert.equal(f.exports[0].width, 1920);
   assert.equal(f.exports[0].duration, 50);
   assert.equal(f.exports[0].height, 1080);
+  assert.deepEqual(f.exports[0].motionRanges, renderer.getIndoorMotionRanges({ products: Array.from({ length: 5 }, () => ({ duration: 10 })) }));
   assert.equal(f.get('download-link').hidden, false);
   assert.equal(f.get('download-link').clickCount, 1);
   assert.match(f.get('download-link').download, /^vidamix-indoor-h-.*\.mp4$/);
@@ -592,4 +626,27 @@ test('refreshing a replaced wallpaper invalidates the selected campaign and prev
   assert.equal(f.get('download').disabled, true);
   assert.equal(f.get('download-link').hidden, true);
   assert.equal(f.revokedUrls.length, 1);
+});
+
+for (const count of [1, 6]) test('Indoor exports all ' + count + ' selected magazine offers with prices and background', async t => {
+  const entries = new Map();
+  const storage = { getItem: key => entries.get(key), setItem: (key, value) => entries.set(key, value) };
+  const items = products.slice(0, count).map(product => ({ productId: product.id, name: product.nome, available: true, imageUrl: product.imagem_local_url, priceCents: 3705 }));
+  const token = saveCampaignSelection(5, items.map(item => item.productId), storage);
+  const f = await openEditor(t, { search: '?selection=' + token, storage,
+    campaign: { id: 5, name: 'Revista', items, backgrounds: { 'indoor-h': 'campaign.png' } },
+    backgrounds: async () => [{ ...backgrounds[0], arquivo: 'campaign.png' }],
+  });
+  assert.equal(f.get('selected').children.length, count);
+  assert.equal(f.get('continue').disabled, false);
+  f.get('continue').click();
+  f.get('open-preview').click();
+  await flush();
+  assert.equal(f.get('download').disabled, false);
+  assert.equal(f.paints.at(-1).snapshot.products.length, count);
+  assert.ok(f.paints.at(-1).snapshot.products.every(entry => entry.price === 'R$ 37,05'));
+  f.get('download').click();
+  await flush();
+  assert.equal(f.exports[0].duration, count * 10);
+  assert.equal(f.get('download-link').hidden, false);
 });

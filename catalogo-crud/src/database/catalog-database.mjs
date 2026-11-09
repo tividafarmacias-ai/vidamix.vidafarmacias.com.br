@@ -46,11 +46,18 @@ export function initializeSchema(database) {
     CREATE INDEX IF NOT EXISTS idx_products_categoria ON products(categoria_produtos);
     CREATE INDEX IF NOT EXISTS idx_products_ean ON products(ean);
 
+    CREATE TABLE IF NOT EXISTS manufacturers (
+      id INTEGER PRIMARY KEY,
+      nome TEXT NOT NULL,
+      name_key TEXT NOT NULL UNIQUE
+    );
+
     CREATE TABLE IF NOT EXISTS revista_campaigns (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       month TEXT NOT NULL,
       import_hash TEXT NOT NULL UNIQUE,
+      backgrounds_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS revista_items (
@@ -63,6 +70,9 @@ export function initializeSchema(database) {
       UNIQUE(campaign_id, ean)
     );
   `);
+  if (!database.prepare('PRAGMA table_info(revista_campaigns)').all().some(column => column.name === 'backgrounds_json')) {
+    database.exec("ALTER TABLE revista_campaigns ADD COLUMN backgrounds_json TEXT NOT NULL DEFAULT '{}'");
+  }
 }
 
 async function importCatalogIfNeeded(database, config) {

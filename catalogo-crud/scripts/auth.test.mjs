@@ -97,7 +97,7 @@ test('authentication fails closed without a service; login resources and PWA met
   const app = await fixture(t);
   const origin = await app.start(null);
   for (const route of ['/', '/catalogo', '/catalogo.html', '/artes/stories', '/feed.html',
-    '/artes/indoor-h', '/revista', '/backgrounds.html']) {
+    '/artes/indoor-h', '/revista', '/revista/ofertas', '/revista-ofertas.html', '/backgrounds.html']) {
     const response = await fetch(origin + route, { redirect: 'manual' });
     assert.equal(response.status, 302, route);
     const destination = new URL(response.headers.get('location'), origin);
@@ -162,7 +162,7 @@ test('client can read products and create all allowed formats, including physica
   assert.equal(session.body.user.role, 'cliente', 'a submitted role cannot elevate the stored account');
   const headers = { Cookie: session.cookie };
   for (const route of ['/', '/index.html', '/catalogo', '/catalogo/', '/catalogo.html', '/artes/stories', '/stories.html',
-    '/artes/feed/', '/feed.html', '/artes/indoor-h', '/indoor-h.html']) {
+    '/artes/feed/', '/feed.html', '/artes/indoor-h', '/indoor-h.html', '/revista/ofertas', '/revista-ofertas.html']) {
     const response = await app.request(route, { headers });
     assert.equal(response.status, 200, route);
     assert.match(response.headers.get('content-type'), /^text\/html/);

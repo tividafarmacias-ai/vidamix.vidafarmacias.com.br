@@ -1,10 +1,30 @@
 import ExcelJS from 'exceljs';
 import { createHash } from 'node:crypto';
 import { badRequest } from '../../http/errors.mjs';
-import { productImageUrl, resolveProductImage } from '../products/product-images.mjs';
+import { configuredProductImages, productImageGroup, productImageUrl, resolveProductImage } from '../products/product-images.mjs';
+import { isSupportedStoryBackground, isWallpaperBackground } from '../stories/background-service.mjs';
 
 export const MAX_REVISTA_ROWS = 2000;
 const headers = ['EAN', 'PREÇO', 'VIGENCIA'];
+
+export function normalizeRevistaBackgrounds(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw badRequest('Informe os backgrounds da revista por formato.');
+  const backgrounds = {};
+  for (const [format, file] of Object.entries(value)) {
+    if (!['stories', 'feed', 'indoor-h'].includes(format)) throw badRequest('Formato de background inválido.');
+    if (file === null || file === '') continue;
+    if (typeof file !== 'string' || file.length > 255 || /[\\/\u0000-\u001f]/.test(file)
+      || !isSupportedStoryBackground(file) || isWallpaperBackground(file)) {
+      throw badRequest('Selecione um background válido para a revista.');
+    }
+    backgrounds[format] = file;
+  }
+  return backgrounds;
+}
+
+function campaignWithBackgrounds({ backgrounds_json, ...campaign }) {
+  return { ...campaign, backgrounds: JSON.parse(backgrounds_json) };
+}
 
 export async function createRevistaTemplate() {
   const workbook = new ExcelJS.Workbook();
@@ -120,37 +140,39 @@ export function createRevistaService({ database, imagesDirectory }) {
   }
 
   function list() {
-    return database.prepare(`SELECT c.id, c.name, c.month, c.created_at AS createdAt, COUNT(i.id) AS productCount
-      FROM revista_campaigns c LEFT JOIN revista_items i ON i.campaign_id = c.id GROUP BY c.id ORDER BY c.id DESC`).all();
+    return database.prepare(`SELECT c.id, c.name, c.month, c.backgrounds_json, c.created_at AS createdAt, COUNT(i.id) AS productCount
+      FROM revista_campaigns c LEFT JOIN revista_items i ON i.campaign_id = c.id GROUP BY c.id ORDER BY c.id DESC`).all().map(campaignWithBackgrounds);
   }
   function get(id) {
-    const campaign = database.prepare('SELECT id, name, month, created_at AS createdAt FROM revista_campaigns WHERE id = ?').get(id);
+    const campaign = database.prepare('SELECT id, name, month, backgrounds_json, created_at AS createdAt FROM revista_campaigns WHERE id = ?').get(id);
     if (!campaign) return null;
-    return { ...campaign, items: database.prepare(`SELECT product_id AS productId, ean, name, price_cents AS priceCents
+    return { ...campaignWithBackgrounds(campaign), items: database.prepare(`SELECT product_id AS productId, ean, name, price_cents AS priceCents
       FROM revista_items WHERE campaign_id = ? ORDER BY id`).all(id) };
   }
   function active(now = new Date()) {
     const month = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo', month: '2-digit', year: 'numeric',
     }).format(now);
-    const campaign = database.prepare(`SELECT id, name, month FROM revista_campaigns
+    const campaign = database.prepare(`SELECT id, name, month, backgrounds_json FROM revista_campaigns
       WHERE month = ? AND EXISTS (SELECT 1 FROM revista_items WHERE campaign_id = revista_campaigns.id)
       ORDER BY id DESC LIMIT 1`).get(month);
     if (!campaign) return null;
+    const defaults = configuredProductImages(database);
     const items = database.prepare(`SELECT i.product_id AS productId, i.ean, i.name, i.price_cents AS priceCents,
-      p.subtitulo AS description, p.fabricante AS manufacturer, p.status, p.imagem_arquivo AS imageFile
+      p.subtitulo AS description, p.fabricante AS manufacturer, p.status, p.imagem_arquivo AS imageFile, p.grupo, p.generico
       FROM revista_items i LEFT JOIN products p ON p.id = i.product_id
-      WHERE i.campaign_id = ? ORDER BY i.id`).all(campaign.id).map(({ imageFile, status, ...item }) => {
-      const image = resolveProductImage(imagesDirectory, imageFile);
+      WHERE i.campaign_id = ? ORDER BY i.id`).all(campaign.id).map(({ imageFile, status, grupo, generico, ...item }) => {
+      const image = resolveProductImage(imagesDirectory, imageFile || defaults[productImageGroup({ grupo, generico })]);
       return { ...item, imageUrl: image ? productImageUrl(image, imagesDirectory) : null,
         available: Boolean(item.productId && status === 'ativo' && image) };
     });
-    return { ...campaign, items };
+    return { ...campaignWithBackgrounds(campaign), items };
   }
-  function create(rows, name) {
+  function create(rows, name, backgrounds = {}) {
     // Recheck catalogue membership when saving, even after a successful preview.
     const report = validate(rows);
     if (!report.valid) return { report };
+    const backgroundJson = JSON.stringify(normalizeRevistaBackgrounds(backgrounds));
     const title = String(name || `Revista ${report.month}`).trim();
     if (!title || title.length > 120) throw badRequest('O nome da campanha deve ter entre 1 e 120 caracteres.');
     const hash = createHash('sha256').update(JSON.stringify(report.items.map(({ ean, priceCents, month }) => ({ ean, priceCents, month })).sort((a, b) => a.ean.localeCompare(b.ean)))).digest('hex');
@@ -158,14 +180,19 @@ export function createRevistaService({ database, imagesDirectory }) {
     if (existing) return { campaign: get(existing.id), existing: true, skippedCount: report.skippedCount };
     database.exec('BEGIN IMMEDIATE');
     try {
-      const result = database.prepare('INSERT INTO revista_campaigns (name, month, import_hash, created_at) VALUES (?, ?, ?, ?)')
-        .run(title, report.month, hash, new Date().toISOString());
+      const result = database.prepare('INSERT INTO revista_campaigns (name, month, import_hash, backgrounds_json, created_at) VALUES (?, ?, ?, ?, ?)')
+        .run(title, report.month, hash, backgroundJson, new Date().toISOString());
       const id = Number(result.lastInsertRowid);
       const insert = database.prepare('INSERT INTO revista_items (campaign_id, product_id, ean, name, price_cents) VALUES (?, ?, ?, ?, ?)');
       for (const item of report.items) insert.run(id, item.productId, item.ean, item.name, item.priceCents);
       database.exec('COMMIT');
       return { campaign: get(id), existing: false, skippedCount: report.skippedCount };
     } catch (error) { database.exec('ROLLBACK'); throw error; }
+  }
+  function updateBackgrounds(id, backgrounds) {
+    const value = JSON.stringify(normalizeRevistaBackgrounds(backgrounds));
+    const result = database.prepare('UPDATE revista_campaigns SET backgrounds_json = ? WHERE id = ?').run(value, id);
+    return result.changes ? get(id) : null;
   }
   function remove(id) {
     const campaign = database.prepare('SELECT id FROM revista_campaigns WHERE id = ?').get(id);
@@ -178,5 +205,5 @@ export function createRevistaService({ database, imagesDirectory }) {
       return true;
     } catch (error) { database.exec('ROLLBACK'); throw error; }
   }
-  return { validate, list, get, active, create, remove };
+  return { validate, list, get, active, create, updateBackgrounds, remove };
 }

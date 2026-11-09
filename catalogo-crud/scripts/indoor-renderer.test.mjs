@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_PRODUCT_COUNT, INDOOR_INTRO_DURATION,
-  getIndoorDuration, getCarouselState, drawIndoorFrame,
+  getIndoorDuration, getIndoorMotionRanges, getCarouselState, drawIndoorFrame,
 } from '../public/js/features/indoor/renderer.js';
 import { INDOOR_DURATION_TIERS } from '../public/js/features/indoor/model.js';
+import { getStoryVideoFramePlan } from '../public/js/features/stories/video-export.js';
 
 function mockContext() {
   const stack = [];
@@ -58,6 +59,31 @@ function snapshot(overrides = {}) {
     ...overrides,
   };
 }
+
+test('Indoor motion maps preserve zoom, reveal, mixed product transitions and both loop endings', () => {
+  for (const hasWallpaper of [false, true]) {
+    for (const tiers of [[10, 10, 10, 10, 10], [20, 10, 15, 10, 20]]) {
+      const input = snapshot({ wallpaper: hasWallpaper ? { width: 1920, height: 1080, id: 'wallpaper' } : null });
+      input.products.forEach((entry, index) => { entry.duration = tiers[index]; });
+      const duration = getIndoorDuration(hasWallpaper, input.products);
+      const plan = getStoryVideoFramePlan({ duration, motionRanges: getIndoorMotionRanges({ hasWallpaper, products: input.products }) });
+      assert.ok(plan.length < duration * 30 / 8, 'At least 87.5% fewer frames for these carousels');
+      if (hasWallpaper) {
+        assert.ok(plan.filter(sample => sample.startFrame < 90).every(sample => sample.endFrame - sample.startFrame === 1),
+          'The entire opening moves, including the zoom before the reveal');
+      }
+      for (const sample of plan) {
+        const first = mockContext();
+        drawIndoorFrame(first, input, sample.startFrame / 30);
+        for (let frame = sample.startFrame + 1; frame < sample.endFrame; frame += 1) {
+          const skipped = mockContext();
+          drawIndoorFrame(skipped, input, frame / 30);
+          assert.deepEqual(skipped.calls, first.calls, `Cannot skip motion at ${frame / 30}s`);
+        }
+      }
+    }
+  }
+});
 
 test('Indoor defaults to ten-second offers and sums the 10, 15 and 20-second tiers', () => {
   assert.deepEqual([INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_PRODUCT_COUNT, INDOOR_INTRO_DURATION], [1920, 1080, 5, 3]);
@@ -180,10 +206,10 @@ test('stationary and sliding offers are clipped clear of the actual templates ca
   }
 });
 
-test('renderer requires exactly five entries and does not mutate the snapshot', () => {
-  for (const products of [[], Array(4).fill({}), Array(6).fill({}), [null, {}, {}, {}, {}]]) {
+test('renderer rejects empty or invalid selections and does not mutate the snapshot', () => {
+  for (const products of [[], [null, {}, {}, {}, {}]]) {
     const context = mockContext();
-    assert.throws(() => drawIndoorFrame(context, snapshot({ products }), 0), /exatamente 5 produtos/);
+    assert.throws(() => drawIndoorFrame(context, snapshot({ products }), 0), /ao menos um produto válido/);
     assert.equal(context.calls.length, 0);
     context.assertBalanced();
   }
@@ -233,6 +259,7 @@ test('short descriptions keep the offer close and the promotional price dominate
   const subtitle = texts[2];
   const normal = texts.find(call => call.text === 'De R$ 10,45');
   const price = texts.find(call => call.text === 'R$ 10,00');
+  assert.ok(texts.some(call => call.text === '4,31% OFF'));
   assert.ok(normal.y - subtitle.y < 180, 'the price sits directly below the description card');
   assert.ok(!texts.some(call => call.text === 'OFERTA'), 'reference has no colored offer badge');
   assert.ok(Number(price.font.match(/([\d.]+)px/)[1]) >= 112);
@@ -308,5 +335,18 @@ test('mixed tiers keep scene boundaries and the wallpaper return aligned to the 
   assert.deepEqual(loop.calls, first.calls, 'the summed boundary loops back to the exact opening frame');
   for (const invalid of [{ duration: 8 }, { duration: 25 }, { duration: null }, { duration: 'dez' }, {}]) {
     assert.equal(getIndoorDuration(false, [invalid]), 10, 'non-tier durations fall back to ten seconds');
+  }
+});
+
+test('renderer paints every offer in magazine sequences of one and seven products', () => {
+  for (const count of [1, 7]) {
+    const original = snapshot();
+    const products = Array.from({ length: count }, (_, index) => ({ ...original.products[index % 5], product: { nome: 'Oferta ' + (index + 1) } }));
+    for (let index = 0; index < count; index += 1) {
+      const context = mockContext();
+      const frame = drawIndoorFrame(context, snapshot({ products }), index * 10 + 2);
+      assert.equal(frame.index, index);
+      context.assertBalanced();
+    }
   }
 });

@@ -5,6 +5,17 @@ const money = cents => Number.isSafeInteger(cents) ? (cents / 100).toLocaleStrin
 let report = null;
 let validatedFile = null;
 let busy = false;
+let detailCampaign = null;
+let savingBackgrounds = false;
+let backgroundsLoading = false;
+let backgroundsReady = false;
+const backgroundFormats = [
+  { key: 'stories', label: 'Story', url: '/api/story-backgrounds' },
+  { key: 'feed', label: 'Feed', url: '/api/feed-backgrounds' },
+  { key: 'indoor-h', label: 'TV Indoor', url: '/api/indoor-backgrounds' },
+];
+const backgroundOptions = {};
+const backgroundPickers = {};
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -21,6 +32,7 @@ function setBusy(value) {
   for (const id of ['file', 'name', 'validate']) byId(id).disabled = value;
   byId('create').disabled = value || !report?.valid || !validatedFile;
   byId('import-form').setAttribute('aria-busy', String(value));
+  syncBackgroundControls();
 }
 async function request(url, options = {}) {
   const response = await authFetch(url, { ...options, signal: AbortSignal.timeout(60000) });
@@ -28,6 +40,85 @@ async function request(url, options = {}) {
   if (!response.ok && !data.report) throw new Error(data.error || 'Não foi possível concluir. Tente novamente.');
   return data;
 }
+function selectedBackgrounds(scope) {
+  return Object.fromEntries(backgroundFormats.map(({ key }) => [key, backgroundPickers[scope][key].select.value]).filter(([, value]) => value));
+}
+function syncBackgroundControls() {
+  for (const scope of ['import', 'detail']) {
+    for (const { select } of Object.values(backgroundPickers[scope])) {
+      select.disabled = !backgroundsReady || backgroundsLoading || (scope === 'import' ? busy : savingBackgrounds);
+    }
+  }
+  byId('save-backgrounds').disabled = !detailCampaign || !backgroundsReady || backgroundsLoading || savingBackgrounds;
+  byId('reload-backgrounds').disabled = backgroundsLoading || savingBackgrounds || busy;
+}
+function renderBackgroundPickers(scope, selection = {}) {
+  for (const { key } of backgroundFormats) {
+    const { select, preview } = backgroundPickers[scope][key];
+    const options = backgroundOptions[key] || [];
+    const empty = node('option', 'Sem vínculo'); empty.value = '';
+    select.replaceChildren(empty, ...options.map(background => {
+      const option = node('option', background.nome); option.value = background.arquivo; return option;
+    }));
+    if (selection[key] && !options.some(background => background.arquivo === selection[key])) {
+      const missing = node('option', `${selection[key]} (indisponível)`); missing.value = selection[key]; select.append(missing);
+    }
+    select.value = selection[key] || '';
+    const background = options.find(option => option.arquivo === select.value);
+    preview.hidden = !background;
+    if (background) preview.src = background.thumbnail_url || background.url;
+  }
+}
+for (const scope of ['import', 'detail']) {
+  backgroundPickers[scope] = {};
+  for (const { key, label } of backgroundFormats) {
+    const wrapper = node('div', undefined, 'revista-background-picker');
+    const select = node('select'); select.id = `revista-${scope}-background-${key}`;
+    const caption = node('label', label); caption.htmlFor = select.id;
+    const preview = node('img', undefined, 'revista-background-preview'); preview.alt = `Background para ${label}`;
+    preview.loading = 'lazy'; preview.hidden = true;
+    backgroundPickers[scope][key] = { select, preview };
+    select.addEventListener('change', () => renderBackgroundPickers(scope, selectedBackgrounds(scope)));
+    wrapper.append(caption, select, preview);
+    byId(`${scope}-backgrounds`).append(wrapper);
+  }
+  renderBackgroundPickers(scope);
+}
+async function loadBackgroundOptions() {
+  if (backgroundsLoading || savingBackgrounds || busy) return;
+  backgroundsLoading = true;
+  syncBackgroundControls();
+  status('Carregando backgrounds…', false, 'background-status');
+  try {
+    const results = await Promise.all(backgroundFormats.map(async format => ({ key: format.key, ...(await request(format.url)) })));
+    for (const { key, items } of results) backgroundOptions[key] = items;
+    backgroundsReady = true;
+    for (const scope of ['import', 'detail']) renderBackgroundPickers(scope, selectedBackgrounds(scope));
+    status('Fundos disponíveis para vincular à revista.', false, 'background-status');
+  } catch (error) { status(`${error.message} Clique em Atualizar fundos para tentar novamente.`, true, 'background-status'); }
+  finally { backgroundsLoading = false; syncBackgroundControls(); }
+}
+byId('reload-backgrounds').addEventListener('click', loadBackgroundOptions);
+byId('background-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!detailCampaign || savingBackgrounds || !backgroundsReady || backgroundsLoading) return;
+  const campaignId = detailCampaign.id;
+  savingBackgrounds = true;
+  syncBackgroundControls();
+  status('Salvando backgrounds…', false, 'detail-status');
+  try {
+    const campaign = await request(`/api/revista/campaigns/${campaignId}/backgrounds`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backgrounds: selectedBackgrounds('detail') }),
+    });
+    if (detailCampaign?.id === campaignId) {
+      detailCampaign = campaign;
+      renderBackgroundPickers('detail', campaign.backgrounds);
+      status('Backgrounds salvos. Os novos anúncios desta revista usarão os fundos selecionados.', false, 'detail-status');
+    }
+  } catch (error) { if (detailCampaign?.id === campaignId) status(error.message, true, 'detail-status'); }
+  finally { savingBackgrounds = false; syncBackgroundControls(); }
+});
 function productRows(target, items) {
   const fragment = document.createDocumentFragment();
   for (const item of items) {
@@ -82,6 +173,7 @@ byId('create').addEventListener('click', async () => {
   setBusy(true); status('Salvando a campanha…');
   try {
     const body = new FormData(); body.append('file', validatedFile); body.append('name', byId('name').value.trim());
+    body.append('backgrounds', JSON.stringify(selectedBackgrounds('import')));
     const data = await request('/api/revista/campaigns', { method: 'POST', body });
     if (data.report) { showReport(data.report); status('O catálogo mudou. Confira as pendências antes de criar.', true); return; }
     resetReport();
@@ -93,10 +185,14 @@ byId('create').addEventListener('click', async () => {
   finally { setBusy(false); }
 });
 function showCampaign(campaign) {
+  detailCampaign = campaign;
   byId('campaign-detail').hidden = false;
   byId('detail-title').textContent = campaign.name;
   byId('detail-month').textContent = `Vigência ${campaign.month} · ${campaign.items.length} produtos`;
   productRows(byId('detail-items'), campaign.items);
+  renderBackgroundPickers('detail', campaign.backgrounds);
+  status('', false, 'detail-status');
+  syncBackgroundControls();
   byId('detail-title').focus();
 }
 async function loadCampaigns() {
@@ -107,7 +203,7 @@ async function loadCampaigns() {
     byId('campaigns').replaceChildren(...items.map(campaign => {
       const card = node('article', undefined, 'revista-campaign');
       const actions = node('div', undefined, 'revista-campaign-actions');
-      const open = node('button', 'Ver produtos', 'revista-button secondary'); open.type = 'button';
+      const open = node('button', 'Produtos e fundos', 'revista-button secondary'); open.type = 'button';
       open.addEventListener('click', async () => {
         open.disabled = true;
         try { showCampaign(await request(`/api/revista/campaigns/${campaign.id}`)); }
@@ -121,7 +217,11 @@ async function loadCampaigns() {
         remove.disabled = open.disabled = true;
         try {
           await request(`/api/revista/campaigns/${campaign.id}`, { method: 'DELETE' });
-          if (!byId('campaign-detail').hidden && byId('detail-title').textContent === campaign.name) byId('campaign-detail').hidden = true;
+          if (detailCampaign?.id === campaign.id) {
+            detailCampaign = null;
+            byId('campaign-detail').hidden = true;
+            syncBackgroundControls();
+          }
           await loadCampaigns();
           status(`Campanha “${campaign.name}” removida.`, false, 'list-status');
         } catch (error) {
@@ -138,4 +238,5 @@ async function loadCampaigns() {
   finally { byId('refresh').disabled = false; }
 }
 byId('refresh').addEventListener('click', loadCampaigns);
+void loadBackgroundOptions();
 void loadCampaigns();

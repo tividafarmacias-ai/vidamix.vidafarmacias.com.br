@@ -1374,6 +1374,22 @@ var Muxer = class {
         __privateMethod(this, _finalizeCurrentChunk, finalizeCurrentChunk_fn).call(this, __privateGet(this, _audioTrack));
     }
     let tracks = [__privateGet(this, _videoTrack), __privateGet(this, _audioTrack)].filter(Boolean);
+    // VidaMix patch: the stts builder provisionally repeats the previous delta
+    // for the final sample. VFR still holds can end with a different duration;
+    // write that final duration explicitly before measuring/writing moov.
+    if (__privateGet(this, _options).fastStart !== "fragmented") {
+      for (let track of tracks) {
+        if (!track.lastSample) continue;
+        let entry = last(track.timeToSampleTable);
+        let sampleDelta = intoTimescale(track.lastSample.duration, track.timescale);
+        if (entry.sampleDelta === sampleDelta) continue;
+        if (entry.sampleCount === 1) entry.sampleDelta = sampleDelta;
+        else {
+          entry.sampleCount--;
+          track.timeToSampleTable.push({ sampleCount: 1, sampleDelta });
+        }
+      }
+    }
     if (__privateGet(this, _options).fastStart === "in-memory") {
       let mdatSize;
       for (let i = 0; i < 2; i++) {

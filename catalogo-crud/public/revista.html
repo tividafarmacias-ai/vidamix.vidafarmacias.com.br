@@ -34,12 +34,19 @@
           <form id="revista-import-form">
             <label for="revista-name">Nome da campanha <small>(opcional)</small></label>
             <input id="revista-name" maxlength="120" placeholder="Ex.: Ofertas de outubro" autocomplete="off" />
+            <fieldset class="revista-background-fieldset">
+              <legend>Backgrounds da revista <small>(opcional)</small></legend>
+              <p class="revista-help">Escolha o fundo de cada formato. Os anúncios criados pelos produtos desta revista já abrirão com o fundo vinculado.</p>
+              <div id="revista-import-backgrounds" class="revista-background-grid"></div>
+            </fieldset>
             <label for="revista-file">Planilha preenchida</label>
             <input id="revista-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required aria-describedby="revista-file-hint" />
             <p class="revista-help" id="revista-file-hint">XLSX de até 2 MB e 2.000 produtos. Mantenha o EAN como texto para preservar zeros à esquerda. Os preços serão importados com apenas as duas primeiras casas decimais, sem arredondamento.</p>
             <button class="revista-button" id="revista-validate" type="submit">Importar e conferir produtos</button>
           </form>
           <p id="revista-status" role="status" aria-live="polite">Selecione a planilha para começar.</p>
+          <p id="revista-background-status" class="revista-help" role="status" aria-live="polite"></p>
+          <button id="revista-reload-backgrounds" class="revista-button secondary" type="button">Atualizar fundos</button>
         </section>
         <section class="revista-panel revista-review" aria-labelledby="review-title">
           <p class="revista-kicker">02 · Conferir e criar</p><h2 id="review-title">Conferência do catálogo</h2>
@@ -61,6 +68,15 @@
       </section>
       <section id="revista-campaign-detail" class="revista-panel revista-campaigns" hidden aria-labelledby="revista-detail-title">
         <h2 id="revista-detail-title" tabindex="-1"></h2><p id="revista-detail-month"></p>
+        <form id="revista-background-form">
+          <fieldset class="revista-background-fieldset">
+            <legend>Backgrounds da revista</legend>
+            <p class="revista-help">Defina ou altere os fundos usados nos novos anúncios desta revista. Selecione “Sem vínculo” para escolher o fundo no editor.</p>
+            <div id="revista-detail-backgrounds" class="revista-background-grid"></div>
+          </fieldset>
+          <button id="revista-save-backgrounds" class="revista-button" type="submit" disabled>Salvar backgrounds</button>
+          <p id="revista-detail-status" class="revista-help" role="status" aria-live="polite"></p>
+        </form>
         <div class="revista-table-wrap"><table><thead><tr><th>EAN</th><th>Produto</th><th>Preço</th></tr></thead><tbody id="revista-detail-items"></tbody></table></div>
       </section>
     </main>

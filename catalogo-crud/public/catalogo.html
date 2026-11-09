@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/catalogue.css" />
     <link rel="stylesheet" href="/tour.css" />
     <link rel="stylesheet" href="/catalogue-mobile.css" />
+    <link rel="stylesheet" href="/catalogue-registration.css" />
     <link rel="stylesheet" href="/app-shell.css" />
     <link rel="stylesheet" href="/theme.css" />
     <script type="module" src="/js/app-shell.js"></script>
@@ -52,14 +53,6 @@
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" stroke-linejoin="round" /></svg>
               Tour guiado
             </button>
-            <a class="primary-button story-launch-button" id="story-creator-button" href="/artes/stories">
-              <span aria-hidden="true">✦</span>
-              Criar Story
-            </a>
-            <a class="primary-button story-launch-button" href="/artes/feed">
-              <span aria-hidden="true">✦</span>
-              Criar Feed
-            </a>
             <button class="ghost-button admin-only" id="new-product-button" type="button" aria-label="Adicionar novo produto" disabled>
               <span aria-hidden="true">+</span>
               Novo produto
@@ -156,7 +149,7 @@
     </main>
 
     <dialog class="product-dialog" id="product-dialog" aria-labelledby="dialog-title">
-      <form class="product-form" id="product-form" novalidate>
+      <form class="product-form" id="product-form">
         <header class="dialog-header">
           <div>
             <p class="eyebrow" id="dialog-kicker">Novo registro</p>
@@ -177,32 +170,47 @@
           <section class="form-fields">
             <div class="field-grid two-columns">
               <label class="full-span">
+                <span>EAN</span>
+                <input name="ean" inputmode="numeric" maxlength="40" placeholder="Código de barras" aria-describedby="ean-help" />
+                <small id="ean-help">Comece pelo código de barras. Ele identifica a imagem enviada.</small>
+              </label>
+              <label class="full-span admin-only">
+                <span>Enviar imagem do produto</span>
+                <input id="image-upload" name="imagem_upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" />
+                <small id="upload-help">PNG, JPG, WebP, GIF ou AVIF. Até 10 MB. A imagem será enviada ao salvar.</small>
+              </label>
+              <label class="full-span">
                 <span>Nome <b>*</b></span>
                 <input name="nome" required maxlength="255" placeholder="Nome do produto" />
               </label>
-              <label>
+              <label class="full-span">
                 <span>Subtítulo</span>
                 <input name="subtitulo" maxlength="255" placeholder="Ex.: 30 cápsulas" />
               </label>
-              <label>
-                <span>EAN</span>
-                <input name="ean" inputmode="numeric" maxlength="40" placeholder="Código de barras" />
-              </label>
-              <label>
-                <span>Fabricante</span>
-                <input name="fabricante" maxlength="255" placeholder="Fabricante" />
-              </label>
-              <label>
-                <span>Grupo</span>
-                <input name="grupo" maxlength="255" placeholder="Ex.: Medicamento" />
-              </label>
-              <label>
+              <div class="registration-field">
+                <label>
+                  <span>Fabricante</span>
+                  <select name="fabricante"><option value="">Selecione o fabricante</option></select>
+                </label>
+                <button type="button" class="registration-link admin-only" id="manage-manufacturers">Cadastrar / editar fabricantes</button>
+              </div>
+              <div class="registration-field">
+                <label>
+                  <span>Grupo</span>
+                  <select name="grupo">
+                    <option value="">Selecione o grupo</option>
+                    <option value="NÃO MEDICAMENTO">NÃO MEDICAMENTO</option>
+                    <option value="MIP">MIP</option>
+                    <option value="TARJADO">TARJADO</option>
+                    <option value="GENÉRICO">GENÉRICO</option>
+                  </select>
+                </label>
+                <small id="group-image-help" aria-live="polite"></small>
+                <button type="button" class="registration-link admin-only" id="manage-group-images">Configurar imagens padrão</button>
+              </div>
+              <label class="full-span">
                 <span>Categoria</span>
                 <input name="categoria_produtos" list="category-options" maxlength="255" placeholder="Categoria do produto" />
-              </label>
-              <label>
-                <span>Nome da categoria</span>
-                <input name="categoria_nome" maxlength="255" placeholder="Opcional" />
               </label>
               <label>
                 <span>Status</span>
@@ -226,6 +234,14 @@
                 <span>Registro MS</span>
                 <input name="ms" maxlength="255" placeholder="Opcional" />
               </label>
+            </div>
+            <details class="registration-extra">
+              <summary>Informações adicionais</summary>
+              <div class="field-grid two-columns">
+              <label>
+                <span>Nome complementar da categoria</span>
+                <input name="categoria_nome" maxlength="255" placeholder="Opcional" />
+              </label>
               <label>
                 <span>Categoria ID</span>
                 <input name="categoria_id" inputmode="numeric" placeholder="Opcional" />
@@ -247,11 +263,6 @@
                 <input name="imagem_url" type="url" maxlength="1000" placeholder="https://..." />
               </label>
               <label class="full-span admin-only">
-                <span>Enviar imagem do produto</span>
-                <input id="image-upload" name="imagem_upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" />
-                <small>Formatos aceitos: PNG, JPG, WebP, GIF ou AVIF. Limite de 10 MB.</small>
-              </label>
-              <label class="full-span admin-only">
                 <span>Arquivo de imagem local</span>
                 <input name="imagem_arquivo" maxlength="1000" placeholder="imagens/nome-do-arquivo.png" />
                 <small>Use somente um arquivo existente dentro de <code>imagens/</code>.</small>
@@ -261,12 +272,9 @@
                 <textarea name="frases_encarte" rows="3" maxlength="1000" placeholder="Observações ou frases promocionais"></textarea>
               </label>
             </div>
+            </details>
 
             <div class="check-row">
-              <label class="check-field">
-                <input name="generico" type="checkbox" />
-                <span>Produto genérico</span>
-              </label>
               <label class="check-field">
                 <input name="produto_destaque" type="checkbox" />
                 <span>Produto em destaque</span>
@@ -282,6 +290,39 @@
             <button class="primary-button admin-only" id="save-product-button" type="submit" disabled>Salvar alterações</button>
           </div>
         </footer>
+      </form>
+    </dialog>
+
+    <dialog class="product-dialog reference-dialog" id="manufacturer-dialog" aria-labelledby="manufacturer-title">
+      <form id="manufacturer-form">
+        <header class="dialog-header">
+          <div><p class="eyebrow">Cadastro separado</p><h2 id="manufacturer-title">Fabricantes</h2></div>
+          <button class="close-button" id="close-manufacturers" type="button" aria-label="Fechar fabricantes">×</button>
+        </header>
+        <div class="form-fields field-grid">
+          <label><span>Fabricante cadastrado</span><select id="manufacturer-existing"><option value="">Novo fabricante</option></select></label>
+          <label><span>Nome do fabricante</span><input id="manufacturer-name" required maxlength="255" placeholder="Ex.: Vini Lady" /></label>
+          <small>Variações de espaços, letras maiúsculas e acentos não criam outro fabricante. Ao editar, os produtos vinculados também são atualizados.</small>
+          <p id="manufacturer-feedback" class="registration-feedback" role="status" aria-live="polite"></p>
+        </div>
+        <footer class="dialog-footer"><button class="primary-button" id="save-manufacturer" type="submit">Cadastrar fabricante</button></footer>
+      </form>
+    </dialog>
+
+    <dialog class="product-dialog reference-dialog" id="group-images-dialog" aria-labelledby="group-images-title">
+      <form id="group-images-form">
+        <header class="dialog-header">
+          <div><p class="eyebrow">Imagens compartilhadas</p><h2 id="group-images-title">Caixinhas padrão</h2></div>
+          <button class="close-button" id="close-group-images" type="button" aria-label="Fechar imagens padrão">×</button>
+        </header>
+        <div class="form-fields field-grid">
+          <p>Envie a caixinha de cada grupo. Ela aparece automaticamente quando o produto não tem uma imagem própria.</p>
+          <label><span>Grupo</span><select id="default-image-group"><option value="TARJADO">TARJADO</option><option value="GENÉRICO">GENÉRICO</option></select></label>
+          <div class="default-image-preview" id="default-image-preview"></div>
+          <label><span>Enviar caixinha padrão</span><input id="default-image-file" type="file" required accept="image/png,image/jpeg,image/webp,image/gif,image/avif" /><small>Até 10 MB. Substituir a caixinha atualiza os produtos que usam a imagem padrão.</small></label>
+          <p id="group-images-feedback" class="registration-feedback" role="status" aria-live="polite"></p>
+        </div>
+        <footer class="dialog-footer"><button class="primary-button" id="save-group-image" type="submit">Salvar imagem padrão</button></footer>
       </form>
     </dialog>
 

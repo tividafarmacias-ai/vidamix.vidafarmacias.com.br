@@ -3,10 +3,36 @@ import test from 'node:test';
 import {
   drawStoryVideoFrame,
   getStoryVideoLayerState,
+  getStoryVideoDuration,
+  getStoryVideoMotionRanges,
   STORY_VIDEO_DURATION_SECONDS,
 } from '../public/js/features/stories/video-animation.js';
+import { getStoryVideoFramePlan } from '../public/js/features/stories/video-export.js';
 
 const STILL = { opacity: 1, translateX: 0, translateY: 0, scale: 1 };
+
+test('wallpaper adds a three-second opening and preserves the full offers animation', () => {
+  assert.equal(getStoryVideoDuration(false), 15);
+  assert.equal(getStoryVideoDuration(true), 18);
+  const artwork = { ...snapshot(), wallpaper: 'wallpaper' };
+  for (const time of [0, 2, 2.75]) {
+    const context = new FakeContext();
+    const initial = context.state();
+    drawStoryVideoFrame(context, artwork, time);
+    assert.deepEqual(context.draws.map(draw => draw.canvas), ['background', 'wallpaper']);
+    assert.equal(context.draws[1].globalAlpha, time === 2.75 ? 0.5 : 1);
+    assert.deepEqual(context.state(), initial);
+  }
+  for (const time of [0, 0.7, 7.5, 15]) {
+    const original = new FakeContext();
+    const withOpening = new FakeContext();
+    drawStoryVideoFrame(original, snapshot(), time);
+    drawStoryVideoFrame(withOpening, artwork, time + 3);
+    // Floating point subtraction can slightly change animated coordinates.
+    assert.deepEqual(withOpening.draws.map(draw => draw.canvas), original.draws.map(draw => draw.canvas));
+    withOpening.draws.forEach((draw, index) => assert.ok(Math.abs(draw.globalAlpha - original.draws[index].globalAlpha) < 1e-10));
+  }
+});
 const LAYERS = [
   { kind: 'product', index: 0 },
   { kind: 'product', index: 1 },
@@ -134,6 +160,30 @@ function snapshot() {
     }))),
   });
 }
+
+test('Stories and Feed motion maps only skip identical frames, including wallpaper and delayed layers', () => {
+  for (const height of [1920, 1350]) {
+    for (const wallpaper of [null, 'wallpaper']) {
+      for (const layers of [[], snapshot().layers.slice(0, 1), snapshot().layers, [
+        ...snapshot().layers, { ...snapshot().layers.at(-1), index: 1 },
+      ]]) {
+        const artwork = { ...snapshot(), height, wallpaper, layers };
+        const duration = getStoryVideoDuration(Boolean(wallpaper));
+        const plan = getStoryVideoFramePlan({ duration, motionRanges: getStoryVideoMotionRanges(artwork) });
+        assert.ok(plan.length < duration * 30 / 4, 'At least 75% fewer frames for these compositions');
+        for (const sample of plan) {
+          const first = new FakeContext();
+          drawStoryVideoFrame(first, artwork, sample.startFrame / 30);
+          for (let frame = sample.startFrame + 1; frame < sample.endFrame; frame += 1) {
+            const skipped = new FakeContext();
+            drawStoryVideoFrame(skipped, artwork, frame / 30);
+            assert.deepEqual(skipped.draws, first.draws, `Cannot skip motion at ${frame / 30}s`);
+          }
+        }
+      }
+    }
+  }
+});
 
 test('the reading interval preserves painting order, geometry and product blending', () => {
   const context = new FakeContext();

@@ -16,9 +16,10 @@ class Element {
   async emit(event) { await this.listeners[event]?.({ preventDefault() {} }); }
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
-function fixture(report) {
+function fixture(report, options = {}) {
   const elements = new Map([...markup.matchAll(/id="(revista-[^"]+)"/g)].map(([, id]) => [id, new Element()]));
   const calls = [];
+  let campaign = options.campaign || null;
   const document = {
     getElementById: id => elements.get(id), createElement: () => new Element(),
     createDocumentFragment: () => Object.assign(new Element(), { fragment: true }),
@@ -26,9 +27,18 @@ function fixture(report) {
   const sandbox = vm.createContext({ document, FormData, AbortSignal,
     authFetch: async (url, options) => {
       calls.push({ url, options });
-      const data = url.endsWith('/validate') ? report : options?.method === 'POST'
-        ? { campaign: { id: 1, name: 'Revista 10/2026', month: '10/2026', items: report.items }, skippedCount: report.total - report.items.length }
-        : { items: [] };
+      let data;
+      if (url.endsWith('/validate')) data = report;
+      else if (options?.method === 'POST') {
+        campaign = { id: 1, name: 'Revista 10/2026', month: '10/2026', items: report.items,
+          backgrounds: JSON.parse(options.body.get('backgrounds') || '{}') };
+        data = { campaign, skippedCount: report.total - report.items.length };
+      } else if (options?.method === 'PUT') {
+        campaign = { ...campaign, backgrounds: JSON.parse(options.body).backgrounds };
+        data = campaign;
+      } else if (url === '/api/revista/campaigns') data = { items: campaign ? [{ ...campaign, productCount: campaign.items.length }] : [] };
+      else if (url.startsWith('/api/revista/campaigns/')) data = campaign;
+      else data = { items: [{ arquivo: 'campanha.png', nome: 'Campanha', thumbnail_url: '/campanha-thumb.png' }] };
       return { ok: true, json: async () => data };
     },
   });
@@ -81,4 +91,43 @@ test('row errors remain visible while the valid subset can be saved', async () =
   await f.get('create').emit('click');
   assert.equal(f.get('detail-items').children.length, 1);
   assert.match(f.get('status').textContent, /2 linhas foram ignoradas/);
+});
+
+test('magazine background selectors preview and save assignments on creation and on existing campaigns', async () => {
+  const f = fixture({ valid: true, total: 1, items: [product], missing: [], errors: [], month: '10/2026' });
+  await settle();
+  const storyPicker = f.get('import-backgrounds').children[0];
+  const storySelect = storyPicker.children[1];
+  assert.equal(storySelect.disabled, false);
+  storySelect.value = 'campanha.png';
+  await storySelect.emit('change');
+  assert.equal(storyPicker.children[2].src, '/campanha-thumb.png');
+  assert.equal(storyPicker.children[2].hidden, false);
+  await f.get('import-form').emit('submit');
+  await f.get('create').emit('click');
+  const saved = f.calls.find(call => call.options?.method === 'POST' && call.url.endsWith('/campaigns'));
+  assert.deepEqual(JSON.parse(saved.options.body.get('backgrounds')), { stories: 'campanha.png' });
+  const storyDetail = f.get('detail-backgrounds').children[0].children[1];
+  const feedDetail = f.get('detail-backgrounds').children[1].children[1];
+  assert.equal(storyDetail.value, 'campanha.png');
+  storyDetail.value = '';
+  feedDetail.value = 'campanha.png';
+  await f.get('background-form').emit('submit');
+  const update = f.calls.find(call => call.options?.method === 'PUT');
+  assert.equal(update.url, '/api/revista/campaigns/1/backgrounds');
+  assert.deepEqual(JSON.parse(update.options.body), { backgrounds: { feed: 'campanha.png' } });
+  assert.match(f.get('detail-status').textContent, /Backgrounds salvos/);
+  await f.get('campaigns').children[0].children.at(-1).children[0].emit('click');
+  assert.equal(storyDetail.value, '');
+  assert.equal(feedDetail.value, 'campanha.png');
+});
+
+test('opening an older magazine keeps an unavailable background visible until it is replaced or removed', async () => {
+  const f = fixture(null, { campaign: { id: 7, name: 'Revista antiga', month: '10/2026', items: [product], backgrounds: { stories: 'removido.png' } } });
+  await settle();
+  await f.get('campaigns').children[0].children.at(-1).children[0].emit('click');
+  const picker = f.get('detail-backgrounds').children[0];
+  assert.equal(picker.children[1].value, 'removido.png');
+  assert.match(picker.children[1].children.at(-1).textContent, /indisponível/);
+  assert.equal(picker.children[2].hidden, true);
 });

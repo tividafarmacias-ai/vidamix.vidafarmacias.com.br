@@ -2,8 +2,8 @@ export const PRODUCT_LIMIT = 5;
 export const INDOOR_DURATION_TIERS = [10, 15, 20];
 export const DEFAULT_INDOOR_DURATION = INDOOR_DURATION_TIERS[0];
 
-export function addProduct(selection, product) {
-  if (!product?.id || !product.imagem_local_url || selection.length >= PRODUCT_LIMIT
+export function addProduct(selection, product, limit = PRODUCT_LIMIT) {
+  if (!product?.id || !product.imagem_local_url || selection.length >= limit
       || selection.some((item) => item.product.id === product.id)) return selection;
   return [...selection, { product, originalPrice: '', price: '', duration: DEFAULT_INDOOR_DURATION }];
 }
@@ -31,8 +31,8 @@ export function moveProduct(selection, id, direction) {
   return result;
 }
 
-export function canContinue(selection) {
-  return selection.length === PRODUCT_LIMIT
-    && new Set(selection.map((item) => item.product.id)).size === PRODUCT_LIMIT
+export function canContinue(selection, { flexible = false, limit = PRODUCT_LIMIT } = {}) {
+  return (flexible ? selection.length > 0 && selection.length <= limit : selection.length === limit)
+    && new Set(selection.map((item) => item.product.id)).size === selection.length
     && selection.every((item) => Boolean(item.product.imagem_local_url));
 }

@@ -64,7 +64,7 @@ export const tours = {
         target: '[data-tour="catalogue-actions"]',
         eyebrow: 'Pronto para criar',
         title: 'Cadastre ou crie uma arte',
-        description: 'Novo produto abre o cadastro. Criar Story e Criar Feed levam ao editor do formato escolhido. Nos cartões dos produtos, esses atalhos já levam o item para a arte. O botão Tour guiado permite rever estas dicas.',
+        description: 'Novo produto abre o cadastro. Nos cartões dos produtos, os atalhos Criar Story e Criar Feed levam o item para o editor do formato escolhido. O botão Tour guiado permite rever estas dicas.',
         placement: 'bottom',
       },
     ],
@@ -167,7 +167,7 @@ const customerCatalogue = {
   ...tours.catalogue,
   steps: tours.catalogue.steps.map((step) => {
     if (step.id === 'results') return { ...step, description: 'Os resultados aparecem nos cartões abaixo. Use as setas para mudar de página e abra Detalhes para consultar os dados do produto.' };
-    if (step.id === 'actions') return { ...step, title: 'Crie sua próxima arte', description: 'Criar Story e Criar Feed levam ao editor do formato escolhido. Nos cartões dos produtos, esses atalhos já levam o item para a arte. Para vídeos de TV Indoor, use o menu de navegação. O catálogo está disponível para consulta.' };
+    if (step.id === 'actions') return { ...step, title: 'Crie sua próxima arte', description: 'Nos cartões dos produtos, os atalhos Criar Story e Criar Feed levam o item para o editor do formato escolhido. Para vídeos de TV Indoor, use o menu de navegação. O botão Tour guiado permite rever estas dicas. O catálogo está disponível para consulta.' };
     return step;
   }),
 };

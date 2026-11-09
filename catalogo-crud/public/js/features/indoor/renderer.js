@@ -1,4 +1,5 @@
 import { INDOOR_DURATION_TIERS, DEFAULT_INDOOR_DURATION } from './model.js';
+import { getDiscountLabel } from '../discount.js';
 
 export const INDOOR_WIDTH = 1920;
 export const INDOOR_HEIGHT = 1080;
@@ -41,7 +42,21 @@ export function getIndoorDuration(hasWallpaper = false, products = []) {
   return (hasWallpaper ? INDOOR_INTRO_DURATION : 0) + offers;
 }
 
-/** One timeline for preview, scene navigation and frame-by-frame MP4 rendering. */
+/** Includes the opening zoom/reveal, every product transition and the loop return. */
+export function getIndoorMotionRanges({ hasWallpaper = false, products = [] } = {}) {
+  const durations = getProductDurations(products);
+  const ranges = hasWallpaper ? [{ start: 0, end: INDOOR_INTRO_DURATION }] : [];
+  let end = hasWallpaper ? INDOOR_INTRO_DURATION : 0;
+  durations.forEach((duration, index) => {
+    end += duration;
+    const movement = hasWallpaper && index === durations.length - 1
+      ? LOOP_RETURN_DURATION : TRANSITION_DURATION;
+    ranges.push({ start: end - movement, end });
+  });
+  return ranges;
+}
+
+/** One timeline for preview, scene navigation and MP4 rendering. */
 export function getCarouselState(seconds, { hasWallpaper = false, products = [] } = {}) {
   const durations = getProductDurations(products);
   const total = getIndoorDuration(hasWallpaper, products);
@@ -240,13 +255,28 @@ function drawDetails(context, entry, badgeTheme) {
     if (originalPrice || price) {
       let priceY = panelY + panelHeight + 34;
       if (originalPrice) {
+        const discount = getDiscountLabel(originalPrice, price);
+        const discountWidth = discount ? 220 : 0;
         context.font = `600 48px ${FONT_FAMILY}`;
         context.fillStyle = '#080808';
-        const label = ellipsize(context, 'De ' + originalPrice, contentWidth);
+        const label = ellipsize(context, 'De ' + originalPrice, contentWidth - discountWidth);
         context.fillText(label, contentX, priceY);
         const labelWidth = context.measureText('De ').width;
         context.fillRect(contentX + labelWidth, priceY + 28,
           Math.max(0, context.measureText(label).width - labelWidth), 3);
+        if (discount) {
+          const x = contentX + contentWidth - discountWidth + 12;
+          context.fillStyle = badgeTheme.fill;
+          roundedRectangle(context, x, priceY, discountWidth - 12, 50, 12);
+          context.fill();
+          context.font = `800 28px ${FONT_FAMILY}`;
+          context.fillStyle = badgeTheme.text;
+          context.textAlign = 'center';
+          context.textBaseline = 'middle';
+          context.fillText(discount, x + (discountWidth - 12) / 2, priceY + 25);
+          context.textAlign = 'left';
+          context.textBaseline = 'top';
+        }
         priceY += 60;
       }
       if (price) {
@@ -286,14 +316,14 @@ function drawProduct(context, entry, badgeTheme) {
 
 /**
  * Paints directly into the supplied 1920×1080 canvas; no intermediate canvases or DOM.
- * products: exactly five { product: { nome, subtitulo, fabricante }, image, originalPrice, price, duration } entries;
+ * products: one or more { product: { nome, subtitulo, fabricante }, image, originalPrice, price, duration } entries;
  * duration is one of the 10/15/20-second tiers and anything else falls back to ten seconds.
  * background and image must be loaded CanvasImageSources. Missing images are skipped.
  * Returns the carousel state used, so preview controls can follow the same timeline.
  */
 export function drawIndoorFrame(context, { background, wallpaper, products, badgeTheme = { fill: '#2768dc', text: '#ffffff' } }, seconds) {
-  if (!Array.isArray(products) || products.length !== INDOOR_PRODUCT_COUNT || products.some((entry) => !entry)) {
-    throw new RangeError('O vídeo Indoor precisa de exatamente 5 produtos.');
+  if (!Array.isArray(products) || !products.length || products.some((entry) => !entry)) {
+    throw new RangeError('O vídeo Indoor precisa de ao menos um produto válido.');
   }
   const state = getCarouselState(seconds, { hasWallpaper: Boolean(imageSize(wallpaper)), products });
   context.save();

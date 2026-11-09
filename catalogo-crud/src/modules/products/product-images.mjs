@@ -1,6 +1,17 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { fileVersion } from '../../http/file-version.mjs';
+import { normalizeGroup } from './product-references.mjs';
+
+export function productImageGroup(product) {
+  return product.generico ? 'GENÉRICO' : normalizeGroup(product.grupo);
+}
+
+export function configuredProductImages(database) {
+  return Object.fromEntries(['TARJADO', 'GENÉRICO'].map((group) => [group,
+    database.prepare('SELECT value FROM app_meta WHERE key = ?').get(`product_image_${group}`)?.value || null,
+  ]));
+}
 
 export function productImageUrl(filename, imagesDirectory) {
   const url = `/assets/${filename.split('/').map(encodeURIComponent).join('/')}`;

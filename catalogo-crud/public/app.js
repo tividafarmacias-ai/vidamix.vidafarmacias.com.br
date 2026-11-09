@@ -11,6 +11,8 @@ const state = {
   pagination: { page: 1, pageSize: 48, total: 0, totalPages: 1 },
   editingId: null,
   categories: [],
+  manufacturers: [],
+  groups: [],
   requestId: 0,
 };
 
@@ -271,9 +273,11 @@ function formValue(name) {
 function resetForm() {
   clearSelectedImagePreview();
   elements.form.reset();
+  elements.imageFile.setCustomValidity('');
   setFormValue('status', 'ativo');
   setFormValue('direcao_imagem', 'vertical');
   setFormValue('imagem_arquivo', '');
+  elements.form.querySelector('.registration-extra').open = false;
 }
 
 function clearSelectedImagePreview() {
@@ -291,18 +295,21 @@ function renderDialogImage(product) {
     image.src = localUrl;
     image.addEventListener('error', () => renderDialogImage(null));
     elements.imagePreview.append(image);
-    elements.imageCaption.textContent = `Imagem local disponível (${product.imagem_status || 'manual'}).`;
+    elements.imageCaption.textContent = product.imagem_padrao ? `Caixinha padrão de ${product.grupo}.` : 'Imagem do produto disponível.';
     return;
   }
 
-  elements.imagePreview.append(createElement('span', null, '⌁'), createElement('p', null, 'Sem imagem local'));
-  elements.imageCaption.textContent = 'A imagem local é definida pelo manifesto importado ou por um arquivo em imagens/.';
+  elements.imagePreview.append(createElement('span', null, '⌁'), createElement('p', null, 'Sem imagem'));
+  elements.imageCaption.textContent = 'Envie uma imagem ou selecione um grupo com caixinha padrão configurada.';
 }
 
 function previewTypedImage() {
   if (elements.imageFile?.files?.length) return;
   const localFile = String(formValue('imagem_arquivo') || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
-  if (!localFile.startsWith('imagens/') || localFile.includes('..')) return renderDialogImage(null);
+  if (!localFile.startsWith('imagens/') || localFile.includes('..')) {
+    const group = state.groups.find((item) => item.nome === formValue('grupo'));
+    return renderDialogImage(group?.imagem_local_url ? { ...group, grupo: group.nome, imagem_padrao: true } : null);
+  }
   renderDialogImage({
     nome: formValue('nome') || 'Imagem do produto',
     imagem_local_url: `/assets/${localFile.split('/').map(encodeURIComponent).join('/')}`,
@@ -313,10 +320,17 @@ function previewTypedImage() {
 function previewSelectedImage() {
   const file = elements.imageFile?.files?.[0];
   if (!file) {
+    elements.imageFile.setCustomValidity('');
     clearSelectedImagePreview();
     previewTypedImage();
     return;
   }
+  if (file.size > 10_000_000) {
+    elements.imageFile.setCustomValidity('A imagem excede o limite de 10 MB.');
+    elements.imageFile.reportValidity();
+    return;
+  }
+  elements.imageFile.setCustomValidity('');
   clearSelectedImagePreview();
   selectedImagePreviewUrl = URL.createObjectURL(file);
   renderDialogImage({
@@ -338,6 +352,12 @@ function openDialog(product = null) {
     elements.saveButton.textContent = 'Salvar alterações';
     elements.deleteButton.hidden = !state.canManage;
 
+    if (product.fabricante && !Array.from(elements.form.elements.namedItem('fabricante').options).some((option) => option.value === product.fabricante)) {
+      elements.form.elements.namedItem('fabricante').append(new Option(product.fabricante, product.fabricante));
+    }
+    if (product.grupo && !Array.from(elements.form.elements.namedItem('grupo').options).some((option) => option.value === product.grupo)) {
+      elements.form.elements.namedItem('grupo').append(new Option(product.grupo, product.grupo));
+    }
     [
       'nome', 'subtitulo', 'caracteres', 'grupo', 'principio_ativo', 'ms', 'fabricante',
       'categoria_id', 'categoria_produtos', 'categoria_nome', 'frases_encarte', 'status',
@@ -351,13 +371,15 @@ function openDialog(product = null) {
     elements.deleteButton.hidden = true;
   }
 
+  updateGroupHelp();
+  updateUploadHelp();
   renderDialogImage(product);
   elements.dialog.showModal();
   // Opening product details should not immediately cover the mobile screen with a keyboard.
   if (!state.canManage || window.matchMedia('(max-width: 900px)').matches) {
     document.querySelector('#close-dialog-button').focus({ preventScroll: true });
   } else {
-    elements.form.elements.namedItem('nome').focus();
+    elements.form.elements.namedItem(product ? 'nome' : 'ean').focus();
   }
 }
 
@@ -383,7 +405,7 @@ function payloadFromForm() {
     'data_vigencia_inicio', 'data_vigencia_fim', 'ean', 'direcao_imagem', 'imagem_url', 'imagem_arquivo',
   ];
   const payload = Object.fromEntries(fields.map((field) => [field, formValue(field)]));
-  payload.generico = formValue('generico');
+  payload.generico = formValue('grupo') === 'GENÉRICO';
   payload.produto_destaque = formValue('produto_destaque');
   return payload;
 }
@@ -401,6 +423,7 @@ async function uploadProductImage(productId, file) {
 async function saveProduct(event) {
   event.preventDefault();
   if (!state.canManage) return;
+  if (!elements.form.reportValidity()) return;
   const name = String(formValue('nome')).trim();
   if (!name) {
     showToast('Informe o nome do produto.', true);
@@ -482,9 +505,19 @@ function bindEvents() {
   document.querySelector('#cancel-dialog-button').addEventListener('click', closeDialog);
   document.querySelector('#clear-filters-button').addEventListener('click', clearFilters);
   elements.form.addEventListener('submit', saveProduct);
+  elements.form.addEventListener('invalid', (event) => {
+    const details = event.target.closest('.registration-extra');
+    if (details) details.open = true;
+  }, true);
   elements.deleteButton.addEventListener('click', deleteCurrentProduct);
   elements.form.elements.namedItem('imagem_arquivo').addEventListener('input', previewTypedImage);
   elements.imageFile.addEventListener('change', previewSelectedImage);
+  elements.form.elements.namedItem('ean').addEventListener('input', updateUploadHelp);
+  elements.form.elements.namedItem('grupo').addEventListener('change', () => {
+    updateGroupHelp();
+    previewTypedImage();
+  });
+  bindReferenceEvents();
 
   elements.search.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -520,6 +553,132 @@ function bindEvents() {
   });
 }
 
+function updateUploadHelp() {
+  const ean = String(formValue('ean')).trim();
+  document.querySelector('#upload-help').textContent = /^\d{8,14}$/.test(ean)
+    ? `A imagem será vinculada ao EAN ${ean} ao salvar. Até 10 MB.`
+    : 'PNG, JPG, WebP, GIF ou AVIF. Até 10 MB. Informe o EAN para identificar o arquivo enviado.';
+}
+
+function updateGroupHelp() {
+  const group = state.groups.find((item) => item.nome === formValue('grupo'));
+  document.querySelector('#group-image-help').textContent = ['TARJADO', 'GENÉRICO'].includes(formValue('grupo'))
+    ? (group?.imagem_local_url ? 'Usa a caixinha padrão quando não há foto própria.' : 'A caixinha padrão deste grupo ainda não foi enviada.') : '';
+}
+
+async function loadReferences() {
+  if (!state.canManage) return;
+  const [manufacturers, groups] = await Promise.all([requestJson('/api/manufacturers'), requestJson('/api/product-groups')]);
+  state.manufacturers = manufacturers.items;
+  state.groups = groups.items;
+  const selected = formValue('fabricante');
+  const field = elements.form.elements.namedItem('fabricante');
+  field.replaceChildren(new Option('Selecione o fabricante', ''), ...state.manufacturers.map((item) => new Option(item.nome, item.nome)));
+  field.value = selected;
+  document.querySelector('#manufacturer-existing').replaceChildren(new Option('Novo fabricante', ''),
+    ...state.manufacturers.map((item) => new Option(item.nome, String(item.id))));
+}
+
+function referenceFeedback(id, message = '', isError = false) {
+  const feedback = document.querySelector(id);
+  feedback.textContent = message;
+  feedback.classList.toggle('error', isError);
+}
+
+function renderDefaultImage() {
+  const group = state.groups.find((item) => item.nome === document.querySelector('#default-image-group').value);
+  const preview = document.querySelector('#default-image-preview');
+  preview.replaceChildren();
+  if (group?.imagem_local_url) {
+    const image = new Image();
+    image.alt = `Caixinha padrão de ${group.nome}`;
+    image.src = group.imagem_local_url;
+    preview.append(image);
+  } else preview.textContent = 'Nenhuma caixinha enviada para este grupo.';
+}
+
+function bindReferenceEvents() {
+  const manufacturerDialog = document.querySelector('#manufacturer-dialog');
+  const groupDialog = document.querySelector('#group-images-dialog');
+  const existing = document.querySelector('#manufacturer-existing');
+  const name = document.querySelector('#manufacturer-name');
+  const save = document.querySelector('#save-manufacturer');
+  document.querySelector('#manage-manufacturers').addEventListener('click', async () => {
+    if (!state.canManage) return;
+    try {
+      await loadReferences();
+      existing.value = '';
+      name.value = '';
+      save.textContent = 'Cadastrar fabricante';
+      referenceFeedback('#manufacturer-feedback');
+      manufacturerDialog.showModal();
+      name.focus();
+    } catch (error) { showToast(error.message, true); }
+  });
+  document.querySelector('#close-manufacturers').addEventListener('click', () => manufacturerDialog.close());
+  existing.addEventListener('change', () => {
+    name.value = state.manufacturers.find((item) => String(item.id) === existing.value)?.nome || '';
+    save.textContent = existing.value ? 'Salvar fabricante' : 'Cadastrar fabricante';
+    referenceFeedback('#manufacturer-feedback');
+  });
+  document.querySelector('#manufacturer-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!state.canManage) return;
+    save.disabled = true;
+    try {
+      const id = existing.value;
+      const result = await requestJson(id ? `/api/manufacturers/${id}` : '/api/manufacturers', {
+        method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: name.value }),
+      });
+      await loadReferences();
+      setFormValue('fabricante', result.nome);
+      manufacturerDialog.close();
+      showToast('Fabricante salvo e selecionado.');
+      if (id) await loadProducts();
+    } catch (error) { referenceFeedback('#manufacturer-feedback', error.message, true); }
+    finally { save.disabled = false; }
+  });
+  document.querySelector('#manage-group-images').addEventListener('click', async () => {
+    if (!state.canManage) return;
+    try {
+      await loadReferences();
+      document.querySelector('#group-images-form').reset();
+      if (['TARJADO', 'GENÉRICO'].includes(formValue('grupo'))) document.querySelector('#default-image-group').value = formValue('grupo');
+      referenceFeedback('#group-images-feedback');
+      renderDefaultImage();
+      groupDialog.showModal();
+    } catch (error) { showToast(error.message, true); }
+  });
+  document.querySelector('#close-group-images').addEventListener('click', () => groupDialog.close());
+  document.querySelector('#default-image-group').addEventListener('change', () => {
+    document.querySelector('#default-image-file').value = '';
+    referenceFeedback('#group-images-feedback');
+    renderDefaultImage();
+  });
+  document.querySelector('#group-images-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!state.canManage) return;
+    const button = document.querySelector('#save-group-image');
+    const file = document.querySelector('#default-image-file').files[0];
+    if (!file) return;
+    if (file.size > 10_000_000) return referenceFeedback('#group-images-feedback', 'A imagem excede o limite de 10 MB.', true);
+    button.disabled = true;
+    try {
+      const data = new FormData();
+      data.append('image', file, file.name);
+      await requestJson(`/api/product-groups/${encodeURIComponent(document.querySelector('#default-image-group').value)}/image`, { method: 'POST', body: data });
+      await loadReferences();
+      renderDefaultImage();
+      updateGroupHelp();
+      previewTypedImage();
+      document.querySelector('#default-image-file').value = '';
+      referenceFeedback('#group-images-feedback', 'Caixinha salva. Os produtos deste grupo sem foto própria já usam esta imagem.');
+      await loadProducts();
+    } catch (error) { referenceFeedback('#group-images-feedback', error.message, true); }
+    finally { button.disabled = false; }
+  });
+}
+
 function applyPermissions() {
   elements.saveButton.disabled = !state.canManage;
   elements.deleteButton.disabled = !state.canManage;
@@ -546,9 +705,9 @@ async function initialize() {
       return;
     }
     state.canManage = session.user.role === 'admin';
-    applyPermissions();
     bindEvents();
-    await Promise.all([loadCategories(), loadProducts()]);
+    await Promise.all([loadCategories(), loadProducts(), loadReferences()]);
+    applyPermissions();
   } catch (error) {
     showToast(error.message, true);
   }
