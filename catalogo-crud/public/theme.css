@@ -17,7 +17,7 @@
 }
 .app-theme-toggle:hover { background: var(--color-blue-soft); }
 .app-theme-toggle:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
-.site-header-inner > .app-theme-toggle { order: 10; }
+.site-header-inner > .app-theme-toggle { order: 10; margin-left: auto; }
 .offline-page > .app-theme-toggle { position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); }
 .theme-icon-sun, [data-theme="dark"] .theme-icon-moon { display: none; }
 [data-theme="dark"] .theme-icon-sun { display: block; }

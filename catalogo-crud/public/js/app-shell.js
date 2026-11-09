@@ -10,9 +10,9 @@ const destinations = [
 ];
 
 const headerDestinations = [
-  { screen: 'home', href: '/', label: 'Central' },
+  destinations.find(({ screen }) => screen === 'home'),
   ...destinations.filter(({ screen }) => screen === 'catalogue' || screen === 'revista'),
-  { screen: 'backgrounds', href: '/backgrounds', label: 'Backgrounds' },
+  { screen: 'backgrounds', href: '/backgrounds', label: 'Fundos', icon: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="2"/><path d="m3 17 5-5 4 4 4-6 5 7"/>' },
   ...destinations.filter(({ screen }) => screen === 'stories' || screen === 'feed'),
   indoorDestination,
 ];
@@ -57,12 +57,33 @@ export function initAppHeader(win, doc, screen, session = null) {
     brand.href = session ? '/' : '/login';
     brand.setAttribute('aria-label', 'VidaMix Studio');
   }
+  const groups = new Map();
   for (const destination of getHeaderDestinations(session?.user.role)) {
+    const groupName = ['catalogue', 'revista', 'backgrounds'].includes(destination.screen) ? 'Biblioteca'
+      : ['stories', 'feed', 'indoor'].includes(destination.screen) ? 'Criar artes' : '';
+    let host = nav;
+    if (groupName) {
+      if (!groups.has(groupName)) {
+        const group = doc.createElement('div');
+        group.className = 'site-nav-group';
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-label', groupName);
+        groups.set(groupName, group);
+        nav.append(group);
+      }
+      host = groups.get(groupName);
+    }
     const link = doc.createElement('a');
     link.href = destination.href;
-    link.textContent = destination.label;
+    const icon = doc.createElement('span');
+    icon.className = 'site-nav-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${destination.icon}</svg>`;
+    const label = doc.createElement('span');
+    label.textContent = destination.label;
+    link.append(icon, label);
     if (destination.screen === screen) link.setAttribute('aria-current', 'page');
-    nav.append(link);
+    host.append(link);
   }
   if (session) {
     const account = doc.createElement('span');

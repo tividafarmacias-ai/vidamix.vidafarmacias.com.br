@@ -324,18 +324,22 @@ padrão), com transições horizontais suaves. O final retorna ao wallpaper para
 repetir o vídeo na televisão; fundos antigos sem wallpaper mantêm o carrossel,
 com retorno ao primeiro produto.
 
-1. Busque e selecione cinco produtos diferentes do catálogo, todos com imagem
-   local disponível. A seleção mostra quantos produtos faltam para continuar.
-2. Reordene os produtos na sequência desejada, escolha o tempo de cada um na TV
-   e informe os preços de cada oferta, se quiser. Os preços são opcionais e
-   acompanham o produto quando sua posição muda. Remova um item para
-   substituí-lo por outro.
-3. Continue para escolher uma campanha e conferir a prévia animada. Os atalhos
-   permitem revisar a abertura e cada produto, com os respectivos intervalos.
-   Confira a descrição dos produtos e os preços antes da exportação.
-4. Clique em **Baixar MP4** e acompanhe a geração do arquivo. O vídeo é criado
-   no navegador; mantenha a página aberta até a conclusão. Depois, transfira
-   o arquivo para a televisão ou para o sistema de exibição da loja.
+A tela **Criar anuncio para Media Indoor** reúne fundo, produtos, ofertas e
+prévia em um único editor, sem etapas. Os painéis **Fundo do anúncio** e
+**Produtos** são retráteis e mantêm as escolhas ao serem recolhidos. Você pode
+escolher o fundo ou os produtos primeiro. No celular, a prévia aparece acima
+dos painéis, com os mesmos controles disponíveis.
+
+Busque cinco produtos diferentes com imagem local. Em **Ofertas do anúncio**,
+reordene os itens, escolha o tempo de cada um e preencha os preços opcionais.
+A prévia atualiza automaticamente a cada alteração, mesmo durante uma seleção
+parcial. Os atalhos abaixo do vídeo permitem conferir a abertura e cada oferta.
+A exportação fica disponível quando os cinco produtos, o fundo e as imagens
+estiverem prontos; seleções vindas da revista mantêm sua quantidade de ofertas.
+
+Use **Baixar MP4** no topo e acompanhe a geração abaixo da prévia. O vídeo é
+criado no navegador; mantenha a página aberta até a conclusão. Depois, transfira
+o arquivo para a televisão ou para o sistema de exibição da loja.
 
 Os fundos ficam em `catalogo-crud/camas-indoor-h/` (a pasta `camas-indoor-h`
 dentro da aplicação). Use `/backgrounds` para cadastrar o background e o

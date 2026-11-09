@@ -166,7 +166,8 @@ test('customer navigation waits for the session, includes TV Indoor and omits ad
   resolveSession({ user: { id: 9, name: '<Conta cliente>', role: 'cliente' } });
   await f.ready;
   const nav = f.inner.children.find(({ className }) => className === 'site-nav');
-  assert.deepEqual(nav.children.filter(({ href }) => href).map(({ href }) => href), ['/', '/catalogo', '/revista/ofertas', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
+  const links = nav.children.flatMap(child => child.className === 'site-nav-group' ? child.children : [child]).filter(({ href }) => href);
+  assert.deepEqual(links.map(({ href }) => href), ['/', '/catalogo', '/revista/ofertas', '/artes/stories', '/artes/feed', '/artes/indoor-h']);
   assert.equal(nav.children.find(({ className }) => className === 'site-account').textContent, '<Conta cliente> · Cliente');
   assert.equal(f.inner.children.find(({ className }) => className === 'site-logout').textContent, 'Sair');
   assert.equal(f.brand.href, '/');

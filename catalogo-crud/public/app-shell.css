@@ -1,6 +1,6 @@
 /* One header for every screen; page-specific tools stay inside the workspace. */
 :root {
-  --app-header-height: calc(72px + env(safe-area-inset-top, 0px));
+  --app-header-height: calc(80px + env(safe-area-inset-top, 0px));
   --app-bottom-space: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 .app-tabbar, .app-screen-name { display: none; }
@@ -30,18 +30,21 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
   min-height: calc(var(--app-header-height) - env(safe-area-inset-top, 0px) - 1px);
   margin: 0 auto;
   padding: 0;
-  gap: 20px;
+  gap: 12px;
   align-items: center;
   flex-wrap: nowrap;
 }
 .site-header .site-brand { flex: 0 0 auto; min-width: 0; }
-.site-header .site-brand-logo { width: 184px; height: auto; }
-.site-nav { display: flex; margin-left: auto; gap: 4px; align-items: center; }
+.site-header .site-brand-logo { width: 168px; height: auto; }
+.site-nav { display: flex; margin-left: 0; gap: 16px; align-items: center; }
+.site-nav-group { display: flex; gap: 2px; padding: 0 0 0 16px; border-left: 1px solid var(--glass-line); }
+.site-nav-icon { display: inline-flex; flex: none; }
 .site-nav[hidden] { display: none; }
 .site-nav a, .site-logout {
   display: inline-flex;
   min-height: 44px;
-  padding: 8px 12px;
+  padding: 8px 9px;
+  gap: 7px;
   align-items: center;
   border: 1px solid transparent;
   border-radius: 12px;
@@ -53,11 +56,13 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
   white-space: nowrap;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.site-logout { order: 11; flex: none; background: var(--glass-surface-strong); font-family: inherit; cursor: pointer; }
+.site-logout { order: 11; flex: none; background: transparent; font-family: inherit; cursor: pointer; }
+.site-logout:hover { color: var(--color-ink); background: var(--glass-surface-strong); }
+.site-nav a:focus-visible, .site-logout:focus-visible, .site-menu-toggle:focus-visible { outline: 3px solid var(--azul); outline-offset: 3px; }
 .site-logout:disabled { opacity: .65; cursor: wait; }
 .site-account { display: none; min-width: 0; color: var(--color-muted); font-size: 12px; overflow-wrap: anywhere; }
 .site-nav a:hover { color: var(--azul); background: var(--glass-surface-strong); }
-.site-nav a[aria-current="page"] { color: var(--brand-blue-dark); border-color: var(--glass-selected-line); background: var(--glass-selected); box-shadow: var(--glass-highlight); }
+.site-nav a[aria-current="page"] { color: #fff; border-color: #175ba5; background: #175ba5; box-shadow: 0 3px 8px rgb(23 91 165 / 18%); }
 .site-menu-toggle {
   display: none;
   flex: 0 0 44px;
@@ -81,7 +86,7 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
   .app-screen-name {
     display: block;
     min-width: 0;
-    margin-left: auto;
+    margin-left: 0;
     color: var(--color-muted);
     font-size: 12px;
     font-weight: 600;
@@ -91,7 +96,7 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
     position: absolute;
     inset: calc(100% + 1px) 0 auto;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     max-height: calc(var(--app-viewport-height, 100dvh) - var(--app-header-height) - 16px);
     margin: 0;
     padding: 12px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
@@ -103,6 +108,7 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
     box-shadow: var(--glass-shadow);
   }
   .site-nav a { justify-content: flex-start; }
+  .site-nav-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--glass-line); }
   .site-account { display: block; grid-column: 1 / -1; padding: 8px 12px; border-top: 1px solid var(--glass-line); }
   .site-logout { justify-content: center; }
 }
@@ -123,7 +129,7 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
   }
   .site-header .site-brand-logo { width: 128px; }
   .site-logout { padding: 8px; font-size: 11px; }
-  .site-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .site-nav-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   html:not([data-user-role="cliente"]) a[href="/artes/indoor-h"], html:not([data-user-role="cliente"]) a[href="/indoor-h.html"] { display: none !important; }
   .app-screen-name {
     font-size: 11px;
@@ -181,7 +187,6 @@ html { scroll-padding-top: calc(var(--app-header-height) + 16px); }
 
 @media (max-width: 380px) {
   .app-screen-name { display: none; }
-  .site-menu-toggle { margin-left: auto; }
 }
 
 @media (prefers-reduced-transparency: reduce) {

@@ -107,30 +107,26 @@ const productPage = (items = products, page = 1, totalPages = 1) => ({
 async function openEditor(t, options = {}) {
   // Missing HTML controls must fail the same way they would in the browser.
   const elements = new Map();
-  const steps = [];
-  const backs = [];
   for (const [tag, name] of markup.matchAll(/<([a-z][a-z0-9]*)\b[^>]*>/gi)) {
     const node = new Element(name);
     const id = tag.match(/\bid="([^"]+)"/)?.[1];
     node.hidden = /\bhidden(?:\s|[=>])/.test(tag);
     node.disabled = /\bdisabled(?:\s|[=>])/.test(tag);
     node.value = tag.match(/\bvalue="([^"]*)"/)?.[1] ?? '';
-    for (const [, attribute, value] of tag.matchAll(/\b(data-step|data-go|width|height)="([^"]+)"/g)) {
-      if (attribute.startsWith('data-')) node.dataset[attribute.slice(5)] = value;
+    for (const [, attribute, value] of tag.matchAll(/\b(aria-expanded|aria-controls|width|height)="([^"]+)"/g)) {
+      if (attribute.startsWith('aria-')) node.setAttribute(attribute, value);
       else node[attribute] = Number(value);
     }
     if (id) elements.set(id, node);
-    if (node.dataset.step) steps.push(node);
-    if (node.dataset.go) backs.push(node);
   }
   const document = new Element('document');
   document.getElementById = (id) => elements.get(id) ?? null;
-  document.querySelectorAll = (selector) => selector === '[data-step]' ? steps : selector === '[data-go]' ? backs : [];
+  document.querySelectorAll = () => [];
   document.createElement = (tag) => { const node = new Element(tag); node.ownerDocument = document; return node; };
   for (const node of elements.values()) node.ownerDocument = document;
   for (const [parent, children] of Object.entries({
-    catalog: ['search', 'results'], 'selection-panel': ['selected', 'selected-heading'],
-    'product-views': ['show-catalog', 'show-selection'], 'mobile-dock': ['mobile-back', 'mobile-next'],
+    'products-content': ['search', 'results'], 'selection-panel': ['selected', 'selected-heading'],
+    'background-content': ['backgrounds', 'reload-backgrounds'],
   })) elements.get(`indoor-${parent}`).append(...children.map((id) => elements.get(`indoor-${id}`)));
   const window = new Element('window');
   window.location = { search: options.search || '' };
@@ -216,18 +212,22 @@ async function openEditor(t, options = {}) {
     await flush();
   };
   const resize = (mobile) => { media.matches = mobile; media.dispatch('change'); };
-  return { get, steps, document, window, resize, requests, imageRequests, paints, exports, createdUrls, revokedUrls, frames, runDebounce };
+  await runDebounce();
+  return { get, document, window, resize, requests, imageRequests, paints, exports, createdUrls, revokedUrls, frames, runDebounce };
 }
 
 function selectFive(fixture) {
   for (let id = 1; id <= 5; id += 1) fixture.get('results').querySelector(`[data-product-id="${id}"]`).click();
 }
 
-test('Indoor starts with the selected magazine product and saved promotional price', async t => {
+test('Indoor keeps the magazine product and price while allowing a partial preview', async t => {
   const f = await openEditor(t, { search: '?productId=1&campaignId=5' });
   assert.equal(f.get('selection-count').textContent, '1 / 5');
   assert.ok(f.get('selected').querySelectorAll('input').some(input => input.value === '37,05'));
-  assert.equal(f.get('continue').disabled, true, 'four more products are still required for the video');
+  f.get('backgrounds').querySelector('button').click();
+  await f.runDebounce();
+  assert.equal(f.get('play').disabled, false);
+  assert.equal(f.get('download').disabled, true);
 });
 
 test('Indoor preselects the magazine background and wallpaper and allows a manual replacement', async t => {
@@ -235,145 +235,132 @@ test('Indoor preselects the magazine background and wallpaper and allows a manua
   const f = await openEditor(t, { search: '?productId=1&campaignId=5', campaignBackgrounds: { 'indoor-h': campaign.arquivo },
     backgrounds: async () => [...backgrounds, campaign] });
   assert.equal(f.get('backgrounds').querySelectorAll('button')[1].getAttribute('aria-pressed'), 'true');
-  for (let id = 2; id <= 5; id++) f.get('results').querySelector(`[data-product-id="${id}"]`).click();
-  f.get('continue').click();
-  assert.equal(f.get('open-preview').disabled, false);
-  f.get('open-preview').click();
-  await flush();
   assert.ok(f.imageRequests.includes(campaign.wallpaper_url));
-  const backgroundStep = f.steps.find(step => step.dataset.step === 'background');
-  backgroundStep.click();
+  for (let id = 2; id <= 5; id++) f.get('results').querySelector('[data-product-id="' + id + '"]').click();
+  await f.runDebounce();
+  assert.equal(f.get('download').disabled, false);
   f.get('backgrounds').querySelector('button').click();
+  await f.runDebounce();
   assert.equal(f.get('backgrounds').querySelectorAll('button')[0].getAttribute('aria-pressed'), 'true');
+  assert.equal(f.paints.at(-1).snapshot.wallpaper, null);
 });
 
-test('Indoor keeps magazine product and price when its linked background was removed', async t => {
+test('Indoor keeps magazine prices and reports a removed linked background', async t => {
   const f = await openEditor(t, { search: '?productId=1&campaignId=5', campaignBackgrounds: { 'indoor-h': 'removed.png' } });
-  for (let id = 2; id <= 5; id++) f.get('results').querySelector(`[data-product-id="${id}"]`).click();
-  f.get('continue').click();
-  assert.match(f.get('status').textContent, /não está mais disponível/);
-  assert.equal(f.get('open-preview').disabled, true);
+  for (let id = 2; id <= 5; id++) f.get('results').querySelector('[data-product-id="' + id + '"]').click();
+  assert.match(f.get('export-status').textContent, /não está mais disponível/);
+  assert.equal(f.get('download').disabled, true);
   assert.ok(f.get('selected').querySelectorAll('input').some(input => input.value === '37,05'));
   f.get('backgrounds').querySelector('button').click();
-  assert.equal(f.get('open-preview').disabled, false);
+  await f.runDebounce();
+  assert.equal(f.get('download').disabled, false);
 });
 
 async function openPreview(fixture) {
   selectFive(fixture);
-  fixture.get('continue').click();
-  await flush();
   fixture.get('backgrounds').querySelector('button').click();
-  fixture.get('open-preview').click();
-  await flush();
+  await fixture.runDebounce();
 }
 
-test('Indoor requires exactly five products and a background before enabling preview and export', async (t) => {
+test('background and products can be chosen freely with live preview and five-product export validation', async t => {
   const f = await openEditor(t);
   const query = new URL(f.requests[0].url, 'https://local.invalid').searchParams;
   assert.equal(query.get('status'), 'ativo');
   assert.equal(query.get('imagem'), 'com');
-  assert.equal(query.get('page'), '1');
   assert.equal(query.get('pageSize'), '18');
-  assert.equal(f.get('continue').disabled, true);
+  assert.ok(f.requests.some(request => request.url === '/api/indoor-backgrounds'));
+  for (const panel of ['products-panel', 'background-panel', 'preview-panel', 'selection-panel']) assert.equal(f.get(panel).hidden, false);
+  f.get('backgrounds').querySelector('button').click();
+  assert.equal(f.get('play').disabled, true);
+  for (let id = 1; id <= 4; id++) f.get('results').querySelector('[data-product-id="' + id + '"]').click();
+  await f.runDebounce();
   assert.equal(f.get('download').disabled, true);
-  for (let id = 1; id <= 4; id += 1) f.get('results').querySelector(`[data-product-id="${id}"]`).click();
-  assert.equal(f.get('continue').disabled, true);
-  f.get('continue').click();
-  assert.equal(f.requests.length, 1, 'Four products cannot open the backgrounds step');
+  assert.equal(f.get('play').disabled, false);
+  assert.equal(f.paints.at(-1).snapshot.products.length, 4);
   f.get('results').querySelector('[data-product-id="5"]').click();
+  await f.runDebounce();
   assert.equal(f.get('selection-count').textContent, '5 / 5');
   assert.equal(f.get('results').querySelector('[data-product-id="6"]').disabled, true);
-  assert.equal(f.get('continue').disabled, false);
-  f.get('continue').click();
-  await flush();
-  assert.equal(f.requests.at(-1).url, '/api/indoor-backgrounds');
-  assert.equal(f.get('products-panel').hidden, true);
-  assert.equal(f.get('background-panel').hidden, false);
-  assert.equal(f.get('open-preview').disabled, true);
-  f.get('backgrounds').querySelector('button').click();
-  f.get('open-preview').click();
-  await flush();
-  assert.equal(f.get('preview-panel').hidden, false);
   assert.equal(f.get('download').disabled, false);
   assert.equal(f.imageRequests.length, 6);
   assert.equal(f.get('scenes').children.length, 5);
-  assert.deepEqual(Array.from(f.paints.at(-1).snapshot.products, (entry) => entry.product.id), [1, 2, 3, 4, 5]);
   f.get('scenes').children[4].click();
   assert.equal(f.paints.at(-1).seconds, 40);
   f.get('play').click();
   assert.equal(f.frames.size, 1);
   f.document.hidden = true;
   f.document.dispatch('visibilitychange');
-  assert.equal(f.frames.size, 0, 'Hiding the tab pauses playback');
+  assert.equal(f.frames.size, 0);
 });
 
-test('mobile review preserves catalogue scroll and prices while reordering without focusing the keyboard', async (t) => {
-  const f = await openEditor(t, { mobile: true });
-  assert.equal(f.get('mobile-dock').hidden, false);
-  assert.equal(f.get('selection-panel').hidden, true);
-  assert.equal(f.get('mobile-next').disabled, true);
-  f.get('results').querySelector('[data-product-id="1"]').click();
-  f.get('results').querySelector('[data-product-id="2"]').click();
-  f.window.scrollY = 640;
-  f.get('mobile-next').click();
-  assert.equal(f.get('catalog').hidden, true);
-  assert.equal(f.get('selection-panel').hidden, false);
-  assert.equal(f.window.scrollY, 0);
-  assert.equal(f.get('mobile-next').disabled, true, 'Partial selection can be reviewed but cannot advance');
-  const input = f.get('selected').querySelector('[data-product-id="1"] input');
-  input.value = '1290';
-  input.dispatch('input');
+for (const mobile of [false, true]) test('collapsible panels retain selections, prices and preview on ' + (mobile ? 'mobile' : 'desktop'), async t => {
+  const f = await openEditor(t, { mobile });
+  await openPreview(f);
+  const price = f.get('selected').querySelector('input');
+  price.value = '1290';
+  price.dispatch('input');
+  await f.runDebounce();
+  for (const name of ['products', 'background']) {
+    f.get(name + '-toggle').click();
+    assert.equal(f.get(name + '-content').hidden, true);
+    assert.equal(f.get(name + '-toggle').getAttribute('aria-expanded'), 'false');
+    assert.equal(f.get('preview-panel').hidden, false);
+    assert.equal(f.get('download').disabled, false);
+    f.get(name + '-toggle').click();
+    assert.equal(f.get(name + '-content').hidden, false);
+    assert.equal(f.get(name + '-toggle').getAttribute('aria-expanded'), 'true');
+  }
   f.get('selected').querySelector('[data-product-id="1"]').querySelector('[data-move="1"]').click();
+  await f.runDebounce();
   assert.equal(f.get('selected').children[1].dataset.productId, '1');
   assert.equal(f.get('selected').children[1].querySelector('input').value, '12,90');
-  assert.equal(f.document.activeElement.tagName, 'button', 'Reordering does not open the price keyboard');
-  f.get('mobile-back').click();
-  assert.equal(f.get('catalog').hidden, false);
-  assert.equal(f.get('selection-panel').hidden, true);
-  assert.equal(f.window.scrollY, 640, 'Returning to the catalogue restores the browsing position');
-  f.resize(false);
-  assert.equal(f.get('catalog').hidden, false);
+  assert.equal(f.document.activeElement.tagName, 'button');
+  assert.equal(f.paints.at(-1).snapshot.products[1].originalPrice, 'R$ 12,90');
+  f.resize(!mobile);
   assert.equal(f.get('selection-panel').hidden, false);
-  assert.equal(f.get('mobile-dock').hidden, true);
-  assert.equal(f.get('selected').children[1].querySelector('input').value, '12,90');
 });
 
-test('mobile actions complete the campaign and keep export cancellation available', async (t) => {
-  const f = await openEditor(t, { mobile: true, exportVideo: ({ signal }) => new Promise((resolve, reject) => {
-    signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true });
-  }) });
-  selectFive(f);
-  f.get('mobile-next').click();
-  assert.equal(f.get('selection-panel').hidden, false);
-  f.get('mobile-next').click();
-  await flush();
-  assert.equal(f.get('background-panel').hidden, false);
-  assert.equal(f.get('mobile-next').disabled, true, 'A background is still required');
-  f.get('backgrounds').querySelector('button').click();
-  f.get('mobile-next').click();
-  await flush();
-  assert.equal(f.get('preview-panel').hidden, false);
-  assert.equal(f.get('mobile-next').disabled, false);
-  f.get('mobile-next').click();
-  await flush();
-  assert.equal(f.exports.length, 1);
-  assert.equal(f.get('mobile-next').disabled, true);
-  assert.equal(f.get('mobile-back').textContent, 'Cancelar');
-  f.get('mobile-back').click();
-  await flush();
-  assert.equal(f.exports[0].signal.aborted, true);
-  assert.equal(f.createdUrls.length, 0);
-  assert.equal(f.get('mobile-next').disabled, false);
-  assert.match(f.get('mobile-hint').textContent, /Exportação cancelada/);
+test('removing products updates the preview and clears it when the selection becomes empty', async t => {
+  const f = await openEditor(t);
+  await openPreview(f);
+  f.get('results').querySelector('[data-product-id="5"]').click();
+  await f.runDebounce();
+  assert.equal(f.get('download').disabled, true);
+  assert.equal(f.get('play').disabled, false);
+  assert.equal(f.paints.at(-1).snapshot.products.length, 4);
+  for (let id = 1; id <= 4; id++) f.get('results').querySelector(`[data-product-id="${id}"]`).click();
+  await f.runDebounce();
+  assert.equal(f.get('play').disabled, true);
+  assert.equal(f.get('preview-loading').hidden, false);
+  assert.equal(f.get('scenes').children.length, 0);
+  assert.equal(f.get('time').value, '0');
 });
 
-test('empty background inventory blocks preview and can recover after refreshing', async (t) => {
+test('live duration edits preserve the playback position and refreshing backgrounds gates export', async t => {
+  const refresh = deferred();
+  let requests = 0;
+  const f = await openEditor(t, { backgrounds: () => ++requests === 1 ? backgrounds : refresh.promise });
+  await openPreview(f);
+  f.get('scenes').children[1].click();
+  f.get('selected').querySelector('[data-tier="20"]').click();
+  assert.equal(f.get('download').disabled, true);
+  await f.runDebounce();
+  assert.equal(f.get('download').disabled, false);
+  assert.equal(f.get('duration').textContent, '60 segundos');
+  assert.equal(f.paints.at(-1).seconds, 10);
+  f.get('reload-backgrounds').click();
+  assert.equal(f.get('download').disabled, true);
+  f.get('download').click();
+  assert.equal(f.exports.length, 0);
+  refresh.resolve(backgrounds);
+  await flush();
+  assert.equal(f.get('download').disabled, false);
+});
+
+test('empty background inventory blocks export and recovers after refreshing', async t => {
   let items = [];
   const f = await openEditor(t, { backgrounds: () => items });
   selectFive(f);
-  f.get('continue').click();
-  await flush();
-  assert.equal(f.get('open-preview').disabled, true);
   assert.equal(f.get('download').disabled, true);
   assert.equal(f.get('reload-backgrounds').hidden, false);
   assert.match(f.get('backgrounds').children[0].textContent, /Ainda não há fundos/);
@@ -381,7 +368,8 @@ test('empty background inventory blocks preview and can recover after refreshing
   f.get('reload-backgrounds').click();
   await flush();
   f.get('backgrounds').querySelector('button').click();
-  assert.equal(f.get('open-preview').disabled, false);
+  await f.runDebounce();
+  assert.equal(f.get('download').disabled, false);
 });
 
 test('failed product images prevent export and retry reloads only the failed image', async (t) => {
@@ -420,7 +408,6 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   assert.match(f.get('download-link').download, /^vidamix-indoor-h-.*\.mp4$/);
   assert.equal(f.get('export-progress').hidden, true);
   assert.equal(f.exports[0].canvas.width, 0, 'Export releases its temporary canvas');
-  f.steps.find((node) => node.dataset.step === 'products').click();
   const input = f.get('selected').querySelector('input');
   input.value = '1290';
   input.dispatch('input');
@@ -432,7 +419,7 @@ test('editing a price invalidates the preview and revokes the previous MP4 befor
   assert.equal(f.get('download-link').hidden, true);
   assert.equal(f.get('download-link').href, undefined);
   assert.deepEqual(f.revokedUrls, [f.createdUrls[0].url]);
-  f.steps.find((node) => node.dataset.step === 'preview').click();
+  await f.runDebounce();
   await flush();
   assert.equal(f.get('download').disabled, false);
   assert.equal(f.paints.at(-1).snapshot.products[0].originalPrice, 'R$ 12,90');
@@ -450,7 +437,9 @@ test('cancelling export aborts the encoder, prevents download and restores the p
   assert.equal(f.exports.length, 1);
   assert.equal(f.get('download').disabled, true);
   assert.equal(f.get('search').disabled, true);
-  assert.ok(f.steps.every((node) => node.disabled));
+  assert.ok(f.get('backgrounds').querySelectorAll('button').every(node => node.disabled));
+  assert.ok(f.get('selected').querySelectorAll('input').every(node => node.disabled));
+  assert.ok(f.get('selected').querySelectorAll('button').every(node => node.disabled));
   assert.equal(f.get('cancel-export').hidden, false);
   f.get('cancel-export').click();
   await flush();
@@ -491,20 +480,19 @@ test('out-of-order search responses cannot replace results from the latest query
   assert.equal(f.get('results').getAttribute('aria-busy'), 'false');
 });
 
-test('leaving preview while images load cannot restore a stale exportable snapshot', async (t) => {
+test('editing while images load cannot restore a stale exportable snapshot', async (t) => {
   const loading = [];
   const f = await openEditor(t, { imageLoad: (image) => loading.push(image) });
   await openPreview(f);
   assert.equal(loading.length, 6);
   assert.equal(f.get('download').disabled, true);
-  f.steps.find((node) => node.dataset.step === 'products').click();
   f.get('selected').querySelector('input').value = '999';
   f.get('selected').querySelector('input').dispatch('input');
   for (const image of loading) image.onload?.();
   await flush();
   assert.equal(f.get('download').disabled, true);
   assert.equal(f.paints.length, 0);
-  f.steps.find((node) => node.dataset.step === 'preview').click();
+  await f.runDebounce();
   await flush();
   assert.equal(f.get('download').disabled, false);
   assert.equal(f.paints.at(-1).snapshot.products[0].originalPrice, 'R$ 9,99');
@@ -561,19 +549,18 @@ test('per-product exposure tiers change the timeline and confirm the choice visu
   assert.equal(chosen.getAttribute('aria-pressed'), 'true', 'the chosen tier is marked as pressed');
   assert.equal(chosen.classList.contains('is-confirmed'), true, 'the pulse animation class is applied');
   assert.equal(f.document.activeElement.dataset.tier, '20', 'focus follows the chosen tier');
-  assert.match(f.get('status').textContent, /Produto 1: 20 segundos na TV · vídeo com 60 s\./);
+  assert.match(f.get('export-status').textContent, /Produto 1: 20 segundos na TV · vídeo com 60 s\./);
   assert.equal(f.get('download').disabled, true, 'changing a tier invalidates the current preview');
 
   f.get('selected').querySelector('[data-product-id="3"]').querySelector('[data-tier="15"]').click();
-  assert.match(f.get('status').textContent, /Produto 3: 15 segundos na TV · vídeo com 65 s\./);
-  const statusAfterChoice = f.get('status').textContent;
+  assert.match(f.get('export-status').textContent, /Produto 3: 15 segundos na TV · vídeo com 65 s\./);
+  const statusAfterChoice = f.get('export-status').textContent;
   f.get('selected').querySelector('[data-product-id="3"]').querySelector('[data-tier="15"]').click();
-  assert.equal(f.get('status').textContent, statusAfterChoice, 're-selecting the same tier keeps the message');
+  assert.equal(f.get('export-status').textContent, statusAfterChoice, 're-selecting the same tier keeps the message');
 
-  f.get('continue').click();
   await flush();
   f.get('backgrounds').querySelector('button').click();
-  f.get('open-preview').click();
+  await f.runDebounce();
   await flush();
   // 20 + 10 + 15 + 10 + 10 = 65 seconds of offers plus the 3-second opening.
   assert.equal(f.get('duration').textContent, '68 segundos');
@@ -618,11 +605,9 @@ test('refreshing a replaced wallpaper invalidates the selected campaign and prev
   await openPreview(f);
   f.get('download').click();
   await flush();
-  f.steps.find(node => node.dataset.step === 'background').click();
   items = [{ ...campaign, wallpaper_url: '/indoor-backgrounds/campanha-wallpaper.webp?v=2' }];
   f.get('reload-backgrounds').click();
   await flush();
-  assert.equal(f.get('open-preview').disabled, true);
   assert.equal(f.get('download').disabled, true);
   assert.equal(f.get('download-link').hidden, true);
   assert.equal(f.revokedUrls.length, 1);
@@ -638,9 +623,7 @@ for (const count of [1, 6]) test('Indoor exports all ' + count + ' selected maga
     backgrounds: async () => [{ ...backgrounds[0], arquivo: 'campaign.png' }],
   });
   assert.equal(f.get('selected').children.length, count);
-  assert.equal(f.get('continue').disabled, false);
-  f.get('continue').click();
-  f.get('open-preview').click();
+  await f.runDebounce();
   await flush();
   assert.equal(f.get('download').disabled, false);
   assert.equal(f.paints.at(-1).snapshot.products.length, count);
