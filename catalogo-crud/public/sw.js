@@ -1,6 +1,6 @@
 // Bump this version when changing the offline page or one of its dependencies.
 const CACHE_PREFIX = 'vidamix-offline-';
-const CACHE_NAME = `${CACHE_PREFIX}v12`;
+const CACHE_NAME = `${CACHE_PREFIX}v13`;
 const OFFLINE_URL = '/offline.html';
 const OFFLINE_ASSETS = [
   OFFLINE_URL,
@@ -19,6 +19,7 @@ const OFFLINE_ASSETS = [
   '/fonts/poppins-latin-700-normal.woff2',
 ];
 const PAGE_PATHS = new Set([
+  '/artes-criadas', '/artes-criadas.html',
   '/', '/login', '/login.html', '/catalogo', '/revista', '/revista.html', '/backgrounds', '/backgrounds.html', '/artes/stories', '/artes/feed', '/artes/indoor-h',
   '/index.html', '/catalogo.html', '/stories.html', '/feed.html', '/indoor-h.html',
   OFFLINE_URL,

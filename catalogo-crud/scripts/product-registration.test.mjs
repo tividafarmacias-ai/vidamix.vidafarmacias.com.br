@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -96,8 +96,49 @@ test('only supported groups are saved and the generic flag follows the selected 
   assert.equal(changed.grupo, 'MIP');
 });
 
-test('configured boxes follow the group, refresh without restart and preserve uploaded product photos', async () => {
-  assert.equal(service.getProduct(1).possui_imagem_local, false);
+test('bundled boxes work without setup for existing products, detail, barcode and image filters', async () => {
+  for (const [id, filename] of [[1, 'padrao-tarjado.png'], [2, 'padrao-generico.png']]) {
+    const product = service.getProduct(id);
+    assert.equal(product.possui_imagem_local, true);
+    assert.equal(product.imagem_padrao, true);
+    assert.ok(product.imagem_local_url.startsWith(`/assets/imagens/${filename}?v=`));
+    const expected = await readFile(new URL(`../assets/imagens/${filename}`, import.meta.url));
+    for (const method of ['GET', 'HEAD']) {
+      const response = await fetch(origin + product.imagem_local_url, { method });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('content-type'), 'image/png');
+      assert.equal(Number(response.headers.get('content-length')), expected.length);
+      if (method === 'GET') assert.deepEqual(Buffer.from(await response.arrayBuffer()), expected);
+    }
+    const detail = await (await fetch(origin + `/api/products/${id}`)).json();
+    assert.equal(detail.imagem_local_url, product.imagem_local_url);
+    service.updateProduct(id, { ean: String(7896007548400 + id) });
+    assert.equal(service.getProductByEan(String(7896007548400 + id)).imagem_local_url, product.imagem_local_url);
+  }
+  const visible = service.listProducts(new URLSearchParams({ imagem: 'com' })).items;
+  assert.deepEqual(visible.map((item) => item.id).sort(), [1, 2]);
+  assert.equal(service.getSummary().com_imagem, 2);
+  assert.ok(service.listProducts(new URLSearchParams({ imagem: 'sem' })).items.every((item) => ![1, 2].includes(item.id)));
+});
+
+test('plural and accented legacy groups use boxes even with an individual image reference', () => {
+  const insert = database.prepare(`INSERT INTO products (nome, grupo, generico, imagem_arquivo, imagem_status, status, created_at, updated_at)
+    VALUES ('Grupo legado', ?, 0, 'imagens/foto-antiga.png', 'sem_imagem', 'ativo', '', '')`);
+  for (const group of ['genericos', 'genéricos', ' GENÉRICOS ', 'tarjados', ' TARJADO ']) {
+    const id = Number(insert.run(group).lastInsertRowid);
+    try {
+      const product = service.getProduct(id);
+      assert.equal(product.imagem_padrao, true);
+      assert.match(product.imagem_local_url, group.trim().toLowerCase().startsWith('tarjad') ? /padrao-tarjado/ : /padrao-generico/);
+      assert.equal(product.imagem_arquivo, 'imagens/foto-antiga.png');
+      assert.ok(service.listProducts(new URLSearchParams({ imagem: 'com' })).items.some((item) => item.id === id));
+      assert.ok(!service.listProducts(new URLSearchParams({ imagem: 'sem' })).items.some((item) => item.id === id));
+    } finally { service.deleteProduct(id); }
+  }
+});
+
+test('configured boxes follow the group, refresh without restart and take priority over product photos', async () => {
+  assert.equal(service.getProduct(1).possui_imagem_local, true);
   assert.equal((await upload('/api/product-groups/MIP/image')).status, 400);
   assert.equal((await upload('/api/product-groups/TARJADO/image', Buffer.from('invalid'))).status, 400);
   const tarjado = await upload('/api/product-groups/TARJADO/image');
@@ -122,10 +163,11 @@ test('configured boxes follow the group, refresh without restart and preserve up
   service.updateProduct(1, { grupo: 'TARJADO', ean: '07896007548400' });
   const ownPhoto = await upload('/api/products/1/image');
   assert.match(ownPhoto.body.imagem_arquivo, /upload-ean-07896007548400-/);
-  assert.equal(ownPhoto.body.imagem_padrao, false);
+  assert.equal(ownPhoto.body.imagem_padrao, true);
+  assert.equal(ownPhoto.body.imagem_local_url, tarjado.body.imagem_local_url);
   const replaced = await upload('/api/product-groups/TARJADO/image');
   assert.notEqual(replaced.body.imagem_local_url, tarjado.body.imagem_local_url);
-  assert.equal(service.getProduct(1).imagem_local_url, ownPhoto.body.imagem_local_url);
+  assert.equal(service.getProduct(1).imagem_local_url, replaced.body.imagem_local_url);
   const reused = service.updateProduct(1, { imagem_arquivo: '' });
   assert.equal(reused.imagem_local_url, replaced.body.imagem_local_url);
 });

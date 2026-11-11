@@ -8,6 +8,8 @@ export function referenceKey(value) {
 
 export function normalizeGroup(value) {
   const key = referenceKey(value);
+  if (key === 'genericos') return 'GENÉRICO';
+  if (key === 'tarjados') return 'TARJADO';
   if (['naomedicamento', 'naomedicado'].includes(key)) return 'NÃO MEDICAMENTO';
   return productGroups.find((group) => referenceKey(group) === key) || null;
 }

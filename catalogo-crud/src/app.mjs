@@ -1,4 +1,5 @@
 import { HttpError } from './http/errors.mjs';
+import { createArtworkService } from './modules/artworks/artwork-service.mjs';
 import path from 'node:path';
 import { backgroundVariant } from './modules/stories/background-variants.mjs';
 import { canonicalRequestPath, isPublicResource, canAccessPage, canAccessApi } from './http/access.mjs';
@@ -6,7 +7,7 @@ import { defaultSecurityHeaders, readJsonBody, sendError, sendJson, sendNoConten
 import { serveFile } from './http/static-files.mjs';
 import { createProductService } from './modules/products/product-service.mjs';
 import { createRevistaService } from './modules/revista/revista-service.mjs';
-import { productImageUrl, resolveProductImage } from './modules/products/product-images.mjs';
+import { productImageUrl, productImagesDirectory, resolveProductImage } from './modules/products/product-images.mjs';
 import {
   createStoryBackgroundService,
   isSupportedStoryBackground,
@@ -59,6 +60,7 @@ export function createApplication({ config, database, authService = null, logger
     'indoor-h': createBackgroundManager({ directory: config.indoorBackgroundsDirectory, format: 'indoor-h' }),
   };
   const apiRouter = createApiRouter({
+    artworkService: createArtworkService({ database }),
     revistaService: createRevistaService({ database, imagesDirectory: config.imagesDirectory }),
     productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, backgroundManagers,
   });
@@ -129,7 +131,7 @@ export function createApplication({ config, database, authService = null, logger
         if (!isSafeStaticMethod(request.method)) authService.assertMutation(request, session);
         // Route parameters may be case-sensitive filenames on Linux/Plesk.
         url.pathname = pathname;
-        const handled = await apiRouter.dispatch({ request, response, url });
+        const handled = await apiRouter.dispatch({ request, response, url, session });
         if (!handled) sendError(response, 404, 'Endpoint não encontrado.');
         return;
       }
@@ -167,7 +169,7 @@ export function createApplication({ config, database, authService = null, logger
         await serveFile({
           request,
           response,
-          rootDirectory: config.imagesDirectory,
+          rootDirectory: productImagesDirectory(imageFile, config.imagesDirectory),
           urlPath: assetPath,
           cacheControl: 'no-store',
         });

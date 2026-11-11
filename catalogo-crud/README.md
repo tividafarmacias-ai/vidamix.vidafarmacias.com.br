@@ -9,6 +9,33 @@ Para medir usuários simultâneos na hospedagem, consulte
 [Testes de carga](docs/load-testing.md). O roteiro usa `scripts/load-test.js`
 com k6 em uma máquina externa e inclui catálogo, Stories, Feed e imagens.
 
+## Salvamento automático das artes
+
+Stories, Feed e TV Indoor mantêm rascunhos independentes no `localStorage`
+do navegador, com produtos, preços e fundo. As alterações são salvas durante
+a edição e restauradas ao atualizar ou voltar ao formato. Também são mantidos
+a composição, os preços de/por, o texto livre e, na TV, a ordem e a duração dos itens.
+Links com outro produto ou seleção da revista iniciam uma nova seleção;
+atualizar o mesmo link preserva as edições. Os rascunhos ficam neste navegador
+e são perdidos se seus dados locais forem apagados.
+
+## Artes criadas por usuário
+
+A tela `/artes-criadas`, disponível no menu para clientes e administradores,
+guarda as 5 últimas exportações PNG/MP4 de cada conta, com prévia e download.
+O histórico fica no SQLite do servidor (`created_artworks`), inclusive os arquivos,
+e continua disponível ao trocar de navegador ou reiniciar a aplicação.
+A tabela é criada automaticamente na inicialização. Inclua o banco nos backups.
+
+Stories, Feed e TV Indoor salvam ao exportar; baixar novamente pelo histórico
+não cria outra entrada. Lotes da revista salvam os últimos 5 PNGs individuais
+após concluir o ZIP. A sexta arte remove a mais antiga da mesma conta, em uma
+transação. Não há importação retroativa das exportações anteriores à feature.
+Cada arquivo pode ter até 100 MB; falhas de salvamento são informadas no editor
+e não impedem o download local. Rascunhos de edição continuam independentes.
+
+Validação: `npm run test:created-artworks` e os testes HTTP em `npm run test:auth`.
+
 ## Login e permissões
 
 O acesso à aplicação exige login em `/login`, usando o e-mail e a senha já
@@ -228,12 +255,15 @@ controla também o indicador legado `generico`. “Não Medicado” é apresenta
 “NÃO MEDICAMENTO”. As categorias “Medicamento” e “Medicamentos” aparecem juntas
 como **Medicamento**, incluindo contagens e filtros, sem excluir produtos.
 
-Em **Configurar imagens padrão**, envie as caixinhas de Tarjado e Genérico.
-Elas são usadas automaticamente pelos produtos sem foto própria, inclusive os
-antigos, no catálogo e nos editores. Trocar de grupo troca a caixinha; enviar uma
-foto própria tem prioridade. As artes oficiais precisam ser enviadas nessa tela.
-As referências ficam no SQLite e os arquivos em `IMAGES_ROOT/imagens/`, portanto
-ambos precisam de armazenamento persistente. Não é necessário reimportar a base.
+As caixinhas de Tarjado e Genérico já estão incluídas em `assets/imagens/`.
+Todos os produtos desses grupos usam a caixinha correspondente no catálogo,
+na revista e nos editores, inclusive produtos antigos com foto própria. O indicador
+legado `generico` seleciona a caixa de Genérico; nomes no plural também são aceitos.
+Trocar de grupo troca a caixinha, sem sobrescrever a referência da foto individual.
+Em **Configurar imagens padrão**, é possível substituir a caixinha de um grupo.
+Essas substituições ficam no SQLite e em `IMAGES_ROOT/imagens/`, que precisam de
+armazenamento persistente. Não é necessário configurar imagens nem reimportar a base
+para usar as caixinhas incluídas no projeto.
 
 As rotas `/api/manufacturers` e `/api/product-groups` são exclusivas do administrador.
 Os testes deste fluxo fazem parte de `npm run test:catalogue`.

@@ -93,6 +93,57 @@ async function fixture(t, { auth = {}, unavailable = false } = {}) {
   };
 }
 
+test('created artworks use the authenticated owner, enforce CSRF and serve private downloads and video ranges', async t => {
+  const app = await fixture(t);
+  const customer = await app.login('cliente@example.test');
+  const admin = await app.login();
+  const headers = app.headers(customer);
+  const upload = (body = png, type = 'image/png') => {
+    const form = new FormData();
+    form.append('artwork', new Blob([body], { type }), type === 'image/png' ? 'oferta.png' : 'video.mp4');
+    form.append('format', type === 'image/png' ? 'stories' : 'indoor-h');
+    form.append('title', 'Oferta de teste');
+    form.append('userId', '1'); // A spoofed owner must be ignored.
+    return form;
+  };
+  assert.equal((await app.request('/artes-criadas')).status, 302);
+  assert.equal((await app.request('/api/artworks')).status, 401);
+  for (const page of ['/artes-criadas', '/artes-criadas.html']) assert.equal((await app.request(page, { headers })).status, 200);
+  const rejected = await app.request('/api/artworks', { method: 'POST', headers: { Cookie: customer.cookie }, body: upload() });
+  assert.equal(rejected.status, 403);
+  assert.equal((await app.request('/api/artworks', { method: 'POST', headers, body: upload(Buffer.from('invalid')) })).status, 400);
+  const ids = [];
+  for (let i = 0; i < 6; i += 1) {
+    const response = await app.request('/api/artworks', { method: 'POST', headers, body: upload() });
+    assert.equal(response.status, 201);
+    ids.push((await response.json()).id);
+  }
+  const list = await (await app.request('/api/artworks', { headers })).json();
+  assert.deepEqual(list.items.map(item => item.id), ids.slice(1).reverse());
+  assert.equal(list.items[0].content, undefined);
+  const url = `/api/artworks/${ids.at(-1)}/file`;
+  assert.equal((await app.request(`/api/artworks/${ids[0]}/file`, { headers })).status, 404);
+  assert.equal((await app.request(url)).status, 401);
+  assert.equal((await app.request(url, { headers: app.headers(admin) })).status, 404, 'even an administrator cannot read another account history');
+  assert.deepEqual((await (await app.request('/api/artworks?userId=2', { headers: app.headers(admin) })).json()).items, []);
+  const download = await app.request(url + '?download=1', { headers });
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get('cache-control'), 'private, no-store');
+  assert.match(download.headers.get('content-disposition'), /^attachment;/);
+  assert.deepEqual(Buffer.from(await download.arrayBuffer()), png);
+  const mp4 = Buffer.alloc(32);
+  mp4.writeUInt32BE(32); mp4.write('ftypisom', 4);
+  const video = await app.request('/api/artworks', { method: 'POST', headers, body: upload(mp4, 'video/mp4') });
+  assert.equal(video.status, 201);
+  const videoUrl = `/api/artworks/${(await video.json()).id}/file`;
+  const partial = await app.request(videoUrl, { headers: { ...headers, Range: 'bytes=4-11' } });
+  assert.equal(partial.status, 206);
+  assert.equal(partial.headers.get('content-range'), 'bytes 4-11/32');
+  assert.equal(await partial.text(), 'ftypisom');
+  assert.equal((await app.request(videoUrl, { headers: { ...headers, Range: 'bytes=99-' } })).status, 416);
+  assert.equal((await app.request(videoUrl, { method: 'HEAD', headers })).headers.get('content-length'), '32');
+});
+
 test('authentication fails closed without a service; login resources and PWA metadata stay public', async t => {
   const app = await fixture(t);
   const origin = await app.start(null);

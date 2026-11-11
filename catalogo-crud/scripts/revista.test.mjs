@@ -29,6 +29,21 @@ async function file(rows, change = () => {}) {
   return { filename: 'revista.xlsx', buffer: Buffer.from(await workbook.xlsx.writeBuffer()) };
 }
 
+test('active magazine uses the same bundled medicine boxes as the catalogue', async t => {
+  const { database, service } = databaseFixture(t);
+  database.prepare("UPDATE products SET grupo = 'tarjados', generico = 0, status = 'ativo', imagem_arquivo = 'imagens/foto-antiga.png' WHERE id = 1").run();
+  database.prepare("UPDATE products SET grupo = 'Tarjado', generico = 1, status = 'ativo' WHERE id = 2").run();
+  const rows = await readRevistaWorkbook(await file([
+    ['7891234567890', 19.9, '10/2026'], ['0012345678905', 9.9, '10/2026'],
+  ]));
+  service.create(rows);
+  const campaign = service.active(new Date('2026-10-15T12:00:00Z'));
+  assert.equal(campaign.items.length, 2);
+  assert.match(campaign.items.find((item) => item.productId === 1).imageUrl, /\/assets\/imagens\/padrao-tarjado\.png/);
+  assert.match(campaign.items.find((item) => item.productId === 2).imageUrl, /\/assets\/imagens\/padrao-generico\.png/);
+  assert.ok(campaign.items.every((item) => item.available));
+});
+
 test('downloaded template has exact headers, text EAN/month columns and no sample products', async () => {
   const buffer = await createRevistaTemplate();
   const workbook = new ExcelJS.Workbook();

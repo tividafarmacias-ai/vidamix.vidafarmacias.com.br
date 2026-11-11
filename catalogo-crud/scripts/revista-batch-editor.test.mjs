@@ -22,11 +22,13 @@ async function fixture(t, options = {}) {
   const surfaces = [main, new Element()];
   const storage = new Map();
   const store = { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) };
-  const token = saveCampaignSelection(5, [1, 2], store);
+  const ids = options.ids || [1, 2];
+  const token = saveCampaignSelection(5, ids, store);
   const window = new Element(); window.location = { search: `?selection=${token}` };
-  const downloads = [], revoked = [], busy = [], prepared = [], rendered = [];
+  const downloads = [], revoked = [], busy = [], prepared = [], rendered = [], saved = [];
   let requests = 0;
   const sandbox = vm.createContext({
+    saveCreatedArtwork: async artwork => { saved.push(artwork); if (options.saveFailure) throw new Error('Offline'); },
     document: { createElement: () => panel, querySelector: () => main, querySelectorAll: () => surfaces, body: new Element() },
     window, URLSearchParams, AbortController,
     URL: { createObjectURL: blob => { downloads.push(blob); return 'blob:zip'; }, revokeObjectURL: url => revoked.push(url) },
@@ -36,7 +38,7 @@ async function fixture(t, options = {}) {
   await sandbox.initCampaignBatchEditor({ format: options.format || 'feed', isBusy: () => false,
     request: async () => {
       requests += 1;
-      return { campaign: { id: options.stale && requests > 1 ? 6 : 5, name: 'Revista', items: [1, 2].map(id => ({
+      return { campaign: { id: options.stale && requests > 1 ? 6 : 5, name: 'Revista', items: ids.map(id => ({
         productId: id, name: 'Produto ' + id, available: true, imageUrl: '/image.png', priceCents: requests > 1 ? 4200 : 3705,
       })) } };
     },
@@ -51,7 +53,7 @@ async function fixture(t, options = {}) {
     },
   });
   t.after(() => window.listeners.pagehide());
-  return { controls, surfaces, downloads, revoked, busy, prepared, rendered, window };
+  return { controls, surfaces, downloads, revoked, busy, prepared, rendered, saved, window };
 }
 
 for (const format of ['feed', 'stories']) test(`${format} batch refreshes prices, locks editing and publishes a downloadable ZIP`, async t => {
@@ -66,6 +68,8 @@ for (const format of ['feed', 'stories']) test(`${format} batch refreshes prices
   assert.equal(f.controls['[data-batch-start]'].disabled, false);
   assert.ok(f.surfaces.every(surface => !surface.inert));
   assert.deepEqual(f.busy, [true, false]);
+  assert.deepEqual(f.saved.map(item => item.title), ['Produto 1', 'Produto 2']);
+  assert.ok(f.saved.every(item => item.format === format));
   f.window.listeners.pagehide();
   assert.deepEqual(f.revoked, ['blob:zip']);
 });
@@ -74,11 +78,28 @@ for (const option of ['cancel', 'failure', 'stale']) test(`${option} restores ed
   const f = await fixture(t, { [option]: true });
   await f.controls['[data-batch-start]'].click();
   assert.equal(f.downloads.length, 0);
+  assert.equal(f.saved.length, 0);
   assert.ok(f.surfaces.every(surface => !surface.inert));
   assert.equal(f.controls['[data-batch-start]'].disabled, false);
   assert.equal(f.controls['[data-batch-cancel]'].hidden, true);
   assert.match(f.controls['[data-batch-status]'].textContent, /cancelado|Imagem indisponível|revista vigente mudou/);
   assert.equal(f.rendered.length, option === 'stale' ? 0 : 1);
+});
+
+test('history upload failures preserve the finished ZIP and show a warning', async t => {
+  const f = await fixture(t, { saveFailure: true });
+  await f.controls['[data-batch-start]'].click();
+  assert.equal(f.downloads.length, 1);
+  assert.equal(f.controls['[data-batch-download]'].hidden, false);
+  assert.match(f.controls['[data-batch-status]'].textContent, /não foram salvas/);
+  assert.ok(f.surfaces.every(surface => !surface.inert));
+});
+
+test('a completed batch uploads only its last five artworks, in creation order', async t => {
+  const f = await fixture(t, { ids: [1, 2, 3, 4, 5, 6, 7] });
+  await f.controls['[data-batch-start]'].click();
+  assert.deepEqual(f.saved.map(item => item.title), ['Produto 3', 'Produto 4', 'Produto 5', 'Produto 6', 'Produto 7']);
+  assert.equal(f.downloads.length, 1);
 });
 
 test('shared Stories and Feed renderer resets offers before each batch artwork', async () => {

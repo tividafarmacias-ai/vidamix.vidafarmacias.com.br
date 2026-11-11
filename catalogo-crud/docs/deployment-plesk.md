@@ -94,6 +94,16 @@ os PNG. Se houver uma regra própria de Apache/nginx para `/assets/`, preserve o
 encaminhamento dessa rota ao Node para que a compatibilidade seja aplicada.
 Os ícones PNG do PWA permanecem como estão.
 
+## Caixinhas de Tarjado e Genérico
+
+Publique também `catalogo-crud/assets/imagens/padrao-tarjado.png` e
+`catalogo-crud/assets/imagens/padrao-generico.png`, junto com o código atualizado,
+e reinicie a aplicação. Esses arquivos fazem parte do projeto e são servidos pelo
+Node em `/assets/imagens/`, mesmo quando `IMAGES_ROOT` aponta para outra pasta.
+Todos os produtos desses grupos usam a caixinha correspondente, sem migração do
+banco. Uma caixinha personalizada já configurada pelo administrador tem prioridade
+sobre a incluída no projeto.
+
 ## Antes de enviar
 
 Na pasta `catalogo-crud`, execute:

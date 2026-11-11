@@ -8,6 +8,8 @@ import * as renderer from '../public/js/features/indoor/renderer.js';
 import { bindPriceInput } from '../public/js/features/stories/price-input.js';
 import { loadArtworkSelection } from '../public/js/features/revista/artwork.js';
 import { loadCampaignSelection, saveCampaignSelection } from '../public/js/features/revista/selection.js';
+import { createArtworkDraftStore, findDraftBackground } from '../public/js/features/artwork-draft.js';
+import { memoryStorage } from './fixtures/artwork-draft.mjs';
 
 const [markup, moduleSource] = await Promise.all([
   readFile(new URL('../public/indoor-h.html', import.meta.url), 'utf8'),
@@ -157,6 +159,13 @@ async function openEditor(t, options = {}) {
     }
   }
   const sandbox = vm.createContext({
+    rememberCreatedArtwork: async artwork => {
+      assert.equal(artwork.format, 'indoor-h');
+      assert.equal(artwork.blob.type, 'video/mp4');
+      return 'Salva em Artes criadas.';
+    },
+    createArtworkDraftStore: (format, config) => createArtworkDraftStore(format, { ...config, storage: options.draftStorage }),
+    findDraftBackground,
     ...model, bindPriceInput, getBackgroundBadgeTheme, loadArtworkSelection, document, window, Image: FakeImage,
     loadCampaignSelection: (search, request) => loadCampaignSelection(search, request, options.storage),
     AbortController, AbortSignal, DOMException, URLSearchParams, Blob,
@@ -201,6 +210,7 @@ async function openEditor(t, options = {}) {
     }),
   });
   vm.runInContext(script, sandbox, { filename: 'indoor/editor.js' });
+  options.duringLoad?.({ window, document });
   t.after(() => window.dispatch('pagehide'));
   await flush();
   const get = (id) => elements.get(`indoor-${id}`);
@@ -219,6 +229,76 @@ async function openEditor(t, options = {}) {
 function selectFive(fixture) {
   for (let id = 1; id <= 5; id += 1) fixture.get('results').querySelector(`[data-product-id="${id}"]`).click();
 }
+
+test('Indoor autosaves edits before the preview debounce and restores the ordered selection', async t => {
+  const draftStorage = memoryStorage();
+  const f = await openEditor(t, { draftStorage });
+  await openPreview(f);
+  let first = f.get('selected').querySelector('[data-product-id="1"]');
+  const [original, price] = first.querySelectorAll('input');
+  original.value = '4990'; original.dispatch('input');
+  price.value = '2990'; price.dispatch('input');
+  first.querySelector('[data-tier="20"]').click();
+  first = f.get('selected').querySelector('[data-product-id="1"]');
+  first.querySelector('[data-move="1"]').click();
+
+  const restored = await openEditor(t, { draftStorage });
+  assert.equal(restored.get('selection-count').textContent, '5 / 5');
+  assert.equal(restored.get('selected').children[0].dataset.productId, '2');
+  const row = restored.get('selected').children[1];
+  assert.equal(row.dataset.productId, '1');
+  assert.deepEqual(row.querySelectorAll('input').map(input => input.value), ['49,90', '29,90']);
+  assert.equal(row.querySelector('[data-tier="20"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(restored.get('backgrounds').querySelector('button').getAttribute('aria-pressed'), 'true');
+  assert.equal(restored.get('download').disabled, false);
+  assert.equal(restored.paints.at(-1).snapshot.products[1].price, 'R$ 29,90');
+
+  for (const selected of [...restored.get('selected').children]) {
+    restored.get('selected').querySelector(`[data-product-id="${selected.dataset.productId}"]`)
+      .querySelectorAll('button').find(button => button.textContent === 'Remover').click();
+  }
+  const empty = await openEditor(t, { draftStorage });
+  assert.equal(empty.get('selection-count').textContent, '0 / 5');
+});
+
+test('Indoor refresh of a campaign link keeps manually edited prices and background', async t => {
+  const draftStorage = memoryStorage();
+  const search = '?productId=1&campaignId=5';
+  const f = await openEditor(t, { draftStorage, search });
+  const price = f.get('selected').querySelectorAll('input')[1];
+  price.value = '1599'; price.dispatch('input');
+  f.get('backgrounds').querySelector('button').click();
+  const restored = await openEditor(t, { draftStorage, search });
+  assert.equal(restored.get('selected').querySelectorAll('input')[1].value, '15,99');
+  assert.equal(restored.get('backgrounds').querySelector('button').getAttribute('aria-pressed'), 'true');
+  assert.ok(!restored.requests.some(({ url }) => url.includes('/active/products/')));
+});
+
+test('Indoor restores the current background asset and opening after an asset revision', async t => {
+  const draftStorage = memoryStorage();
+  const old = { arquivo: 'campanha.png', nome: 'Campanha', url: '/campanha.png?v=1' };
+  createArtworkDraftStore('indoor-h', { storage: draftStorage }).save({ selection: [{ product: products[0], price: '9,90' }], background: old });
+  const current = { ...old, url: '/campanha.png?v=2', wallpaper_url: '/opening.png' };
+  const restored = await openEditor(t, { draftStorage, backgrounds: () => [current] });
+  assert.ok(restored.imageRequests.includes(current.url));
+  assert.ok(restored.imageRequests.includes(current.wallpaper_url));
+  const missing = await openEditor(t, { draftStorage, backgrounds: () => [] });
+  assert.equal(missing.get('selection-count').textContent, '1 / 5');
+  assert.match(missing.get('export-status').textContent, /fundo salvo não está mais disponível/);
+});
+
+test('Indoor does not replace a draft while a new linked offer is still loading', async t => {
+  const draftStorage = memoryStorage();
+  createArtworkDraftStore('indoor-h', { storage: draftStorage }).save({ selection: [{ product: products[1], price: '17,90' }] });
+  const previous = [...draftStorage.items.values()][0];
+  await openEditor(t, { draftStorage, search: '?productId=1&campaignId=5', duringLoad: ({ document }) => {
+    document.hidden = true;
+    document.dispatch('visibilitychange');
+    assert.equal([...draftStorage.items.values()][0], previous);
+    document.hidden = false;
+  } });
+  assert.equal(createArtworkDraftStore('indoor-h', { storage: draftStorage }).load().selection[0].product.id, 1);
+});
 
 test('Indoor keeps the magazine product and price while allowing a partial preview', async t => {
   const f = await openEditor(t, { search: '?productId=1&campaignId=5' });

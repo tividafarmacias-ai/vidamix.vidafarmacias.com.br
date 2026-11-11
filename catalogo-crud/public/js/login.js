@@ -1,6 +1,8 @@
 const clientDestinations = new Map([
   ['/', '/'],
   ['/index.html', '/'],
+  ['/artes-criadas', '/artes-criadas'],
+  ['/artes-criadas.html', '/artes-criadas'],
   ['/catalogo', '/catalogo'],
   ['/catalogo.html', '/catalogo'],
   ['/revista', '/revista'],

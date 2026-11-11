@@ -190,7 +190,7 @@ test('new registration focuses EAN and saves the chosen manufacturer and group',
   assert.equal(elements.get('product-dialog').open, false);
 });
 
-test('group changes preview their default box and preserve a manually linked product photo', async () => {
+test('group changes prioritize the default box and restore the product photo for other groups', async () => {
   const { context, fields, elements } = await openCatalogue();
   context.openDialog();
   fields.get('grupo').value = 'TARJADO';
@@ -201,6 +201,9 @@ test('group changes preview their default box and preserve a manually linked pro
   assert.equal(elements.get('dialog-image-preview').children[0].src, '/assets/imagens/generico.png');
   fields.get('imagem_arquivo').value = 'imagens/foto.png';
   fields.get('grupo').value = 'TARJADO';
+  fields.get('grupo').listeners.get('change')();
+  assert.equal(elements.get('dialog-image-preview').children[0].src, '/assets/imagens/tarjado.png');
+  fields.get('grupo').value = 'MIP';
   fields.get('grupo').listeners.get('change')();
   assert.equal(elements.get('dialog-image-preview').children[0].src, '/assets/imagens/foto.png');
 });

@@ -17,11 +17,14 @@ export function isPublicResource(pathname) {
 
 const clientePages = new Set(['index.html', 'catalogo.html', 'revista.html', 'revista-ofertas.html', 'stories.html', 'feed.html', 'indoor-h.html']);
 export function canAccessPage(role, filename) {
+  if (role === 'cliente' && filename === 'artes-criadas.html') return true;
   return role === 'admin' || (role === 'cliente' && clientePages.has(filename));
 }
 
 export function canAccessApi(role, method, pathname) {
   if (role === 'admin') return true;
+  if (role === 'cliente' && ((pathname === '/api/artworks' && ['GET', 'POST'].includes(method))
+    || (/^\/api\/artworks\/[1-9]\d*\/file$/.test(pathname) && ['GET', 'HEAD'].includes(method)))) return true;
   if (role !== 'cliente' || !['GET', 'HEAD'].includes(method)) return false;
   return /^\/api\/(?:health|summary|categories|story-backgrounds|feed-backgrounds|indoor-backgrounds|products(?:\/(?:\d+|by-ean\/[^/]+))?|revista\/(?:active(?:\/products\/\d+)?|campaigns(?:\/\d+)?))$/.test(pathname);
 }

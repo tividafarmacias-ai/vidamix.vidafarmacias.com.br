@@ -1,10 +1,12 @@
 import { getBackgroundBadgeTheme } from '../stories/background-theme.js';
+import { rememberCreatedArtwork } from '../created-artworks.js';
 import { authFetch } from '../../auth-session.js';
 import { loadArtworkSelection } from '../revista/artwork.js';
 import { loadCampaignSelection } from '../revista/selection.js';
 import { PRODUCT_LIMIT, INDOOR_DURATION_TIERS, addProduct, removeProduct, moveProduct, setProductDuration, canContinue } from './model.js';
 import { INDOOR_WIDTH, INDOOR_HEIGHT, INDOOR_INTRO_DURATION, getProductDurations, getIndoorDuration, getIndoorMotionRanges, drawIndoorFrame } from './renderer.js';
 import { bindPriceInput } from '../stories/price-input.js';
+import { createArtworkDraftStore, findDraftBackground } from '../artwork-draft.js';
 
 const byId = (id) => document.getElementById(`indoor-${id}`);
 const ui = Object.fromEntries([
@@ -25,8 +27,17 @@ const state = {
   seconds: 0, playing: false, frame: 0, exportController: null, downloadUrl: null,
 };
 const images = new Map();
+const draftStore = createArtworkDraftStore('indoor-h', { search: window.location?.search });
+const restoredDraft = draftStore.load();
+if (restoredDraft) Object.assign(state, restoredDraft);
+let draftReady = Boolean(restoredDraft) || !['productId', 'campaignId', 'selection']
+  .some(key => new URLSearchParams(window.location?.search).has(key));
 let searchTimer;
 let previewTimer;
+
+function saveEditorDraft() {
+  if (draftReady) draftStore.save(state);
+}
 
 function selectionComplete() {
   return canContinue(state.selection, { flexible: state.campaignBatch, limit: state.selectionLimit });
@@ -126,6 +137,7 @@ function clearDownload() {
 }
 
 function invalidatePreview() {
+  saveEditorDraft();
   pause();
   clearTimeout(previewTimer);
   state.snapshot = null;
@@ -353,11 +365,13 @@ async function loadBackgrounds() {
     const response = await fetchJson('/api/indoor-backgrounds', controller.signal);
     state.backgrounds = response.items.map((item) => ({ ...item, url: item.preview_url || item.url }));
     state.backgroundsLoaded = true;
-    if (state.background && !state.backgrounds.some((item) => item.url === state.background.url
-      && item.wallpaper_url === state.background.wallpaper_url
-      && item.wallpaper_preview_url === state.background.wallpaper_preview_url)) {
-      state.background = null;
-      invalidatePreview();
+    if (state.background) {
+      const previous = state.background;
+      state.background = findDraftBackground(state.backgrounds, previous);
+      state.campaignBackgroundError = state.background ? '' : 'O fundo salvo não está mais disponível. Escolha outro fundo para continuar.';
+      if (!state.snapshot || !state.background || state.background.url !== previous.url
+        || state.background.wallpaper_url !== previous.wallpaper_url
+        || state.background.wallpaper_preview_url !== previous.wallpaper_preview_url) invalidatePreview();
     }
     if (state.campaignBackgroundFile && !state.background) {
       state.background = state.backgrounds.find(item => item.arquivo === state.campaignBackgroundFile) || null;
@@ -525,7 +539,10 @@ async function download() {
     ui['download-link'].download = `vidamix-indoor-h-${new Date().toISOString().replace(/[:.]/g, '-')}.mp4`;
     ui['download-link'].hidden = false;
     ui['download-link'].click();
-    status('Vídeo pronto! Se o download não começar, use Baixar vídeo novamente.', false, ui['export-status']);
+    ui['cancel-export'].hidden = true;
+    status('Vídeo pronto. Salvando em Artes criadas…', false, ui['export-status']);
+    const saved = await rememberCreatedArtwork({ blob, filename: ui['download-link'].download, title: 'TV Indoor', format: 'indoor-h' });
+    status('Vídeo pronto! Se o download não começar, use Baixar vídeo novamente. ' + saved, false, ui['export-status']);
   } catch (error) {
     status(error.name === 'AbortError' ? 'Exportação cancelada. Você pode tentar novamente.' : error.message,
       error.name !== 'AbortError', ui['export-status']);
@@ -568,8 +585,11 @@ ui['cancel-export'].addEventListener('click', () => {
   state.exportController?.abort();
   ui['cancel-export'].disabled = true;
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { saveEditorDraft(); pause(); }
+});
 window.addEventListener('pagehide', () => {
+  saveEditorDraft();
   pause();
   clearTimeout(searchTimer);
   clearTimeout(previewTimer);
@@ -582,15 +602,16 @@ window.addEventListener('pagehide', () => {
 renderSelected();
 async function initializeProducts() {
   await loadProducts();
-  if (!window.location?.search) return;
+  if (restoredDraft || !window.location?.search) return;
   try {
     if (new URLSearchParams(window.location.search).has('selection')) {
       const batch = await loadCampaignSelection(window.location.search, url => fetchJson(url, AbortSignal.timeout(15000)));
       state.campaignBatch = true;
       state.selectionLimit = Math.max(PRODUCT_LIMIT, batch.items.length);
       const next = batch.items.map(item => ({ product: item.product, price: item.price, originalPrice: '', duration: INDOOR_DURATION_TIERS[0] }));
-      updateSelection(next);
       state.campaignBackgroundFile = batch.campaign.backgrounds?.['indoor-h'] || '';
+      draftReady = true;
+      updateSelection(next);
 
       ui.canvas.setAttribute('aria-label', 'Prévia do vídeo dos produtos selecionados para TV');
       const back = element('a', 'indoor-button secondary', '← Voltar à seleção da revista');
@@ -609,10 +630,12 @@ async function initializeProducts() {
     const next = addProduct(state.selection, selection.product);
     if (next === state.selection) return;
     next[next.length - 1].price = selection.price || '';
-    updateSelection(next);
     state.campaignBackgroundFile = selection.backgrounds?.['indoor-h'] || '';
+    draftReady = true;
+    updateSelection(next);
     if (state.campaignBackgroundFile) await loadBackgrounds();
   } catch (error) { status(error.message, true); }
+  finally { draftReady = true; }
 }
 void initializeProducts();
 void loadBackgrounds();

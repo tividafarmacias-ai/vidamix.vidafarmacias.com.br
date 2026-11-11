@@ -14,6 +14,18 @@ export function initializeSchema(database) {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS created_artworks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      format TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      content_type TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      content BLOB NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_created_artworks_user ON created_artworks(user_id, id DESC);
+
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY,
       nome TEXT NOT NULL,

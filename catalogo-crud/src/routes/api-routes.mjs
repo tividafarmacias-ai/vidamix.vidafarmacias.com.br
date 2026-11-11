@@ -3,6 +3,7 @@ import { createRouter } from '../http/router.mjs';
 import { defaultSecurityHeaders } from '../http/response.mjs';
 import { createRevistaTemplate, readRevistaWorkbook, normalizeRevistaBackgrounds } from '../modules/revista/revista-service.mjs';
 import { badRequest } from '../http/errors.mjs';
+import { registerArtworkRoutes } from './artwork-routes.mjs';
 
 const backgroundFormatMap = Object.freeze({
   stories: 'stories',
@@ -19,8 +20,9 @@ function getRequestedProductId(productService, value) {
   return productService.productId(value);
 }
 
-export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, backgroundManagers = {}, revistaService }) {
+export function createApiRouter({ productService, storyBackgroundService, feedBackgroundService, indoorBackgroundService, backgroundManagers = {}, revistaService, artworkService }) {
   const router = createRouter();
+  registerArtworkRoutes(router, artworkService);
   const backgroundServices = { stories: storyBackgroundService, feed: feedBackgroundService, 'indoor-h': indoorBackgroundService };
   async function validateRevistaBackgrounds(value) {
     const backgrounds = normalizeRevistaBackgrounds(value);

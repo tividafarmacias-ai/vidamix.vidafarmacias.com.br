@@ -1,5 +1,6 @@
 import { loadCampaignSelection } from './selection.js';
 import { exportArtworkBatch } from './zip.js';
+import { saveCreatedArtwork } from '../created-artworks.js';
 
 export async function initCampaignBatchEditor({ format, request, prepare, render, setBusy, isBusy }) {
   if (!new URLSearchParams(window.location.search).has('selection')) return false;
@@ -46,8 +47,15 @@ export async function initCampaignBatchEditor({ format, request, prepare, render
       say('Conferindo os preços e a disponibilidade da revista…');
       batch = await loadCampaignSelection(window.location.search, url => request(url, { signal }));
       signal.throwIfAborted();
+      const recent = [];
       const blob = await exportArtworkBatch({
-        items: batch.items, format, signal, render,
+        items: batch.items, format, signal,
+        render: async (item, renderSignal) => {
+          const artwork = await render(item, renderSignal);
+          recent.push({ blob: artwork, format, title: item.product.nome, filename: `${format}-${item.product.id}.png` });
+          if (recent.length > 5) recent.shift();
+          return artwork;
+        },
         onProgress: (done, total) => { progress.value = done / total * 100; say(`Gerando artes: ${done} de ${total}…`); },
       });
       signal.throwIfAborted();
@@ -56,7 +64,15 @@ export async function initCampaignBatchEditor({ format, request, prepare, render
       link.download = `revista-${batch.campaign.id}-${format}.zip`;
       link.hidden = false;
       link.click();
-      say(`${batch.items.length} artes prontas! O ZIP contém um PNG por produto. Se necessário, use Baixar ZIP novamente.`);
+      cancel.hidden = true;
+      say('ZIP pronto. Salvando as últimas artes em Artes criadas…');
+      let failures = 0;
+      for (const artwork of recent) {
+        try { await saveCreatedArtwork(artwork); } catch { failures += 1; }
+      }
+      say(`${batch.items.length} artes prontas! O ZIP contém um PNG por produto. ` + (failures
+        ? `${failures} arte(s) não foram salvas no histórico. Verifique sua conexão e exporte novamente para salvar.`
+        : 'As últimas artes foram salvas em Artes criadas.'));
     } catch (error) {
       say(error.name === 'AbortError' ? 'Lote cancelado. A seleção foi mantida para tentar novamente.' : error.message, error.name !== 'AbortError');
     } finally {

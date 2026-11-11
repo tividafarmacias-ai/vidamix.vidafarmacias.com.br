@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#f5f8fc" />
+    <script src="/js/theme.js"></script>
+    <title>Artes criadas | VidaMix Studio</title>
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="icon" type="image/png" href="/pwa-icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
+    <link rel="stylesheet" href="/brand.css" />
+    <link rel="stylesheet" href="/home.css" />
+    <link rel="stylesheet" href="/artes-criadas.css" />
+    <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="stylesheet" href="/pwa.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <script src="/js/pwa.js" defer></script>
+    <script type="module" src="/js/app-shell.js"></script>
+  </head>
+  <body class="home-page artworks-page">
+    <script src="/js/pwa-launch.js"></script>
+    <a class="skip-link" href="#artworks-main">Ir para as artes criadas</a>
+    <header class="site-header" data-app-header><div class="site-header-inner"><a class="site-brand" href="/" aria-label="VidaMix Studio"><img class="site-brand-logo" src="/branding/vida-horizontal.png" width="923" height="302" alt="Vida Farmácias" /></a></div></header>
+    <main class="studio-main" id="artworks-main">
+      <div class="artworks-heading">
+        <div><p class="studio-kicker">Seu histórico</p><h1>Artes criadas</h1><p>Suas 5 últimas artes exportadas, salvas na sua conta. Ao criar uma nova, a mais antiga sai do histórico.</p></div>
+        <a class="studio-primary-action" href="/artes/stories">Criar nova arte</a>
+      </div>
+      <p id="artworks-status" role="status" aria-live="polite">Carregando suas artes…</p>
+      <button id="artworks-retry" type="button" hidden>Tentar novamente</button>
+      <section id="artworks-empty" class="artworks-empty" hidden>
+        <h2>Suas criações vão aparecer aqui</h2>
+        <p>Exporte um PNG ou MP4 nos editores de Stories, Feed ou TV Indoor. As artes da revista também são salvas automaticamente.</p>
+        <a class="studio-catalog-link" href="/">Escolher um formato</a>
+      </section>
+      <div id="artworks-grid" class="artworks-grid" aria-label="Artes mais recentes"></div>
+    </main>
+    <script type="module" src="/js/features/artwork-history.js"></script>
+  </body>
+</html>

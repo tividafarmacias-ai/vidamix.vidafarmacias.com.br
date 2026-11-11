@@ -159,6 +159,13 @@ test('legacy and WebP URLs stay behind authentication and reject writes', async 
   for (const extension of ['png', 'webp']) {
     assert.equal((await fetch(`${protectedOrigin}/assets/imagens/convertido.${extension}`)).status, 401);
   }
+  for (const filename of ['padrao-tarjado.png', 'padrao-generico.png']) {
+    assert.equal((await fetch(`${protectedOrigin}/assets/imagens/${filename}`)).status, 401);
+    assert.equal((await fetch(`${protectedOrigin}/assets/imagens/${filename}`, {
+      headers: fixtureSessionHeaders,
+    })).status, 200);
+    assert.equal((await fetch(`${origin}/assets/imagens/${filename}`, { method: 'POST' })).status, 405);
+  }
   const authorized = await fetch(protectedOrigin + '/assets/imagens/convertido.png', {
     headers: fixtureSessionHeaders,
   });

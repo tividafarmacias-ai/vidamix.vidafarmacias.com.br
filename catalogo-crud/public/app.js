@@ -304,11 +304,14 @@ function renderDialogImage(product) {
 }
 
 function previewTypedImage() {
-  if (elements.imageFile?.files?.length) return;
+  const group = state.groups.find((item) => item.nome === formValue('grupo'));
+  if (group?.imagem_local_url) {
+    return renderDialogImage({ ...group, grupo: group.nome, imagem_padrao: true });
+  }
+  if (elements.imageFile?.files?.length) return previewSelectedImage();
   const localFile = String(formValue('imagem_arquivo') || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
   if (!localFile.startsWith('imagens/') || localFile.includes('..')) {
-    const group = state.groups.find((item) => item.nome === formValue('grupo'));
-    return renderDialogImage(group?.imagem_local_url ? { ...group, grupo: group.nome, imagem_padrao: true } : null);
+    return renderDialogImage(null);
   }
   renderDialogImage({
     nome: formValue('nome') || 'Imagem do produto',
@@ -332,6 +335,10 @@ function previewSelectedImage() {
   }
   elements.imageFile.setCustomValidity('');
   clearSelectedImagePreview();
+  const group = state.groups.find((item) => item.nome === formValue('grupo'));
+  if (group?.imagem_local_url) {
+    return renderDialogImage({ ...group, grupo: group.nome, imagem_padrao: true });
+  }
   selectedImagePreviewUrl = URL.createObjectURL(file);
   renderDialogImage({
     nome: formValue('nome') || 'Imagem do produto',
@@ -563,7 +570,7 @@ function updateUploadHelp() {
 function updateGroupHelp() {
   const group = state.groups.find((item) => item.nome === formValue('grupo'));
   document.querySelector('#group-image-help').textContent = ['TARJADO', 'GENÉRICO'].includes(formValue('grupo'))
-    ? (group?.imagem_local_url ? 'Usa a caixinha padrão quando não há foto própria.' : 'A caixinha padrão deste grupo ainda não foi enviada.') : '';
+    ? (group?.imagem_local_url ? 'Todos os produtos deste grupo usam a caixinha padrão.' : 'A caixinha padrão deste grupo ainda não foi enviada.') : '';
 }
 
 async function loadReferences() {
@@ -672,7 +679,7 @@ function bindReferenceEvents() {
       updateGroupHelp();
       previewTypedImage();
       document.querySelector('#default-image-file').value = '';
-      referenceFeedback('#group-images-feedback', 'Caixinha salva. Os produtos deste grupo sem foto própria já usam esta imagem.');
+      referenceFeedback('#group-images-feedback', 'Caixinha salva. Todos os produtos deste grupo já usam esta imagem.');
       await loadProducts();
     } catch (error) { referenceFeedback('#group-images-feedback', error.message, true); }
     finally { button.disabled = false; }

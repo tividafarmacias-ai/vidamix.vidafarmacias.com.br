@@ -15,11 +15,12 @@ const headerDestinations = [
   { screen: 'backgrounds', href: '/backgrounds', label: 'Fundos', icon: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="2"/><path d="m3 17 5-5 4 4 4-6 5 7"/>' },
   ...destinations.filter(({ screen }) => screen === 'stories' || screen === 'feed'),
   indoorDestination,
+  { screen: 'artworks', href: '/artes-criadas', label: 'Artes criadas', icon: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m3 16 5-5 4 4 4-6 5 7M7 7h2"/>' },
 ];
 
 export function getHeaderDestinations(role) {
   if (role === 'admin') return headerDestinations;
-  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['home', 'catalogue', 'revista', 'stories', 'feed', 'indoor'].includes(screen));
+  if (role === 'cliente') return headerDestinations.filter(({ screen }) => ['home', 'catalogue', 'revista', 'stories', 'feed', 'indoor', 'artworks'].includes(screen));
   return [];
 }
 
@@ -27,6 +28,7 @@ export function getAppScreen(pathname) {
   const path = pathname.replace(/\/+$/, '') || '/';
   return ({
     '/': 'home', '/index.html': 'home',
+    '/artes-criadas': 'artworks', '/artes-criadas.html': 'artworks',
     '/catalogo': 'catalogue', '/catalogo.html': 'catalogue',
     '/revista/ofertas': 'revista', '/revista-ofertas.html': 'revista',
     '/revista': 'revista', '/revista.html': 'revista',

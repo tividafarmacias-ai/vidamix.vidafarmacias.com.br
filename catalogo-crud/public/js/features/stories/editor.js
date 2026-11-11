@@ -1,8 +1,10 @@
 import { getBackgroundBadgeTheme } from './background-theme.js';
+import { rememberCreatedArtwork } from '../created-artworks.js';
 import { getDiscountLabel } from '../discount.js';
 import { authFetch } from '../../auth-session.js';
 import { loadArtworkSelection } from '../revista/artwork.js';
 import { initCampaignBatchEditor } from '../revista/batch-editor.js';
+import { createArtworkDraftStore, findDraftBackground } from '../artwork-draft.js';
 import {
   DEFAULT_FREE_TEXT_WIDTH,
   DESCRIPTION_CARD_PADDING,
@@ -28,6 +30,8 @@ const {
 } = format;
 const state = createStoriesEditorState();
 const elements = getStoriesEditorElements();
+const draftStore = createArtworkDraftStore(format.downloadPrefix === 'feed' ? 'feed' : 'stories', { search: window.location.search });
+let draftReady = false;
 
 let searchTimer;
 let detailsMeasureContext;
@@ -43,6 +47,28 @@ function createElement(tagName, className, textContent) {
   if (className) element.className = className;
   if (textContent !== undefined && textContent !== null) element.textContent = textContent;
   return element;
+}
+
+function saveEditorDraft() {
+  if (draftReady && !state.pngExporting) draftStore.save(state);
+}
+
+function restoreEditorDraft() {
+  const draft = draftStore.load();
+  if (draft) {
+    Object.assign(state, draft);
+    syncCompositionModeControls();
+    syncPriceInputs();
+    elements.freeText.value = state.freeText;
+    if (state.freeText) resetFreeTextTransform();
+    syncProductPanel();
+    setPanelCollapsed(compositionPanel, state.compositionChosen);
+    setPanelCollapsed(backgroundPanel, state.backgroundChosen);
+  }
+  const params = new URLSearchParams(window.location.search);
+  // Leaving while a new linked selection is loading must not replace it with an empty draft.
+  draftReady = Boolean(draft) || !['productId', 'campaignId', 'selection'].some(key => params.has(key));
+  return Boolean(draft);
 }
 
 async function requestJson(url, { signal } = {}) {
@@ -1240,6 +1266,7 @@ function drawPreviewNow() {
 }
 
 function schedulePreview() {
+  saveEditorDraft();
   if (state.animationFrame) return;
   state.animationFrame = requestAnimationFrame(() => {
     state.animationFrame = null;
@@ -1555,6 +1582,7 @@ function getMobileProgress() {
 }
 
 function renderPreview() {
+  saveEditorDraft();
   ++state.previewRequestId;
   updateAvailability();
   // Rapid taps only load the latest selection after the current decode finishes.
@@ -1788,6 +1816,7 @@ function setCompositionMode(value) {
   const nextMode = normalizeCompositionMode(value);
   state.compositionChosen = true;
   if (state.compositionMode === nextMode) {
+    saveEditorDraft();
     syncCompositionModeControls();
     setPanelCollapsed(compositionPanel, true);
     return;
@@ -2018,8 +2047,14 @@ async function loadBackgrounds() {
   state.backgroundRequest = requestJson(format.backgroundsUrl)
     .then((response) => {
       state.backgrounds = (response.items || []).map((item) => ({ ...item, url: item.preview_url || item.url }));
-      state.selectedBackground = state.backgrounds[0] || null;
+      const previous = state.selectedBackground;
+      state.selectedBackground = previous ? findDraftBackground(state.backgrounds, previous) : state.backgrounds[0] || null;
+      if (previous && !state.selectedBackground) {
+        state.backgroundChosen = false;
+        state.campaignBackgroundError = 'O fundo salvo não está mais disponível. Escolha outro fundo para continuar.';
+      }
       renderBackgrounds();
+      setPanelCollapsed(backgroundPanel, state.backgroundChosen);
       return state.backgrounds;
     })
     .catch((error) => {
@@ -2638,7 +2673,8 @@ async function downloadStoryVideo() {
   let resultMessage;
   let failed = false;
   try {
-    const filename = storyDownloadName(state.selectedProduct.nome, 'mp4');
+    const productName = state.selectedProduct.nome;
+    const filename = storyDownloadName(productName, 'mp4');
     const snapshot = captureVideoSnapshot(canvases);
     if (wallpaperUrl) {
       const wallpaperImage = await loadImage(wallpaperUrl);
@@ -2678,6 +2714,9 @@ async function downloadStoryVideo() {
     elements.videoDownloadLink.hidden = false;
     elements.videoDownloadLink.click();
     resultMessage = `MP4 pronto: ${duration} segundos${wallpaperUrl ? ', com abertura da campanha' : ''}, com animações de entrada e saída. Se o download não iniciar, use o link abaixo.`;
+    elements.videoExportStatus.textContent = 'MP4 pronto. Salvando em Artes criadas…';
+    elements.cancelVideo.hidden = true;
+    resultMessage += ' ' + await rememberCreatedArtwork({ blob, filename, title: productName, format: format.downloadPrefix === 'feed' ? 'feed' : 'stories' });
   } catch (error) {
     if (controller.signal.aborted || error.name === 'AbortError') {
       resultMessage = 'Exportação cancelada. Sua arte continua disponível no editor.';
@@ -2719,11 +2758,11 @@ function downloadStory() {
   state.pngExporting = true;
   updateAvailability();
   updateDownloadLabel('Preparando PNG…');
-  exportCanvas.toBlob((blob) => {
-    state.pngExporting = false;
-    updateDownloadLabel('Baixar PNG');
-    updateAvailability();
+  exportCanvas.toBlob(async (blob) => {
     if (!blob) {
+      state.pngExporting = false;
+      updateDownloadLabel('Baixar PNG');
+      updateAvailability();
       setStatus('Não foi possível gerar o PNG. Tente novamente.', true);
       return;
     }
@@ -2736,7 +2775,12 @@ function downloadStory() {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setStatus('PNG pronto. A arte foi baixada para o seu dispositivo.');
+    setStatus('PNG pronto. Salvando em Artes criadas…');
+    const saved = await rememberCreatedArtwork({ blob, filename: link.download, title: productName, format: format.downloadPrefix === 'feed' ? 'feed' : 'stories' });
+    state.pngExporting = false;
+    updateDownloadLabel('Baixar PNG');
+    updateAvailability();
+    setStatus('PNG pronto. ' + saved);
   }, 'image/png');
 }
 
@@ -2970,18 +3014,21 @@ function bindEvents() {
     elements.videoExportStatus.textContent = 'Cancelando exportação…';
   });
   window.addEventListener('pagehide', () => {
+    saveEditorDraft();
     state.videoExportController?.abort();
     if (videoDownloadUrl) URL.revokeObjectURL(videoDownloadUrl);
     videoDownloadUrl = null;
     elements.videoDownloadLink.hidden = true;
     elements.videoDownloadLink.removeAttribute('href');
   });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveEditorDraft(); });
 }
 
 export async function initStoriesEditor() {
   elements.canvas.width = STORY_WIDTH;
   elements.canvas.height = STORY_HEIGHT;
   bindEvents();
+  const restoredDraft = restoreEditorDraft();
   mobileEditor = initStoriesMobileEditor({
     getProgress: getMobileProgress,
     onStepChange: () => {
@@ -3001,6 +3048,7 @@ export async function initStoriesEditor() {
       isBusy: () => state.pngExporting || Boolean(state.videoExportController),
       setBusy: value => { state.pngExporting = value; updateAvailability(); },
       prepare: async ({ campaign, items }) => {
+        if (restoredDraft) return;
         const file = campaign.backgrounds?.[format.downloadPrefix === 'feed' ? 'feed' : 'stories'];
         if (file) {
           state.selectedBackground = state.backgrounds.find(background => background.arquivo === file) || null;
@@ -3022,7 +3070,8 @@ export async function initStoriesEditor() {
         } finally { canvas.width = canvas.height = 0; }
       },
     });
-    if (!batchMode) await preselectProductFromLocation();
+    if (!batchMode && !restoredDraft) await preselectProductFromLocation();
+    draftReady = true;
     await renderPreview();
     // The mobile canvas stays expanded even when a product arrives from the catalogue.
   } catch {

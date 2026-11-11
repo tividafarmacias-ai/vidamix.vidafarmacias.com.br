@@ -162,7 +162,7 @@ export function createRevistaService({ database, imagesDirectory }) {
       p.subtitulo AS description, p.fabricante AS manufacturer, p.status, p.imagem_arquivo AS imageFile, p.grupo, p.generico
       FROM revista_items i LEFT JOIN products p ON p.id = i.product_id
       WHERE i.campaign_id = ? ORDER BY i.id`).all(campaign.id).map(({ imageFile, status, grupo, generico, ...item }) => {
-      const image = resolveProductImage(imagesDirectory, imageFile || defaults[productImageGroup({ grupo, generico })]);
+      const image = resolveProductImage(imagesDirectory, defaults[productImageGroup({ grupo, generico })] || imageFile);
       return { ...item, imageUrl: image ? productImageUrl(image, imagesDirectory) : null,
         available: Boolean(item.productId && status === 'ativo' && image) };
     });

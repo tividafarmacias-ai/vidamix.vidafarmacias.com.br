@@ -83,8 +83,8 @@ function serializeProduct(row, imagesDirectory, defaults, manufacturers) {
   if (!row) return null;
   const group = productImageGroup(row);
   const defaultFile = defaults[group];
-  const imageFile = resolveProductImage(imagesDirectory, row.imagem_arquivo || defaultFile);
-  const usesDefault = !row.imagem_arquivo && Boolean(defaultFile);
+  const imageFile = resolveProductImage(imagesDirectory, defaultFile || row.imagem_arquivo);
+  const usesDefault = Boolean(defaultFile);
 
   return {
     ...row,
@@ -144,8 +144,8 @@ export function createProductService({ database, imagesDirectory }) {
   function imageCondition() {
     const defaults = defaultImages();
     const rules = ["coalesce(imagem_status IN ('baixado', 'existente', 'manual'), 0)"];
-    if (defaults.TARJADO) rules.push("(coalesce(imagem_arquivo, '') = '' AND generico = 0 AND upper(trim(grupo)) = 'TARJADO')");
-    if (defaults['GENÉRICO']) rules.push("(coalesce(imagem_arquivo, '') = '' AND (generico = 1 OR upper(trim(grupo)) IN ('GENÉRICO', 'GENéRICO', 'GENERICO')))");
+    if (defaults.TARJADO) rules.push("(coalesce(generico, 0) = 0 AND upper(trim(grupo)) IN ('TARJADO', 'TARJADOS'))");
+    if (defaults['GENÉRICO']) rules.push("(generico = 1 OR upper(trim(grupo)) IN ('GENÉRICO', 'GENéRICO', 'GENERICO', 'GENÉRICOS', 'GENéRICOS', 'GENERICOS'))");
     return `(${rules.join(' OR ')})`;
   }
   const serialize = (row) => serializeProduct(row, imagesDirectory, defaultImages(), manufacturers);
