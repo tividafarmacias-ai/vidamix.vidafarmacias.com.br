@@ -44,11 +44,12 @@ export function initAppHeader(win, doc, screen, session = null) {
   if (!header || header.dataset.initialized) return;
   header.dataset.initialized = 'true';
   const inner = header.querySelector('.site-header-inner');
+  const editor = header.classList.contains('site-header-editor');
   const name = doc.createElement('span');
   name.className = 'app-screen-name';
   name.textContent = screen === 'offline' ? 'Sem conexão'
     : headerDestinations.find((destination) => destination.screen === screen)?.label || 'VidaMix Studio';
-  inner.append(name);
+  if (!editor) inner.append(name);
 
   const nav = doc.createElement('nav');
   nav.id = 'site-navigation';
@@ -108,7 +109,7 @@ export function initAppHeader(win, doc, screen, session = null) {
       }
     });
     nav.append(account);
-    inner.append(exit);
+    (editor ? nav : inner).append(exit);
   } else {
     const login = doc.createElement('a');
     login.href = '/login';
@@ -121,14 +122,22 @@ export function initAppHeader(win, doc, screen, session = null) {
   toggle.className = 'site-menu-toggle';
   toggle.setAttribute('aria-controls', nav.id);
   toggle.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
-  inner.append(toggle, nav);
+  if (editor) inner.prepend(toggle);
+  else inner.append(toggle);
+  inner.append(nav);
+
+  // The theme can mount before the session resolves or after this header.
+  const theme = editor && header.querySelector('.app-theme-toggle');
+  if (theme) nav.append(theme);
 
   const compact = win.matchMedia('(max-width: 1100px)');
   const setOpen = (open) => {
-    const expanded = compact.matches && open;
+    const collapsed = editor || compact.matches;
+    const expanded = collapsed && open;
+    header.classList.toggle('site-header-compact', collapsed);
     toggle.setAttribute('aria-expanded', String(expanded));
     toggle.setAttribute('aria-label', expanded ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
-    nav.hidden = compact.matches && !expanded;
+    nav.hidden = collapsed && !expanded;
   };
   toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
   doc.addEventListener('keydown', (event) => {
@@ -137,10 +146,11 @@ export function initAppHeader(win, doc, screen, session = null) {
     toggle.focus();
   });
   doc.addEventListener('click', (event) => {
-    if (!header.contains(event.target) || nav.contains(event.target)) setOpen(false);
+    if ((!nav.contains(event.target) && !toggle.contains(event.target))
+      || (event.target.closest?.('a[href]') && nav.contains(event.target))) setOpen(false);
   });
   doc.addEventListener('focusin', (event) => {
-    if (!header.contains(event.target)) setOpen(false);
+    if (!nav.contains(event.target) && !toggle.contains(event.target)) setOpen(false);
   });
   compact.addEventListener('change', () => setOpen(false));
   win.addEventListener('pageshow', () => setOpen(false));

@@ -29,19 +29,21 @@ function element() {
     setAttribute(name, value) { attributes.set(name, value); },
     getAttribute(name) { return attributes.get(name); },
     append(...children) { this.children.push(...children); },
+    prepend(...children) { this.children.unshift(...children); },
     matches() { return false; },
     contains(node) { return node === this || this.children.some((child) => child.contains?.(node)); },
     focus() {},
   });
 }
 
-function fixture({ pathname = '/catalogo', iosStandalone = false, visualViewport = true, withHeader = false, session = { user: { id: 1, name: 'Usuário', role: 'admin' } } } = {}) {
+function fixture({ pathname = '/catalogo', iosStandalone = false, visualViewport = true, withHeader = false, desktop = false, session = { user: { id: 1, name: 'Usuário', role: 'admin' } } } = {}) {
   const win = new EventHost();
   const doc = new EventHost();
   const viewport = visualViewport ? Object.assign(new EventHost(), { height: 844, offsetTop: 0, scale: 1 }) : null;
   const standalone = Object.assign(new EventHost(), { matches: false });
-  const mobile = Object.assign(new EventHost(), { matches: true });
+  const mobile = Object.assign(new EventHost(), { matches: !desktop });
   const header = element();
+  if (['stories', 'feed', 'indoor'].includes(getAppScreen(pathname))) header.classList.add('site-header-editor');
   const inner = element();
   const brand = element();
   header.append(inner);
@@ -52,6 +54,7 @@ function fixture({ pathname = '/catalogo', iosStandalone = false, visualViewport
     location: { pathname }, navigator: { standalone: iosStandalone },
     matchMedia: (query) => query.includes('display-mode') ? standalone : mobile,
     requestAnimationFrame: (callback) => callback(),
+    clearTimeout() {},
   });
   Object.assign(doc, {
     documentElement: Object.assign(element(), { clientHeight: 844, clientWidth: 390 }),
@@ -194,6 +197,43 @@ test('failed sessions and offline screens show only the login destination', asyn
     const error = f.doc.body.children.find(({ className }) => className === 'app-session-error');
     assert.equal(Boolean(error), pathname !== '/offline.html');
   }
+});
+
+test('all artwork editors keep navigation and account actions in a working menu at desktop widths', async () => {
+  for (const pathname of ['/artes/stories', '/artes/feed', '/artes/indoor-h', '/stories.html', '/feed.html', '/indoor-h.html']) {
+    const f = fixture({ pathname, withHeader: true, desktop: true });
+    await f.ready;
+    const nav = f.inner.children.find(({ className }) => className === 'site-nav');
+    const toggle = f.inner.children.find(({ className }) => className === 'site-menu-toggle');
+    assert.equal(nav.hidden, true, pathname);
+    assert.equal(f.header.classList.contains('site-header-compact'), true);
+    assert.equal(f.inner.children[0], toggle);
+    assert.ok(nav.children.some(({ className }) => className === 'site-logout'));
+    assert.equal(f.inner.children.some(({ className }) => className === 'app-screen-name'), false);
+    toggle.emit('click');
+    assert.equal(nav.hidden, false);
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+    f.doc.emit('click', { target: nav.children.find(({ className }) => className === 'site-logout') });
+    assert.equal(nav.hidden, false, 'menu buttons remain available without hiding their feedback');
+    f.doc.emit('keydown', { key: 'Escape' });
+    assert.equal(nav.hidden, true);
+    toggle.emit('click');
+    f.doc.emit('click', { target: f.brand });
+    assert.equal(nav.hidden, true, 'other header controls close the menu');
+    f.mobile.matches = true;
+    f.mobile.emit('change');
+    toggle.emit('click');
+    assert.equal(nav.hidden, false);
+    f.mobile.matches = false;
+    f.mobile.emit('change');
+    assert.equal(nav.hidden, true, 'returning to desktop keeps editor navigation collapsed');
+    toggle.emit('click');
+    f.win.emit('pageshow');
+    assert.equal(nav.hidden, true);
+  }
+  const browse = fixture({ withHeader: true, desktop: true });
+  await browse.ready;
+  assert.equal(browse.inner.children.find(({ className }) => className === 'site-nav').hidden, false);
 });
 
 test('standalone detection supports both installed iOS and display-mode changes', () => {

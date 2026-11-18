@@ -16,7 +16,7 @@ h2 { margin: 0; color: var(--brand-blue-dark); font-size: .94rem; letter-spacing
 .indoor-library { grid-area: library; display: grid; gap: 14px; min-width: 0; }
 .indoor-workspace { grid-area: preview; min-width: 0; position: sticky; top: calc(var(--app-header-height, 76px) + 16px); }
 .indoor-panel { min-width: 0; padding: 18px; border: 1px solid var(--glass-line); border-radius: 18px; background: var(--glass-surface); box-shadow: var(--glass-highlight), var(--glass-shadow); }
-.indoor-library, .indoor-selection { max-height: calc(100dvh - var(--app-header-height, 76px) - 156px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
+.indoor-library, .indoor-selection { max-height: calc(100dvh - var(--app-header-height, 76px) - 50px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
 .indoor-collapsible { padding: 0; overflow: clip; }
 .indoor-panel-toggle { display: flex; width: 100%; min-height: 76px; padding: 16px; gap: 10px; align-items: center; text-align: left; color: var(--brand-blue-dark); border: 0; background: transparent; }
 .indoor-panel-toggle:hover { background: var(--glass-selected); }

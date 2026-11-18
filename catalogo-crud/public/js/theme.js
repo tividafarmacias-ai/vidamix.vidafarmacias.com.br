@@ -39,7 +39,8 @@
   window.addEventListener('pageshow', () => { readPreference(); apply(); });
 
   function mount() {
-    const host = document.querySelector('.site-header-inner') || document.body;
+    const host = document.querySelector('.site-header-editor .site-nav')
+      || document.querySelector('.site-header-inner') || document.body;
     button = document.createElement('button');
     button.type = 'button';
     button.className = 'app-theme-toggle';
